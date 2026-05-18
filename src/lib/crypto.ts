@@ -5,13 +5,13 @@ const ALGORITHM = 'aes-256-cbc';
 const HMAC_ALGORITHM = 'sha256';
 
 function getEncryptionKey(): Uint8Array {
-  return Buffer.from(ENCRYPTION_KEY.padEnd(32, '0')).slice(0, 32) as unknown as Uint8Array;
+  return Uint8Array.from(Buffer.from(ENCRYPTION_KEY.padEnd(32, '0').slice(0, 32), 'utf8'));
 }
 
 function computeAuthTag(iv: string, encryptedData: string): string {
   return crypto
     .createHmac(HMAC_ALGORITHM, getEncryptionKey())
-    .update(Buffer.from(iv, 'hex') as unknown as Uint8Array)
+    .update(Uint8Array.from(Buffer.from(iv, 'hex')))
     .update(encryptedData)
     .digest('hex');
 }
@@ -21,25 +21,29 @@ export function encryptSensitiveData(plaintext: string): {
   iv: string;
   authTag: string;
 } {
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(ALGORITHM, getEncryptionKey(), iv as unknown as Uint8Array);
+  const iv = Uint8Array.from(crypto.randomBytes(16));
+  const cipher = crypto.createCipheriv(ALGORITHM, getEncryptionKey(), iv);
   let encrypted = cipher.update(plaintext, 'utf8', 'hex');
   encrypted += cipher.final('hex');
+  const ivHex = Buffer.from(iv).toString('hex');
 
   return {
     encryptedData: encrypted,
-    iv: iv.toString('hex'),
-    authTag: computeAuthTag(iv.toString('hex'), encrypted),
+    iv: ivHex,
+    authTag: computeAuthTag(ivHex, encrypted),
   };
 }
 
 export function decryptSensitiveData(encryptedData: string, iv: string, authTag: string): string {
   const calculatedAuthTag = computeAuthTag(iv, encryptedData);
-  if (!crypto.timingSafeEqual(Buffer.from(calculatedAuthTag, 'hex'), Buffer.from(authTag, 'hex'))) {
+  if (!crypto.timingSafeEqual(
+    Uint8Array.from(Buffer.from(calculatedAuthTag, 'hex')),
+    Uint8Array.from(Buffer.from(authTag, 'hex'))
+  )) {
     throw new Error('Failed to verify encrypted data integrity');
   }
 
-  const decipher = crypto.createDecipheriv(ALGORITHM, getEncryptionKey(), Buffer.from(iv, 'hex') as unknown as Uint8Array);
+  const decipher = crypto.createDecipheriv(ALGORITHM, getEncryptionKey(), Uint8Array.from(Buffer.from(iv, 'hex')));
   let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
   decrypted += decipher.final('utf8');
 

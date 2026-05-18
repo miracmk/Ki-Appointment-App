@@ -1,6 +1,35 @@
 import { getAdminFirestore } from './firebase-admin';
-import { decryptSensitiveData } from './crypto';
-import { ConsultantProfile, Appointment } from '@/types/marketplace';
+import { decryptSensitiveData } from './encryption';
+import { ConsultantProfile, Appointment, PaymentMode, FeeBreakdown } from '@/types/marketplace';
+
+/**
+ * Calculate platform fee breakdown.
+ * Commission base: net (gross - Stripe fee) × 10%.
+ * Stripe standard fee: 2.9% + $0.30 (US cards).
+ */
+export function calculateFees(grossCents: number): FeeBreakdown {
+  const stripeFee = Math.round(grossCents * 0.029) + 30;
+  const net = grossCents - stripeFee;
+  const platformFee = Math.round(net * 0.10);
+  const consultantPayout = net - platformFee;
+  return {
+    gross_cents: grossCents,
+    stripe_fee_cents: stripeFee,
+    net_cents: net,
+    platform_fee_cents: platformFee,
+    consultant_payout_cents: consultantPayout,
+  };
+}
+
+export async function getConsultantPaymentMode(consultantId: string): Promise<PaymentMode> {
+  const profile = await getConsultantProfile(consultantId);
+  return profile?.payment_mode ?? 'own_keys';
+}
+
+export async function getConsultantConnectAccountId(consultantId: string): Promise<string | null> {
+  const profile = await getConsultantProfile(consultantId);
+  return profile?.stripe_connect_account_id ?? null;
+}
 
 /**
  * Fetch a consultant's profile from Firestore
@@ -135,7 +164,7 @@ export async function getAppointment(consultantId: string, appointmentId: string
       return null;
     }
 
-    return doc.data() as Appointment;
+    return { id: doc.id, ...doc.data() } as Appointment;
   } catch (error) {
     console.error(
       `Error fetching appointment ${appointmentId} for consultant ${consultantId}:`,
