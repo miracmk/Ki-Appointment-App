@@ -1,0 +1,35 @@
+{
+  "name": "ki-business-solutions-clone",
+  "version": "1.0.0",
+  "description": "A customer portal and consultation booking system for Ki Business Solutions",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@stripe/stripe-js": "^2.0.0",
+    "@types/node": "20.11.0",
+    "@types/react": "18.2.47",
+    "@types/react-dom": "18.2.18",
+    "autoprefixer": "^10.4.16",
+    "clsx": "^2.0.0",
+    "firebase": "^10.0.0",
+    "firebase-admin": "^11.0.0",
+    "next": "14.0.4",
+    "nodemailer": "^6.9.4",
+    "postcss": "^8.4.32",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "stripe": "^14.0.0",
+    "tailwind-merge": "^2.0.0",
+    "tailwindcss": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^8.0.0",
+    "eslint": "^8.55.0",
+    "eslint-config-next": "14.0.4"
+  }
+}
