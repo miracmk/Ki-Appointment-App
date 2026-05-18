@@ -1,0 +1,127 @@
+import { NextResponse, NextRequest } from 'next/server';
+import { getAdminAuth } from '@/lib/firebase-admin';
+import {
+  updateConsultantStripeSettings,
+  updateConsultantGoogleCalendar,
+  updateConsultantOutlookCalendar,
+  disableConsultantStripe,
+  disconnectGoogleCalendar,
+  disconnectOutlookCalendar,
+} from '@/lib/consultant-settings';
+
+/**
+ * POST /api/admin/consultant-settings
+ *
+ * Admin endpoint to manage consultant integrations
+ * Requires admin authentication
+ *
+ * Body examples:
+ * {
+ *   action: 'update_stripe',
+ *   consultant_id: 'uid...',
+ *   api_key: 'sk_...',
+ *   webhook_secret: 'whsec_...'
+ * }
+ *
+ * {
+ *   action: 'update_google',
+ *   consultant_id: 'uid...',
+ *   refresh_token: 'token...',
+ *   calendar_id: 'primary@gmail.com'
+ * }
+ *
+ * {
+ *   action: 'disconnect_google',
+ *   consultant_id: 'uid...'
+ * }
+ */
+export async function POST(request: NextRequest) {
+  try {
+    // Get auth token from header
+    const authToken = request.headers.get('Authorization')?.replace('Bearer ', '');
+    if (!authToken) {
+      return NextResponse.json({ error: 'Missing authorization token' }, { status: 401 });
+    }
+
+    // Verify token and get user
+    const auth = getAdminAuth();
+    let decodedToken;
+    try {
+      decodedToken = await auth.verifyIdToken(authToken);
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+    }
+
+    // Check if user is admin (you may want to add a custom claim for this)
+    const userRecord = await auth.getUser(decodedToken.uid);
+    if (!userRecord.customClaims?.admin) {
+      return NextResponse.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { action, consultant_id } = body;
+
+    if (!consultant_id) {
+      return NextResponse.json({ error: 'Missing consultant_id' }, { status: 400 });
+    }
+
+    if (action === 'update_stripe') {
+      const { api_key, webhook_secret } = body;
+      if (!api_key || !webhook_secret) {
+        return NextResponse.json(
+          { error: 'Missing api_key or webhook_secret' },
+          { status: 400 }
+        );
+      }
+
+      await updateConsultantStripeSettings(consultant_id, api_key, webhook_secret);
+      return NextResponse.json({ success: true, message: 'Stripe settings updated' });
+    }
+
+    if (action === 'update_google') {
+      const { refresh_token, calendar_id } = body;
+      if (!refresh_token || !calendar_id) {
+        return NextResponse.json(
+          { error: 'Missing refresh_token or calendar_id' },
+          { status: 400 }
+        );
+      }
+
+      await updateConsultantGoogleCalendar(consultant_id, refresh_token, calendar_id);
+      return NextResponse.json({ success: true, message: 'Google Calendar settings updated' });
+    }
+
+    if (action === 'update_outlook') {
+      const { refresh_token } = body;
+      if (!refresh_token) {
+        return NextResponse.json({ error: 'Missing refresh_token' }, { status: 400 });
+      }
+
+      await updateConsultantOutlookCalendar(consultant_id, refresh_token);
+      return NextResponse.json({ success: true, message: 'Outlook Calendar settings updated' });
+    }
+
+    if (action === 'disable_stripe') {
+      await disableConsultantStripe(consultant_id);
+      return NextResponse.json({ success: true, message: 'Stripe disabled for consultant' });
+    }
+
+    if (action === 'disconnect_google') {
+      await disconnectGoogleCalendar(consultant_id);
+      return NextResponse.json({ success: true, message: 'Google Calendar disconnected' });
+    }
+
+    if (action === 'disconnect_outlook') {
+      await disconnectOutlookCalendar(consultant_id);
+      return NextResponse.json({ success: true, message: 'Outlook Calendar disconnected' });
+    }
+
+    return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+  } catch (error: any) {
+    console.error('Error in consultant settings endpoint:', error);
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
