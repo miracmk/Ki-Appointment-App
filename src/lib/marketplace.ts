@@ -1,5 +1,5 @@
 import { getAdminFirestore } from './firebase-admin';
-import { decryptSensitiveData } from './encryption';
+import { decryptSensitiveData } from './crypto';
 import { ConsultantProfile, Appointment } from '@/types/marketplace';
 
 /**

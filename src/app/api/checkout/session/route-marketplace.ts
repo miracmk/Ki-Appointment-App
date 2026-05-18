@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     const appointmentId = await createAppointment(consultantId, appointmentData);
 
     // Prepare checkout metadata
-    const metadata: AppointmentMetadata = {
+    const metadata: Stripe.MetadataParam = {
       consultant_id: consultantId,
       customer_email: customerEmail,
       customer_name: customerName || '',
@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
       appointment_time: appointmentTime,
       appointment_timezone: appointmentTimezone || 'UTC',
       package_id: packageId,
+      session_id: appointmentId,
     };
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || 'http://localhost:3000';
