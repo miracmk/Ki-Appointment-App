@@ -1,50 +1,61 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import Stripe from 'stripe';
-import { getServerStripeSecret } from '@/lib/config';
+import { getConsultantStripeApiKey } from '@/lib/marketplace';
 
-export async function POST(request: Request) {
+const packagePrices: Record<string, number> = {
+  starter: 20000,
+  growth: 100000,
+  scale: 500000,
+  executive: 1000000,
+};
+
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { packageId, email, stripeSecretKey } = body;
-    const secretKey = getServerStripeSecret({ stripeSecretKey });
+    const { consultantId, packageId, email, name, appointmentDate, appointmentTime, appointmentTimezone } = body;
 
-    if (!secretKey) {
+    if (!consultantId || !packageId || !email) {
       return NextResponse.json(
-        { error: 'Stripe secret key is missing. Set STRIPE_SECRET_KEY in environment variables or fill it on /admin.' },
-        { status: 500 }
-      );
-    }
-
-    const stripe = new Stripe(secretKey, {
-      apiVersion: '2023-10-16',
-    });
-
-    const packagePrices: Record<string, number> = {
-      starter: 20000,
-      growth: 100000,
-      scale: 500000,
-      executive: 1000000,
-    };
-
-    const amount = packagePrices[packageId];
-    if (!amount) {
-      return NextResponse.json(
-        { error: 'Invalid package selected' },
+        { error: 'consultantId, packageId, and email are required.' },
         { status: 400 }
       );
     }
 
-    // Create a PaymentIntent with the order amount and currency
+    const amount = packagePrices[packageId];
+    if (!amount) {
+      return NextResponse.json({ error: 'Invalid package selected.' }, { status: 400 });
+    }
+
+    const stripeApiKey = await getConsultantStripeApiKey(consultantId);
+    if (!stripeApiKey) {
+      console.error(`Missing Stripe API key for consultant ${consultantId}`);
+      return NextResponse.json(
+        { error: 'Stripe is not configured for this consultant.' },
+        { status: 503 }
+      );
+    }
+
+    const stripe = new Stripe(stripeApiKey, { apiVersion: '2023-10-16' });
+    const metadata: Record<string, string> = {
+      consultant_id: consultantId,
+      package_id: packageId,
+      customer_email: email,
+      appointment_date: appointmentDate || '',
+      appointment_time: appointmentTime || '',
+      appointment_timezone: appointmentTimezone || 'UTC',
+    };
+
+    if (name) {
+      metadata.customer_name = name;
+    }
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency: 'usd',
       automatic_payment_methods: {
         enabled: true,
       },
-      metadata: {
-        packageId,
-        email,
-      },
+      metadata,
     });
 
     return NextResponse.json({

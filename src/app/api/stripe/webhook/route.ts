@@ -1,56 +1,24 @@
-﻿import { NextResponse } from 'next/server';
+﻿import { NextResponse, NextRequest } from 'next/server';
 import Stripe from 'stripe';
-import { getAdminAuth, getAdminFirestore } from '@/lib/firebase-admin';
+import { getConsultantWebhookSecret, getAppointment, updateAppointmentStatus, getConsultantProfile } from '@/lib/marketplace';
+import { syncToGoogleCalendar, syncToOutlookCalendar, generateICS } from '@/lib/calendar-sync';
+import { AppointmentMetadata, Appointment } from '@/types/marketplace';
 import nodemailer from 'nodemailer';
-import crypto from 'crypto';
 
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-const stripe = stripeSecretKey
-  ? new Stripe(stripeSecretKey, { apiVersion: '2023-10-16' })
-  : null;
-
-const documentMappings: Record<string, { title: string; url: string }> = {
-  starter: {
-    title: 'Starter Engagement Guide',
-    url: '/documents/starter.pdf',
-  },
-  growth: {
-    title: 'Growth Strategy Playbook',
-    url: '/documents/growth.pdf',
-  },
-  scale: {
-    title: 'Scale Transformation Toolkit',
-    url: '/documents/scale.pdf',
-  },
-  executive: {
-    title: 'Executive Leadership Blueprint',
-    url: '/documents/executive.pdf',
-  },
+const pricingMap: Record<string, { amount: number; name: string }> = {
+  starter: { amount: 20000, name: 'Starter' },
+  growth: { amount: 100000, name: 'Growth' },
+  scale: { amount: 500000, name: 'Scale' },
+  executive: { amount: 1000000, name: 'Executive' },
 };
 
-const smtpHost = process.env.SMTP_HOST;
-const smtpPort = Number(process.env.SMTP_PORT || '587');
-const smtpUser = process.env.SMTP_USER;
-const smtpPassword = process.env.SMTP_PASSWORD;
-const emailFrom = process.env.EMAIL_FROM || 'Ki Business Solutions <no-reply@kibusiness.co>';
+async function sendConfirmationEmail(to: string, consultantEmail: string, appointment: Appointment, icsContent: string) {
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = Number(process.env.SMTP_PORT || '587');
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPassword = process.env.SMTP_PASSWORD;
+  const emailFrom = process.env.EMAIL_FROM || 'Ki Business Solutions <no-reply@kibusiness.co>';
 
-function getPackageName(packageId: string) {
-  switch (packageId) {
-    case 'starter':
-      return 'Starter';
-    case 'growth':
-      return 'Growth';
-    case 'scale':
-      return 'Scale';
-    case 'executive':
-      return 'Executive';
-    default:
-      return 'Consultation';
-  }
-}
-
-async function sendConfirmationEmail(to: string, password: string, packageName: string, sessionUrl: string) {
   if (!smtpHost || !smtpUser || !smtpPassword) {
     console.warn('SMTP is not configured; skipping confirmation email.');
     return;
@@ -68,16 +36,16 @@ async function sendConfirmationEmail(to: string, password: string, packageName: 
 
   const mailBody = `Hello,
 
-Thank you for booking the ${packageName} consultation with Ki Business Solutions.
+Your consultation appointment has been confirmed!
 
-Your client portal credentials are ready below:
+Consultant: ${consultantEmail}
+Date: ${appointment.appointment_date}
+Time: ${appointment.appointment_time} ${appointment.appointment_timezone || 'UTC'}
+Package: ${pricingMap[appointment.package_id]?.name || appointment.package_id}
 
-Email: ${to}
-Password: ${password}
+Please add the attached calendar event to your schedule.
 
-Sign in at: ${process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? 'http://localhost:3000'}/login
-
-We have recorded your appointment and assigned your package documents. Please login to view your appointments and download your documents.
+If you have any questions, please contact your consultant directly.
 
 Best regards,
 Ki Business Solutions Team`;
@@ -85,111 +53,94 @@ Ki Business Solutions Team`;
   await transporter.sendMail({
     from: emailFrom,
     to,
-    subject: 'Your Ki Business Solutions Consultation Confirmation',
+    subject: 'Your Consultation Appointment Confirmed',
     text: mailBody,
+    icalEvent: {
+      filename: 'appointment.ics',
+      method: 'REQUEST',
+      content: icsContent,
+    },
   });
 }
 
-export async function POST(request: Request) {
-  if (!stripe || !webhookSecret) {
-    return NextResponse.json(
-      { error: 'Stripe webhook is not configured. Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET.' },
-      { status: 500 }
-    );
-  }
-
-  const payload = await request.text();
-  const signature = request.headers.get('stripe-signature');
-
-  if (!signature) {
-    return NextResponse.json({ error: 'Missing Stripe signature header.' }, { status: 400 });
-  }
-
-  let event: Stripe.Event;
-
+export async function POST(request: NextRequest) {
   try {
-    event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
-  } catch (error: any) {
-    console.error('Webhook signature verification failed:', error);
-    return NextResponse.json({ error: `Webhook error: ${error.message}` }, { status: 400 });
-  }
+    const payload = await request.text();
+    const signature = request.headers.get('stripe-signature');
 
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session;
-    const email = session.customer_details?.email || session.customer_email;
-    const packageId = session.metadata?.packageId as string || 'starter';
-    const packageName = getPackageName(packageId);
-    const amount = session.amount_total || 0;
-    const userEmail = email?.toString() ?? '';
-    const auth = getAdminAuth();
-    const db = getAdminFirestore();
-
-    if (!userEmail) {
-      console.error('Stripe session does not include customer email.');
-      return NextResponse.json({ error: 'Missing customer email in Stripe session.' }, { status: 400 });
+    if (!signature) {
+      console.error('Missing Stripe signature header');
+      return NextResponse.json({ error: 'Missing Stripe signature header.' }, { status: 400 });
     }
 
+    let rawEvent: any;
     try {
-      let userRecord;
-      let plainPassword = crypto.randomBytes(10).toString('hex');
+      rawEvent = JSON.parse(payload);
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON payload.' }, { status: 400 });
+    }
+
+    const session = rawEvent.data?.object;
+    const metadata = session?.metadata as AppointmentMetadata | undefined;
+
+    if (!metadata?.consultant_id) {
+      console.error('Missing consultant_id in Stripe metadata:', metadata);
+      return NextResponse.json({ error: 'Missing consultant_id in Stripe metadata.' }, { status: 400 });
+    }
+
+    const consultantId = metadata.consultant_id;
+    const webhookSecret = await getConsultantWebhookSecret(consultantId);
+
+    if (!webhookSecret) {
+      console.error(`Webhook secret not found for consultant ${consultantId}`);
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
+
+    let event: Stripe.Event;
+    try {
+      const stripe = new Stripe('sk_test_placeholder', { apiVersion: '2023-10-16' });
+      event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+    } catch (error: any) {
+      console.error(`Webhook signature verification failed for consultant ${consultantId}:`, error);
+      return NextResponse.json({ error: `Webhook error: ${error.message}` }, { status: 400 });
+    }
+
+    if (event.type === 'checkout.session.completed') {
+      const sessionObj = event.data.object as Stripe.Checkout.Session;
+      const eventMetadata = sessionObj.metadata as unknown as AppointmentMetadata;
+      const appointmentId = eventMetadata.session_id || (eventMetadata as any).appointment_id;
+
+      if (!appointmentId) {
+        console.error('Missing appointment identifier in webhook metadata', eventMetadata);
+        return NextResponse.json({ received: true }, { status: 200 });
+      }
 
       try {
-        userRecord = await auth.getUserByEmail(userEmail);
-      } catch (error: any) {
-        if (error.code === 'auth/user-not-found') {
-          userRecord = await auth.createUser({
-            email: userEmail,
-            password: plainPassword,
-          });
-        } else {
-          throw error;
+        const appointment = await getAppointment(consultantId, appointmentId);
+        if (!appointment) {
+          console.error(`Appointment not found: ${appointmentId} for consultant ${consultantId}`);
+          return NextResponse.json({ received: true }, { status: 200 });
         }
+
+        await updateAppointmentStatus(consultantId, appointment.id, 'confirmed');
+
+        const consultant = await getConsultantProfile(consultantId);
+        if (!consultant) {
+          throw new Error(`Consultant profile not found: ${consultantId}`);
+        }
+
+        await Promise.allSettled([syncToGoogleCalendar(consultantId, appointment), syncToOutlookCalendar(consultantId, appointment)]);
+
+        const icsContent = generateICS(appointment, consultant.email);
+        await sendConfirmationEmail(eventMetadata.customer_email, consultant.email, appointment, icsContent);
+      } catch (error) {
+        console.error(`Error processing checkout.session.completed for ${consultantId}:`, error);
       }
-
-      if (!userRecord.passwordHash) {
-        plainPassword = crypto.randomBytes(10).toString('hex');
-        await auth.updateUser(userRecord.uid, { password: plainPassword });
-      }
-
-      const userRef = db.collection('users').doc(userRecord.uid);
-      await userRef.set(
-        {
-          email: userEmail,
-          packageId,
-          packageName,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-
-      await db.collection('appointments').add({
-        userId: userRecord.uid,
-        email: userEmail,
-        packageId,
-        packageName,
-        status: 'confirmed',
-        createdAt: new Date().toISOString(),
-        amount,
-        currency: 'usd',
-        stripeSessionId: session.id,
-      });
-
-      const docInfo = documentMappings[packageId] || documentMappings.starter;
-      await db.collection('userDocuments').add({
-        userId: userRecord.uid,
-        userEmail,
-        packageId,
-        title: docInfo.title,
-        url: docInfo.url,
-        createdAt: new Date().toISOString(),
-      });
-
-      await sendConfirmationEmail(userEmail, plainPassword, packageName, process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000');
-    } catch (error) {
-      console.error('Webhook processing failed:', error);
-      return NextResponse.json({ error: 'Webhook processing failed.' }, { status: 500 });
     }
-  }
 
-  return NextResponse.json({ received: true });
+    return NextResponse.json({ received: true }, { status: 200 });
+  } catch (error: any) {
+    console.error('Webhook processing error:', error);
+    return NextResponse.json({ received: true }, { status: 200 });
+  }
 }

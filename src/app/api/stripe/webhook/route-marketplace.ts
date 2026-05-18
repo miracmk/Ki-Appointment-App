@@ -1,18 +1,14 @@
 import { NextResponse, NextRequest } from 'next/server';
 import Stripe from 'stripe';
-import { getAdminAuth, getAdminFirestore } from '@/lib/firebase-admin';
 import {
   getConsultantProfile,
   getConsultantWebhookSecret,
   getAppointment,
   updateAppointmentStatus,
-  getConsultantByEmail,
 } from '@/lib/marketplace';
 import { syncToGoogleCalendar, syncToOutlookCalendar, generateICS } from '@/lib/calendar-sync';
-import { decryptSensitiveData } from '@/lib/encryption';
 import { AppointmentMetadata, Appointment } from '@/types/marketplace';
 import nodemailer from 'nodemailer';
-import crypto from 'crypto';
 
 const pricingMap: Record<string, { amount: number; name: string }> = {
   starter: { amount: 20000, name: 'Starter' },
@@ -145,7 +141,7 @@ export async function POST(request: NextRequest) {
     // Handle different event types
     if (event.type === 'checkout.session.completed') {
       const sessionObj = event.data.object as Stripe.Checkout.Session;
-      const eventMetadata = sessionObj.metadata as AppointmentMetadata;
+      const eventMetadata = sessionObj.metadata as unknown as AppointmentMetadata;
 
       if (!eventMetadata?.consultant_id) {
         console.error('Invalid metadata in completed session');
@@ -153,7 +149,13 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        const appointment = await getAppointment(consultantId, eventMetadata.consultant_id);
+        const appointmentId = eventMetadata.session_id || (eventMetadata as any).appointment_id;
+        if (!appointmentId) {
+          console.error('Missing appointment identifier in webhook metadata', eventMetadata);
+          return NextResponse.json({ received: true }, { status: 200 });
+        }
+
+        const appointment = await getAppointment(consultantId, appointmentId);
         if (appointment) {
           // Update appointment status to confirmed
           await updateAppointmentStatus(consultantId, appointment.id, 'confirmed');

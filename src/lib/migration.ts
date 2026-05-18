@@ -10,7 +10,7 @@
  */
 
 import { getAdminFirestore, getAdminAuth } from './firebase-admin';
-import { encryptSensitiveData } from './encryption';
+import { encryptSensitiveData } from './crypto';
 import { ConsultantProfile } from '@/types/marketplace';
 
 /**

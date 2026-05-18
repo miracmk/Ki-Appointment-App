@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getConsultantProfile } from './marketplace';
-import { decryptSensitiveData, encryptSensitiveData } from './encryption';
+import { decryptSensitiveData, encryptSensitiveData } from './crypto';
 import { getAdminFirestore } from './firebase-admin';
 import { Appointment, ConsultantProfile } from '@/types/marketplace';
 
