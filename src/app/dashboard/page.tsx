@@ -2,248 +2,107 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { getFirebaseAuth, getFirestoreClient } from '@/lib/firebase-client';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
-import { FlatAppointment } from '@/types/marketplace';
+import { onAuthStateChanged } from 'firebase/auth';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import type { FlatAppointment } from '@/types/marketplace';
 
-interface DocumentItem {
-  id: string;
-  title: string;
-  url: string;
-  packageId: string;
-}
-
-const statusLabels: Record<string, { label: string; style: string }> = {
-  confirmed: { label: 'Onaylandı', style: 'bg-green-100 text-green-800' },
-  pending: { label: 'Beklemede', style: 'bg-yellow-100 text-yellow-800' },
-  cancelled: { label: 'İptal', style: 'bg-red-100 text-red-800' },
-  completed: { label: 'Tamamlandı', style: 'bg-blue-100 text-blue-800' },
+const STATUS_STYLES: Record<string, string> = {
+  confirmed: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  pending:   'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+  cancelled: 'bg-red-500/10 text-red-400 border-red-500/20',
+  completed: 'bg-[#00F0FF]/10 text-[#00F0FF] border-[#00F0FF]/20',
+};
+const STATUS_LABELS: Record<string, string> = {
+  confirmed: 'Onaylandı', pending: 'Beklemede', cancelled: 'İptal', completed: 'Tamamlandı',
 };
 
-const onboardingLabels: Record<string, { label: string; style: string }> = {
-  form_pending: { label: 'Başlangıç formu bekleniyor', style: 'bg-orange-100 text-orange-700' },
-  complete: { label: 'Onboarding tamamlandı', style: 'bg-green-100 text-green-700' },
-};
-
-function formatAppointmentDate(isoDate: string, time: string, timezone: string): string {
+function formatDate(iso: string, time: string, tz: string) {
   try {
-    const dt = new Date(isoDate);
-    const datePart = dt.toLocaleDateString('tr-TR', {
-      timeZone: timezone || 'UTC',
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-    return `${datePart}, ${time} (${timezone || 'UTC'})`;
-  } catch {
-    return `${isoDate} ${time}`;
-  }
+    return new Date(iso).toLocaleDateString('tr-TR', { timeZone: tz || 'UTC', day: '2-digit', month: 'long', year: 'numeric' }) + ' ' + time;
+  } catch { return `${iso} ${time}`; }
 }
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+export default function DashboardOverview() {
   const [appointments, setAppointments] = useState<(FlatAppointment & { id: string })[]>([]);
-  const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
-    if (!auth) {
-      setLoading(false);
-      return;
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-
-      setUserEmail(user.email);
+    if (!auth) { setLoading(false); return; }
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user?.email) { setLoading(false); return; }
       const db = getFirestoreClient();
-      if (!db) {
-        setLoading(false);
-        return;
-      }
-
-      const email = user.email ?? '';
-
-      const [appointmentsSnap, docsSnap] = await Promise.all([
-        getDocs(
-          query(
-            collection(db, 'appointments'),
-            where('customer_email', '==', email)
-          )
-        ),
-        getDocs(
-          query(
-            collection(db, 'userDocuments'),
-            where('userEmail', '==', email)
-          )
-        ),
-      ]);
-
-      const appts = appointmentsSnap.docs
-        .map((doc) => ({ id: doc.id, ...(doc.data() as Omit<FlatAppointment, 'id'>) }))
+      if (!db) { setLoading(false); return; }
+      const snap = await getDocs(query(collection(db, 'appointments'), where('customer_email', '==', user.email)));
+      const appts = snap.docs
+        .map((d) => ({ id: d.id, ...(d.data() as Omit<FlatAppointment, 'id'>) }))
         .sort((a, b) => b.created_at - a.created_at);
-
       setAppointments(appts);
-      setDocuments(
-        docsSnap.docs.map((doc) => ({
-          id: doc.id,
-          title: doc.data().title,
-          url: doc.data().url,
-          packageId: doc.data().packageId,
-        }))
-      );
-
       setLoading(false);
     });
+    return () => unsub();
+  }, []);
 
-    return () => unsubscribe();
-  }, [router]);
+  const now       = Date.now();
+  const upcoming  = appointments.filter((a) => a.status === 'confirmed' && new Date(a.appointment_date).getTime() > now);
+  const totalPaid = appointments.filter((a) => a.status !== 'cancelled').reduce((s, a) => s + a.payment_amount, 0);
 
-  const handleLogout = async () => {
-    const auth = getFirebaseAuth();
-    if (!auth) return;
-    await signOut(auth);
-    router.push('/login');
-  };
-
-  if (loading) {
-    return (
-      <section className="min-h-screen bg-slate-50 py-20">
-        <div className="mx-auto max-w-3xl rounded-3xl bg-white p-10 shadow-sm text-center">
-          <p className="text-gray-700">Portal yükleniyor…</p>
-        </div>
-      </section>
-    );
-  }
+  if (loading) return null;
 
   return (
-    <section className="min-h-screen bg-slate-50 py-20">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-8 flex flex-col gap-4 rounded-3xl bg-white p-8 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Müşteri Portalı</h1>
-            <p className="mt-2 text-gray-600">
-              Hoş geldiniz{userEmail ? `, ${userEmail}` : ''}. Randevularınızı ve belgelerinizi buradan takip edebilirsiniz.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/"
-              className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Ana Sayfa
-            </Link>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="inline-flex items-center justify-center rounded-full bg-primary-600 px-6 py-3 text-sm font-medium text-white hover:bg-primary-700"
-            >
-              Çıkış Yap
-            </button>
-          </div>
-        </div>
+    <div>
+      <h1 className="mb-6 text-2xl font-bold text-white">Genel Bakış</h1>
 
-        <div className="grid gap-8 lg:grid-cols-2">
-          <div className="rounded-3xl bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-semibold text-gray-900">Randevularım</h2>
-            {appointments.length === 0 ? (
-              <p className="mt-4 text-gray-600">
-                Henüz randevunuz bulunmuyor. Ana sayfadan bir paket seçerek rezervasyon yapabilirsiniz.
-              </p>
-            ) : (
-              <div className="mt-6 space-y-4">
-                {appointments.map((appt) => {
-                  const statusInfo = statusLabels[appt.status] ?? {
-                    label: appt.status,
-                    style: 'bg-gray-100 text-gray-800',
-                  };
-                  const onboardingInfo = onboardingLabels[appt.onboarding_status];
-                  return (
-                    <div key={appt.id} className="rounded-3xl border border-gray-200 p-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <h3 className="font-semibold text-gray-900">{appt.package_name}</h3>
-                          {appt.consultant_name && (
-                            <p className="mt-0.5 text-sm text-gray-500">
-                              Danışman: {appt.consultant_name}
-                            </p>
-                          )}
-                          <p className="mt-1 text-sm text-gray-600">
-                            {formatAppointmentDate(
-                              appt.appointment_date,
-                              appt.appointment_time,
-                              appt.appointment_timezone
-                            )}
-                          </p>
-                          <p className="mt-1 text-sm text-gray-500">
-                            Ödeme: ${(appt.payment_amount / 100).toLocaleString()}
-                          </p>
-                        </div>
-                        <span
-                          className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${statusInfo.style}`}
-                        >
-                          {statusInfo.label}
-                        </span>
-                      </div>
-                      {onboardingInfo && appt.onboarding_status === 'form_pending' && (
-                        <div className="mt-3 flex items-center justify-between rounded-2xl bg-orange-50 px-4 py-2">
-                          <span className={`text-xs font-medium ${onboardingInfo.style}`}>
-                            {onboardingInfo.label}
-                          </span>
-                          <Link
-                            href="/onboarding"
-                            className="text-xs font-semibold text-orange-700 underline hover:text-orange-900"
-                          >
-                            Formu Doldur →
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+      {/* Stats */}
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {[
+          { label: 'Yaklaşan Randevu', value: upcoming.length, color: 'text-[#00F0FF]' },
+          { label: 'Toplam Randevu', value: appointments.length, color: 'text-white' },
+          { label: 'Toplam Ödeme', value: `$${(totalPaid / 100).toLocaleString()}`, color: 'text-emerald-400' },
+        ].map((s) => (
+          <div key={s.label} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+            <p className="text-sm text-white/40">{s.label}</p>
+            <p className={`mt-1 text-3xl font-bold ${s.color}`}>{s.value}</p>
           </div>
-
-          <div className="rounded-3xl bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-semibold text-gray-900">Belgelerim</h2>
-            {documents.length === 0 ? (
-              <p className="mt-4 text-gray-600">
-                Belgeleriniz danışmanlık onaylandıktan sonra burada görünecektir.
-              </p>
-            ) : (
-              <div className="mt-6 space-y-4">
-                {documents.map((doc) => (
-                  <div key={doc.id} className="rounded-3xl border border-gray-200 p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{doc.title}</h3>
-                        <p className="text-sm text-gray-500">Paket: {doc.packageId}</p>
-                      </div>
-                      <a
-                        href={doc.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded-full bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-                      >
-                        İndir
-                      </a>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        ))}
       </div>
-    </section>
+
+      {/* Upcoming */}
+      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-semibold text-white">Yaklaşan Randevular</h2>
+          <Link href="/dashboard/appointments" className="text-sm text-[#00F0FF] hover:opacity-80">Tümünü Gör →</Link>
+        </div>
+        {upcoming.length === 0 ? (
+          <div className="py-10 text-center">
+            <p className="text-white/40">Yaklaşan randevunuz yok.</p>
+            <Link href="/marketplace" className="mt-3 inline-block text-sm text-[#00F0FF] hover:opacity-80">
+              Danışman Bul →
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {upcoming.slice(0, 3).map((appt) => (
+              <div key={appt.id} className="flex items-center justify-between gap-4 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+                <div>
+                  <p className="font-medium text-white">{appt.package_name}</p>
+                  <p className="mt-0.5 text-sm text-white/40">{appt.consultant_name} · {formatDate(appt.appointment_date, appt.appointment_time, appt.appointment_timezone)}</p>
+                  {appt.meet_link && (
+                    <a href={appt.meet_link} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 text-xs text-[#00F0FF] hover:opacity-80">
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.869V15.13a1 1 0 01-1.447.894L15 14M3 8h12a2 2 0 012 2v4a2 2 0 01-2 2H3a2 2 0 01-2-2V10a2 2 0 012-2z" /></svg>
+                      Google Meet Linki
+                    </a>
+                  )}
+                </div>
+                <span className={`shrink-0 rounded-lg border px-2.5 py-1 text-xs font-medium ${STATUS_STYLES[appt.status] ?? ''}`}>
+                  {STATUS_LABELS[appt.status] ?? appt.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

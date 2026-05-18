@@ -1,11 +1,64 @@
+// ─── Roles & Modes ──────────────────────────────────────────────────────────
+
 export type UserRole = 'admin' | 'supervisor' | 'consultant' | 'consulter';
 
-/** How a consultant receives payments through the platform */
 export type PaymentMode =
-  | 'ki_escrow'   // Ki Business collects, transfers to consultant minus fees
-  | 'own_keys'    // Consultant uses own Stripe keys; owes 10% by contract
-  | 'ki_connect'  // Stripe Connect: auto-split at checkout (10% platform fee)
-  | 'direct';     // Ki Business itself is the consultant; no platform fee
+  | 'ki_escrow'   // Ki Business holds funds, transfers minus fees
+  | 'own_keys'    // Consultant's own Stripe; owes 10% via Ki Wallet
+  | 'ki_connect'  // Stripe Connect: auto-split at checkout
+  | 'direct';     // Ki Business is the consultant; no platform fee
+
+// ─── Marketplace Categories ──────────────────────────────────────────────────
+
+export type MarketplaceCategory =
+  | 'accounting_tax'
+  | 'law_corporate'
+  | 'immigration_visa'
+  | 'financial_investment'
+  | 'customs_trade'
+  | 'trademark_ip';
+
+// ─── KYC ────────────────────────────────────────────────────────────────────
+
+export type KycStatus = 'none' | 'pending' | 'verified' | 'rejected';
+
+export interface KycDocument {
+  type: string;
+  url: string;
+  uploaded_at: number;
+}
+
+export interface KycSubmission {
+  uid: string;
+  user_type: 'consultant' | 'client';
+  documents: KycDocument[];
+  status: KycStatus;
+  stripe_identity_session_id?: string;
+  rejection_reason?: string;
+  submitted_at: number;
+  reviewed_at?: number;
+  reviewer_uid?: string;
+}
+
+// ─── Availability ────────────────────────────────────────────────────────────
+
+export interface DayAvailability {
+  enabled: boolean;
+  start: string;  // "09:00"
+  end: string;    // "18:00"
+}
+
+export interface WeeklyAvailability {
+  monday:    DayAvailability;
+  tuesday:   DayAvailability;
+  wednesday: DayAvailability;
+  thursday:  DayAvailability;
+  friday:    DayAvailability;
+  saturday:  DayAvailability;
+  sunday:    DayAvailability;
+}
+
+// ─── Stripe Settings ────────────────────────────────────────────────────────
 
 export interface StripeSettings {
   api_key_encrypted?: string;
@@ -17,6 +70,8 @@ export interface StripeSettings {
   is_active: boolean;
   updated_at?: number;
 }
+
+// ─── Calendar Integrations ──────────────────────────────────────────────────
 
 export interface GoogleCalendarIntegration {
   refresh_token_encrypted?: string;
@@ -44,40 +99,93 @@ export interface OutlookCalendarIntegration {
   updated_at?: number;
 }
 
+// ─── Consultant Profile ──────────────────────────────────────────────────────
+
 export interface ConsultantProfile {
   uid: string;
   email: string;
   name: string;
   role: UserRole;
   is_active: boolean;
+
+  // Marketplace display
   photo_url?: string;
   title?: string;
+  bio?: string;
   expertise?: string;
+  location?: string;
+  languages: string[];
+  categories: MarketplaceCategory[];
+  sub_specialties: string[];
+  hourly_rate_cents: number;
+  rating: number;
+  review_count: number;
+
+  // Special flags
+  is_ki_business?: boolean;
 
   // Payment configuration
   payment_mode: PaymentMode;
-  /** Stripe Connect account ID (required for ki_connect and ki_escrow) */
   stripe_connect_account_id?: string;
-  /** Running total (cents) of platform fee owed under own_keys mode */
   platform_fee_owed_cents?: number;
+  ki_wallet_cents: number;           // Mode B: must cover 10% fee per booking
 
+  // KYC
+  kyc_status: KycStatus;
+  kyc_fee_paid: boolean;
+  stripe_identity_session_id?: string;
+  kyc_rejection_reason?: string;
+
+  // Integrations
   stripe_settings: StripeSettings;
   google_calendar: GoogleCalendarIntegration;
   outlook_calendar: OutlookCalendarIntegration;
+  availability?: WeeklyAvailability;
+  meet_link?: string;
 
+  // Meta
   timezone?: string;
   onboarding_status?: 'email_pending' | 'form_pending' | 'complete';
   created_at: number;
   updated_at: number;
 }
 
+// ─── Client (User) Profile ───────────────────────────────────────────────────
+
+export interface ClientProfile {
+  uid: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  phone?: string;
+  address?: string;
+  timezone: string;
+  kyc_status: KycStatus;
+  kyc_documents?: KycDocument[];
+  created_at: number;
+  updated_at: number;
+}
+
+// ─── Public Consultant Info (for marketplace) ────────────────────────────────
+
 export interface PublicConsultantInfo {
   uid: string;
   name: string;
   title?: string;
-  expertise?: string;
+  bio?: string;
   photo_url?: string;
+  categories: MarketplaceCategory[];
+  sub_specialties: string[];
+  languages: string[];
+  hourly_rate_cents: number;
+  rating: number;
+  review_count: number;
+  location?: string;
+  kyc_status: KycStatus;
+  is_ki_business?: boolean;
 }
+
+// ─── Appointments ────────────────────────────────────────────────────────────
 
 export interface AppointmentMetadata {
   consultant_id: string;
@@ -87,7 +195,6 @@ export interface AppointmentMetadata {
   appointment_time: string;
   appointment_timezone?: string;
   package_id: string;
-  /** payment mode at time of booking */
   payment_mode?: PaymentMode;
   session_id?: string;
   stripe_session_id?: string;
@@ -104,21 +211,11 @@ export interface Appointment {
   package_id: string;
   stripe_session_id?: string;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-  calendar_event_ids?: {
-    google?: string;
-    outlook?: string;
-  };
+  meet_link?: string;
+  calendar_event_ids?: { google?: string; outlook?: string };
   created_at: number;
   updated_at: number;
   payment_amount: number;
-}
-
-export interface FeeBreakdown {
-  gross_cents: number;
-  stripe_fee_cents: number;
-  net_cents: number;
-  platform_fee_cents: number;
-  consultant_payout_cents: number;
 }
 
 export interface FlatAppointment {
@@ -136,21 +233,90 @@ export interface FlatAppointment {
   payment_amount: number;
   payment_mode: PaymentMode;
   stripe_session_id?: string;
-  /** Stripe Transfer ID (after escrow payout) */
   stripe_transfer_id?: string;
-
-  // Fee breakdown (populated at webhook time)
+  meet_link?: string;
   stripe_fee_cents?: number;
   platform_fee_cents?: number;
   consultant_payout_cents?: number;
-
-  /** Whether the consultant has been paid (for escrow mode) */
   payout_status?: 'pending' | 'paid' | 'na';
-
   onboarding_status: 'form_pending' | 'complete';
   created_at: number;
   updated_at: number;
 }
+
+// ─── Fees ────────────────────────────────────────────────────────────────────
+
+export interface FeeBreakdown {
+  gross_cents: number;
+  stripe_fee_cents: number;
+  net_cents: number;
+  platform_fee_cents: number;
+  consultant_payout_cents: number;
+}
+
+// ─── Reviews ─────────────────────────────────────────────────────────────────
+
+export interface Review {
+  id: string;
+  appointment_id: string;
+  consultant_id: string;
+  client_uid: string;
+  client_name: string;
+  rating: number;       // 1-5
+  comment: string;
+  created_at: number;
+}
+
+// ─── Wallet ──────────────────────────────────────────────────────────────────
+
+export type WalletTransactionType =
+  | 'topup_stripe'
+  | 'topup_bank'
+  | 'deduction_platform_fee'
+  | 'refund';
+
+export interface WalletTransaction {
+  id: string;
+  consultant_id: string;
+  amount_cents: number;
+  type: WalletTransactionType;
+  appointment_id?: string;
+  stripe_session_id?: string;
+  note?: string;
+  created_at: number;
+}
+
+// ─── Tickets ─────────────────────────────────────────────────────────────────
+
+export type TicketType     = 'marketplace' | 'ki_business' | 'technical';
+export type TicketStatus   = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+export interface TicketMessage {
+  id: string;
+  sender_uid: string;
+  sender_name: string;
+  sender_role: 'user' | 'admin';
+  content: string;
+  created_at: number;
+}
+
+export interface Ticket {
+  id: string;
+  type: TicketType;
+  subject: string;
+  description: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  user_id: string;
+  user_email: string;
+  assigned_to?: string;
+  messages: TicketMessage[];
+  created_at: number;
+  updated_at: number;
+}
+
+// ─── Onboarding ──────────────────────────────────────────────────────────────
 
 export interface OnboardingProfile {
   uid?: string;

@@ -9,6 +9,7 @@ import {
   calculateFees,
 } from '@/lib/marketplace';
 import { syncToGoogleCalendar, syncToOutlookCalendar, generateICS } from '@/lib/calendar-sync';
+import { createMeetLink } from '@/lib/google-meet';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase-admin';
 import { AppointmentMetadata, Appointment, FlatAppointment, PaymentMode } from '@/types/marketplace';
 import nodemailer from 'nodemailer';
@@ -215,9 +216,45 @@ export async function POST(request: NextRequest) {
     }
 
     if (event.type === 'checkout.session.completed') {
-      const sessionObj = event.data.object as Stripe.Checkout.Session;
-      const eventMetadata = sessionObj.metadata as unknown as AppointmentMetadata;
-      const appointmentId = eventMetadata.session_id || (eventMetadata as any).appointment_id;
+      const sessionObj   = event.data.object as Stripe.Checkout.Session;
+      const eventMetadata = sessionObj.metadata as unknown as AppointmentMetadata & { type?: string };
+
+      // ── KYC fee paid ─────────────────────────────────────────────────
+      if (eventMetadata.type === 'kyc_fee') {
+        const db = getAdminFirestore();
+        await db.collection('users').doc(consultantId).update({
+          kyc_fee_paid: true,
+          kyc_status:   'pending',
+          updated_at:   Date.now(),
+        });
+        await db.collection('kyc_submissions').doc(consultantId).set(
+          { uid: consultantId, status: 'pending', submitted_at: Date.now() },
+          { merge: true }
+        );
+        return NextResponse.json({ received: true }, { status: 200 });
+      }
+
+      // ── Wallet top-up ─────────────────────────────────────────────────
+      if (eventMetadata.type === 'wallet_topup') {
+        const db          = getAdminFirestore();
+        const amountCents = sessionObj.amount_total ?? 0;
+        await db.runTransaction(async (tx) => {
+          const ref  = db.collection('users').doc(consultantId);
+          const snap = await tx.get(ref);
+          const cur  = (snap.data()?.ki_wallet_cents as number) ?? 0;
+          tx.update(ref, { ki_wallet_cents: cur + amountCents, updated_at: Date.now() });
+          tx.set(db.collection('wallet_transactions').doc(), {
+            consultant_id:     consultantId,
+            amount_cents:      amountCents,
+            type:              'topup_stripe',
+            stripe_session_id: sessionObj.id,
+            created_at:        Date.now(),
+          });
+        });
+        return NextResponse.json({ received: true }, { status: 200 });
+      }
+
+      const appointmentId = eventMetadata.session_id || (eventMetadata as Record<string, string>).appointment_id;
 
       if (!appointmentId) {
         console.error('Webhook metadata içinde appointment ID yok', eventMetadata);
@@ -239,6 +276,25 @@ export async function POST(request: NextRequest) {
 
         await updateAppointmentStatus(consultantId, appointmentId, 'confirmed');
 
+        // ── Mode B: deduct platform fee from Ki Wallet ────────────────
+        if (paymentMode === 'own_keys') {
+          const fees = calculateFees(appointment.payment_amount);
+          const db   = getAdminFirestore();
+          await db.runTransaction(async (tx) => {
+            const ref  = db.collection('users').doc(consultantId);
+            const snap = await tx.get(ref);
+            const cur  = (snap.data()?.ki_wallet_cents as number) ?? 0;
+            tx.update(ref, { ki_wallet_cents: Math.max(0, cur - fees.platform_fee_cents), updated_at: Date.now() });
+            tx.set(db.collection('wallet_transactions').doc(), {
+              consultant_id:  consultantId,
+              amount_cents:   -fees.platform_fee_cents,
+              type:           'deduction_platform_fee',
+              appointment_id: appointmentId,
+              created_at:     Date.now(),
+            });
+          });
+        }
+
         await writeFlatAppointment(
           appointmentId,
           { ...appointment, id: appointmentId },
@@ -246,6 +302,29 @@ export async function POST(request: NextRequest) {
           sessionObj.id,
           paymentMode
         );
+
+        // ── Google Meet auto-generation ───────────────────────────────
+        try {
+          const startIso = appointment.appointment_date;
+          const endIso   = new Date(new Date(startIso).getTime() + 60 * 60 * 1000).toISOString();
+          const meetLink = await createMeetLink({
+            title:          `Ki Business – ${consultant.name}`,
+            startIso,
+            endIso,
+            attendeeEmails: [eventMetadata.customer_email, consultant.email],
+            appointmentId,
+          });
+          if (meetLink) {
+            const db = getAdminFirestore();
+            await Promise.all([
+              db.collection('consultants').doc(consultantId).collection('appointments')
+                .doc(appointmentId).update({ meet_link: meetLink }),
+              db.collection('appointments').doc(appointmentId).update({ meet_link: meetLink }),
+            ]);
+          }
+        } catch (meetErr) {
+          console.error('Google Meet oluşturma hatası:', meetErr);
+        }
 
         let passwordResetLink: string | null = null;
         try {

@@ -4,19 +4,125 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --surface:     #0A0B0F;
+    --surface-50:  #12141A;
+    --surface-100: #1A1D26;
+    --surface-200: #222632;
+    --text-primary:   #F0F4FF;
+    --text-secondary: rgba(240,244,255,0.60);
+    --text-muted:     rgba(240,244,255,0.35);
+    --aurora-cyan:   #00F0FF;
+    --aurora-blue:   #0047FF;
+    --aurora-purple: #B000FF;
+    --aurora-pink:   #FF006E;
+    --glass-border:  rgba(255,255,255,0.10);
+    --glass-bg:      rgba(255,255,255,0.04);
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+  html {
+    scroll-behavior: smooth;
   }
+
+  body {
+    background-color: var(--surface);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: rgba(0, 240, 255, 0.25);
+    color: #fff;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface-50); }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
 }
 
-@layer base {
-  body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+@layer components {
+  /* Glass card base */
+  .glass-card {
+    @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300;
+  }
+  .glass-card-hover:hover {
+    @apply border-white/20 bg-white/8;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 40px rgba(0,240,255,0.08), inset 0 1px 0 rgba(255,255,255,0.10);
+    transform: translateY(-2px);
+  }
+
+  /* Gradient heading text */
+  .gradient-text {
+    background: linear-gradient(135deg, #00F0FF 0%, #0047FF 50%, #B000FF 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-text-warm {
+    background: linear-gradient(135deg, #FF006E 0%, #B000FF 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Aurora button */
+  .btn-aurora {
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-xl px-6 py-3 font-semibold text-white transition-all duration-300;
+    background: linear-gradient(135deg, #0047FF 0%, #00F0FF 100%);
+    box-shadow: 0 0 30px rgba(0,71,255,0.35);
+  }
+  .btn-aurora:hover {
+    box-shadow: 0 0 50px rgba(0,71,255,0.55);
+    transform: translateY(-1px);
+  }
+  .btn-aurora:active { transform: translateY(0); }
+
+  /* Ghost button */
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-xl border border-white/15 px-6 py-3 font-semibold text-white/80 transition-all duration-200 hover:border-white/30 hover:bg-white/5 hover:text-white;
+  }
+
+  /* Aurora glow blob */
+  .aurora-blob {
+    @apply pointer-events-none absolute rounded-full blur-[120px];
+  }
+
+  /* Input dark */
+  .input-dark {
+    @apply w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 outline-none transition;
+  }
+  .input-dark:focus {
+    @apply border-aurora-cyan/50 ring-2 ring-aurora-cyan/20;
+  }
+
+  /* Badge */
+  .badge-aurora {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-aurora-cyan/30 bg-aurora-cyan/10 px-3 py-1 text-xs font-semibold text-aurora-cyan;
+  }
+  .badge-purple {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-aurora-purple/30 bg-aurora-purple/10 px-3 py-1 text-xs font-semibold text-aurora-purple;
+  }
+  .badge-glass {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-white/70;
+  }
+
+  /* Section divider */
+  .section-divider {
+    @apply border-t border-white/5;
+  }
+
+  /* Hero grid overlay */
+  .hero-grid {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px);
+    background-size: 60px 60px;
   }
 }

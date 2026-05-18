@@ -140,6 +140,18 @@ export async function POST(request: NextRequest) {
     let session: Stripe.Checkout.Session;
 
     if (paymentMode === 'own_keys') {
+      // ── Mode B: wallet must cover the 10% platform fee ───────────────
+      if ((consultant.ki_wallet_cents ?? 0) < fees.platform_fee_cents) {
+        return NextResponse.json(
+          {
+            error: `Yetersiz Ki Wallet bakiyesi. Gereken: $${(fees.platform_fee_cents / 100).toFixed(2)}, Mevcut: $${((consultant.ki_wallet_cents ?? 0) / 100).toFixed(2)}. Lütfen cüzdanınızı doldurun.`,
+            required_cents: fees.platform_fee_cents,
+            available_cents: consultant.ki_wallet_cents ?? 0,
+          },
+          { status: 402 }
+        );
+      }
+
       // ── Consultant's own Stripe account ──────────────────────────────
       const stripeApiKey = await getConsultantStripeApiKey(consultantId);
       if (!stripeApiKey) {

@@ -1,0 +1,138 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { getFirebaseAuth, getFirestoreClient } from '@/lib/firebase-client';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import type { ConsultantProfile } from '@/types/marketplace';
+
+export default function IntegrationsPage() {
+  const [profile, setProfile]   = useState<ConsultantProfile | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [apiKey, setApiKey]     = useState('');
+  const [webhook, setWebhook]   = useState('');
+  const [saving, setSaving]     = useState(false);
+  const [msg, setMsg]           = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+
+  useEffect(() => {
+    const auth = getFirebaseAuth();
+    if (!auth) { setLoading(false); return; }
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) { setLoading(false); return; }
+      const db = getFirestoreClient();
+      if (!db) { setLoading(false); return; }
+      const d = await getDoc(doc(db, 'users', user.uid));
+      if (d.exists()) setProfile(d.data() as ConsultantProfile);
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  const handleStripeUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile?.uid) return;
+    setSaving(true);
+    setMsg(null);
+    try {
+      const res = await fetch('/api/admin/consultant-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consultantId: profile.uid, stripeApiKey: apiKey, stripeWebhookSecret: webhook }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Hata');
+      setMsg({ type: 'ok', text: 'Stripe ayarları kaydedildi.' });
+      setApiKey('');
+      setWebhook('');
+    } catch (err: unknown) {
+      setMsg({ type: 'err', text: err instanceof Error ? err.message : 'Hata oluştu.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#B000FF] border-t-transparent" />
+      </div>
+    );
+  }
+
+  const googleConnected  = profile?.google_calendar?.connected ?? false;
+  const outlookConnected = profile?.outlook_calendar?.connected ?? false;
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <h1 className="text-2xl font-bold text-white">Entegrasyonlar</h1>
+
+      {/* Stripe */}
+      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-white">Stripe</h2>
+          <span className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${profile?.stripe_settings?.is_active ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' : 'border-white/10 bg-white/5 text-white/40'}`}>
+            {profile?.stripe_settings?.is_active ? 'Bağlı' : 'Bağlı Değil'}
+          </span>
+        </div>
+        <p className="text-sm text-white/40">Kendi Stripe hesabınızı bağlayın (Mode B — Kendi Anahtarlar).</p>
+        <form onSubmit={handleStripeUpdate} className="space-y-3">
+          <div>
+            <label htmlFor="stripe-key" className="mb-1.5 block text-sm text-white/60">Stripe Secret Key</label>
+            <input id="stripe-key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk_live_..." className="input-dark w-full font-mono text-sm" autoComplete="off" />
+          </div>
+          <div>
+            <label htmlFor="stripe-webhook" className="mb-1.5 block text-sm text-white/60">Webhook Secret</label>
+            <input id="stripe-webhook" type="password" value={webhook} onChange={(e) => setWebhook(e.target.value)} placeholder="whsec_..." className="input-dark w-full font-mono text-sm" autoComplete="off" />
+          </div>
+          {msg && <p className={`text-sm ${msg.type === 'ok' ? 'text-emerald-400' : 'text-red-400'}`}>{msg.text}</p>}
+          <button type="submit" disabled={saving || !apiKey || !webhook} className="rounded-xl bg-gradient-to-r from-[#B000FF] to-[#0047FF] px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
+            {saving ? 'Kaydediliyor…' : 'Stripe Ayarlarını Kaydet'}
+          </button>
+        </form>
+      </div>
+
+      {/* Google Calendar */}
+      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor">
+              <path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm-7.5 13.5a4.5 4.5 0 110-9 4.5 4.5 0 010 9z" className="text-[#4285F4]" />
+            </svg>
+            <h2 className="font-semibold text-white">Google Calendar</h2>
+          </div>
+          <span className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${googleConnected ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' : 'border-white/10 bg-white/5 text-white/40'}`}>
+            {googleConnected ? 'Bağlı' : 'Bağlı Değil'}
+          </span>
+        </div>
+        <p className="mt-2 text-sm text-white/40">Randevularınız otomatik olarak Google Calendar&apos;ınıza eklenir.</p>
+        <a
+          href="/api/auth/google-calendar"
+          className="mt-4 inline-block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+        >
+          {googleConnected ? 'Yeniden Bağla' : 'Google ile Bağla'}
+        </a>
+      </div>
+
+      {/* Outlook */}
+      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <svg viewBox="0 0 24 24" className="h-6 w-6 text-[#0078D4]" fill="currentColor">
+              <path d="M7.5 5.25h9A2.25 2.25 0 0118.75 7.5v9a2.25 2.25 0 01-2.25 2.25h-9A2.25 2.25 0 015.25 16.5v-9A2.25 2.25 0 017.5 5.25zm4.5 2.25a3 3 0 100 6 3 3 0 000-6z" />
+            </svg>
+            <h2 className="font-semibold text-white">Outlook Calendar</h2>
+          </div>
+          <span className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${outlookConnected ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' : 'border-white/10 bg-white/5 text-white/40'}`}>
+            {outlookConnected ? 'Bağlı' : 'Bağlı Değil'}
+          </span>
+        </div>
+        <p className="mt-2 text-sm text-white/40">Microsoft Outlook takvim entegrasyonu.</p>
+        <a
+          href="/api/auth/outlook-calendar"
+          className="mt-4 inline-block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+        >
+          {outlookConnected ? 'Yeniden Bağla' : 'Outlook ile Bağla'}
+        </a>
+      </div>
+    </div>
+  );
+}
