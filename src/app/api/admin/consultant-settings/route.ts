@@ -8,6 +8,7 @@ import {
   disconnectGoogleCalendar,
   disconnectOutlookCalendar,
 } from '@/lib/consultant-settings';
+import { PaymentMode } from '@/types/marketplace';
 
 /**
  * POST /api/admin/consultant-settings
@@ -65,6 +66,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing consultant_id' }, { status: 400 });
     }
 
+    if (action === 'update_profile') {
+      const { name, title, expertise, photo_url } = body;
+      if (!name) {
+        return NextResponse.json({ error: 'name alanı zorunlu.' }, { status: 400 });
+      }
+      const db = await import('@/lib/firebase-admin').then((m) => m.getAdminFirestore());
+      await db.collection('users').doc(consultant_id).set(
+        { name, title: title || '', expertise: expertise || '', photo_url: photo_url || '', updated_at: Date.now() },
+        { merge: true }
+      );
+      return NextResponse.json({ success: true, message: 'Profil güncellendi.' });
+    }
+
     if (action === 'update_stripe') {
       const { api_key, webhook_secret } = body;
       if (!api_key || !webhook_secret) {
@@ -114,6 +128,23 @@ export async function POST(request: NextRequest) {
     if (action === 'disconnect_outlook') {
       await disconnectOutlookCalendar(consultant_id);
       return NextResponse.json({ success: true, message: 'Outlook Calendar disconnected' });
+    }
+
+    if (action === 'update_payment_mode') {
+      const { payment_mode } = body;
+      const validModes: PaymentMode[] = ['ki_escrow', 'own_keys', 'ki_connect', 'direct'];
+      if (!payment_mode || !validModes.includes(payment_mode)) {
+        return NextResponse.json(
+          { error: `Geçersiz payment_mode. Geçerli değerler: ${validModes.join(', ')}` },
+          { status: 400 }
+        );
+      }
+      const db = await import('@/lib/firebase-admin').then((m) => m.getAdminFirestore());
+      await db.collection('users').doc(consultant_id).set(
+        { payment_mode, updated_at: Date.now() },
+        { merge: true }
+      );
+      return NextResponse.json({ success: true, message: 'Ödeme modu güncellendi.' });
     }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });

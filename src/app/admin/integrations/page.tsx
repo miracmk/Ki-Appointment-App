@@ -1,46 +1,99 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getFirebaseAuth } from '@/lib/firebase-client';
+import { useSearchParams } from 'next/navigation';
+import { getFirebaseAuth, getFirebaseClientApp } from '@/lib/firebase-client';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
+import type { PaymentMode } from '@/types/marketplace';
+
+type ActiveTab = 'payment' | 'stripe' | 'profile' | 'google' | 'outlook';
+
+const paymentModeLabels: Record<PaymentMode, string> = {
+  ki_escrow: 'Ki Business Escrow (platform tahsil eder, danışmana transfer)',
+  own_keys: 'Kendi API Anahtarları (danışman tahsil eder, %10 sözleşme)',
+  ki_connect: 'Stripe Connect (otomatik %10 kesinti)',
+  direct: 'Ki Business Direkt (platform danışmanın kendisi)',
+};
 
 export default function ConsultantIntegrationsPage() {
+  const searchParams = useSearchParams();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [consultantId, setConsultantId] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [webhookSecret, setWebhookSecret] = useState('');
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<ActiveTab>('payment');
+  const [feedback, setFeedback] = useState<{ message: string; ok: boolean } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [stripeForm, setStripeForm] = useState({ consultant_id: '', api_key: '', webhook_secret: '' });
+  const [profileForm, setProfileForm] = useState({ consultant_id: '', name: '', title: '', expertise: '', photo_url: '' });
+  const [googleForm, setGoogleForm] = useState({ consultant_id: '', refresh_token: '', calendar_id: 'primary' });
+  const [outlookForm, setOutlookForm] = useState({ consultant_id: '', refresh_token: '' });
+
+  // Payment mode tab state
+  const [paymentConsultantId, setPaymentConsultantId] = useState('');
+  const [selectedMode, setSelectedMode] = useState<PaymentMode>('own_keys');
+  const [connectAccountId, setConnectAccountId] = useState<string | null>(null);
+  const [connectLoading, setConnectLoading] = useState(false);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
-    if (!auth) {
-      setIsAdmin(false);
-      setLoading(false);
-      return;
-    }
+    if (!auth) { setLoading(false); return; }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        setUserEmail(null);
-        setIsAdmin(false);
-        return;
-      }
+      if (!user) { setUserEmail(null); setIsAdmin(false); setLoading(false); return; }
 
       const email = user.email ?? '';
       setUserEmail(email);
-
       const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? 'admin@kibusiness.co')
         .split(',')
-        .map((item) => item.trim().toLowerCase());
-
+        .map((e) => e.trim().toLowerCase());
       setIsAdmin(adminEmails.includes(email.toLowerCase()));
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
+
+  // Handle Stripe Connect OAuth redirect params
+  useEffect(() => {
+    const connectSuccess = searchParams.get('connect_success');
+    const connectError = searchParams.get('connect_error');
+    const accountId = searchParams.get('account_id');
+
+    if (connectSuccess) {
+      setActiveTab('payment');
+      setFeedback({ message: `Stripe Connect bağlandı! Hesap: ${accountId || ''}`, ok: true });
+      if (accountId) setConnectAccountId(accountId);
+    } else if (connectError) {
+      setActiveTab('payment');
+      setFeedback({ message: `Stripe Connect hatası: ${decodeURIComponent(connectError)}`, ok: false });
+    }
+  }, [searchParams]);
+
+  // Load consultant's current payment mode and connect account when consultant_id changes
+  useEffect(() => {
+    if (!paymentConsultantId.trim()) { setConnectAccountId(null); return; }
+
+    const loadConsultantData = async () => {
+      try {
+        const app = getFirebaseClientApp();
+        if (!app) return;
+        const db = getFirestore(app);
+        const snap = await getDoc(doc(db, 'users', paymentConsultantId.trim()));
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.payment_mode) setSelectedMode(data.payment_mode as PaymentMode);
+          setConnectAccountId(data.stripe_connect_account_id ?? null);
+        }
+      } catch {
+        // silently ignore
+      }
+    };
+
+    loadConsultantData();
+  }, [paymentConsultantId]);
 
   const handleLogout = async () => {
     const auth = getFirebaseAuth();
@@ -50,59 +103,99 @@ export default function ConsultantIntegrationsPage() {
     setIsAdmin(false);
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setLoading(true);
+  const getToken = async (): Promise<string> => {
+    const auth = getFirebaseAuth();
+    const user = auth?.currentUser;
+    if (!user) throw new Error('Oturum bulunamadı.');
+    return user.getIdToken();
+  };
+
+  const callApi = async (body: Record<string, string>) => {
+    setSubmitting(true);
     setFeedback(null);
-
     try {
-      const auth = getFirebaseAuth();
-      const currentUser = auth?.currentUser;
-      if (!currentUser) {
-        throw new Error('Authentication required. Please sign in again.');
-      }
-
-      const token = await currentUser.getIdToken();
-      const response = await fetch('/api/admin/consultant-settings', {
+      const token = await getToken();
+      const res = await fetch('/api/admin/consultant-settings', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          action: 'update_stripe',
-          consultant_id: consultantId,
-          api_key: apiKey,
-          webhook_secret: webhookSecret,
-        }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update consultant Stripe settings.');
-      }
-
-      setFeedback('Consultant Stripe settings saved successfully.');
-      setConsultantId('');
-      setApiKey('');
-      setWebhookSecret('');
-    } catch (error: any) {
-      console.error('Integration form error:', error);
-      setFeedback(error.message || 'Unable to save consultant settings.');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'İşlem başarısız.');
+      setFeedback({ message: data.message || 'Kaydedildi.', ok: true });
+    } catch (err: any) {
+      setFeedback({ message: err.message || 'Hata oluştu.', ok: false });
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
+
+  const handleStripe = (e: React.FormEvent) => {
+    e.preventDefault();
+    callApi({ action: 'update_stripe', ...stripeForm });
+  };
+
+  const handleProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    callApi({ action: 'update_profile', ...profileForm });
+  };
+
+  const handleGoogle = (e: React.FormEvent) => {
+    e.preventDefault();
+    callApi({ action: 'update_google', ...googleForm });
+  };
+
+  const handleOutlook = (e: React.FormEvent) => {
+    e.preventDefault();
+    callApi({ action: 'update_outlook', ...outlookForm });
+  };
+
+  const handlePaymentMode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentConsultantId.trim()) {
+      setFeedback({ message: 'Danışman UID giriniz.', ok: false });
+      return;
+    }
+    callApi({ action: 'update_payment_mode', consultant_id: paymentConsultantId.trim(), payment_mode: selectedMode });
+  };
+
+  const handleConnectOAuth = async () => {
+    if (!paymentConsultantId.trim()) {
+      setFeedback({ message: 'Önce Danışman UID giriniz.', ok: false });
+      return;
+    }
+    setConnectLoading(true);
+    setFeedback(null);
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/stripe/connect/oauth?consultant_id=${encodeURIComponent(paymentConsultantId.trim())}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'OAuth URL oluşturulamadı.');
+      window.location.href = data.oauth_url;
+    } catch (err: any) {
+      setFeedback({ message: err.message || 'Hata oluştu.', ok: false });
+    } finally {
+      setConnectLoading(false);
+    }
+  };
+
+  const set = <T extends Record<string, string>>(setter: React.Dispatch<React.SetStateAction<T>>, field: keyof T) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setter((prev) => ({ ...prev, [field]: e.target.value }));
+
+  if (loading) return null;
 
   if (!userEmail) {
     return (
       <section className="min-h-screen bg-slate-50 py-20">
-        <div className="mx-auto max-w-3xl rounded-3xl bg-white p-10 shadow-sm text-center">
-          <h1 className="text-2xl font-semibold text-gray-900">Consultant Integrations</h1>
-          <p className="mt-3 text-gray-600">Please sign in to manage consultant Stripe integration settings.</p>
+        <div className="mx-auto max-w-2xl rounded-3xl bg-white p-10 shadow-sm text-center">
+          <h1 className="text-2xl font-semibold text-gray-900">Danışman Entegrasyonları</h1>
+          <p className="mt-3 text-gray-600">Erişmek için giriş yapın.</p>
           <div className="mt-6">
             <a href="/login" className="rounded-full bg-primary-600 px-6 py-3 text-white hover:bg-primary-700">
-              Sign in
+              Giriş Yap
             </a>
           </div>
         </div>
@@ -113,12 +206,12 @@ export default function ConsultantIntegrationsPage() {
   if (!isAdmin) {
     return (
       <section className="min-h-screen bg-slate-50 py-20">
-        <div className="mx-auto max-w-4xl rounded-3xl bg-white p-10 shadow-sm text-center">
-          <h1 className="text-2xl font-semibold text-gray-900">Access denied</h1>
-          <p className="mt-3 text-gray-600">Your user is not authorized to manage consultant settings.</p>
+        <div className="mx-auto max-w-2xl rounded-3xl bg-white p-10 shadow-sm text-center">
+          <h1 className="text-2xl font-semibold text-gray-900">Erişim Reddedildi</h1>
+          <p className="mt-3 text-gray-600">Bu sayfa sadece admin kullanıcılara açıktır.</p>
           <div className="mt-6">
-            <button onClick={handleLogout} className="rounded-full bg-primary-600 px-6 py-3 text-white hover:bg-primary-700">
-              Sign out
+            <button type="button" onClick={handleLogout} className="rounded-full bg-primary-600 px-6 py-3 text-white hover:bg-primary-700">
+              Çıkış Yap
             </button>
           </div>
         </div>
@@ -126,71 +219,288 @@ export default function ConsultantIntegrationsPage() {
     );
   }
 
+  const tabs: { id: ActiveTab; label: string }[] = [
+    { id: 'payment', label: 'Ödeme Modu' },
+    { id: 'stripe', label: 'Stripe' },
+    { id: 'profile', label: 'Profil' },
+    { id: 'google', label: 'Google Takvim' },
+    { id: 'outlook', label: 'Outlook Takvim' },
+  ];
+
   return (
     <section className="min-h-screen bg-slate-50 py-20">
-      <div className="mx-auto max-w-4xl rounded-3xl bg-white p-8 shadow-sm">
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Consultant Integrations</h1>
-            <p className="mt-2 text-gray-600">Store encrypted Stripe credentials and webhook secrets per consultant.</p>
-            <p className="mt-1 text-sm text-gray-500">Signed in as {userEmail}</p>
+      <div className="mx-auto max-w-2xl px-4">
+        <div className="rounded-3xl bg-white p-8 shadow-sm">
+          {/* Header */}
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Danışman Entegrasyonları</h1>
+              <p className="mt-1 text-sm text-gray-500">Giriş: {userEmail}</p>
+            </div>
+            <div className="flex gap-3">
+              <a
+                href="/admin"
+                className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Admin Paneli
+              </a>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="inline-flex items-center justify-center rounded-full bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+              >
+                Çıkış
+              </button>
+            </div>
           </div>
-          <div className="flex gap-3">
-            <a href="/admin" className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              Admin Dashboard
-            </a>
-            <button onClick={handleLogout} className="inline-flex items-center justify-center rounded-full bg-primary-600 px-6 py-3 text-sm font-medium text-white hover:bg-primary-700">
-              Sign out
-            </button>
+
+          {/* Tabs */}
+          <div className="mb-6 flex gap-1 overflow-x-auto rounded-2xl bg-gray-100 p-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => { setActiveTab(tab.id); setFeedback(null); }}
+                className={`flex-shrink-0 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
+
+          {feedback && (
+            <div className={`mb-4 rounded-2xl p-4 text-sm ${feedback.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+              {feedback.message}
+            </div>
+          )}
+
+          {/* Payment Mode Tab */}
+          {activeTab === 'payment' && (
+            <div className="space-y-6">
+              <p className="text-sm text-gray-500">
+                Danışmanın ödeme alma yöntemini seçin. Connect veya Escrow modları için Stripe Connect hesabı gereklidir.
+              </p>
+
+              <div>
+                <label htmlFor="payment-uid" className="block text-sm font-medium text-gray-700">
+                  Danışman UID *
+                </label>
+                <input
+                  id="payment-uid"
+                  type="text"
+                  value={paymentConsultantId}
+                  onChange={(e) => setPaymentConsultantId(e.target.value)}
+                  placeholder="firebase-uid…"
+                  className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                />
+              </div>
+
+              <form onSubmit={handlePaymentMode} className="space-y-4">
+                <fieldset className="space-y-2">
+                  <legend className="block text-sm font-medium text-gray-700 mb-2">Ödeme Modu</legend>
+                  {(Object.entries(paymentModeLabels) as [PaymentMode, string][]).map(([mode, label]) => (
+                    <label
+                      key={mode}
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-colors ${
+                        selectedMode === mode
+                          ? 'border-primary-500 bg-primary-50'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="payment_mode"
+                        value={mode}
+                        checked={selectedMode === mode}
+                        onChange={() => setSelectedMode(mode)}
+                        className="mt-0.5 accent-primary-600"
+                      />
+                      <div>
+                        <span className="block text-sm font-medium text-gray-900">
+                          {mode === 'ki_escrow' && 'Ki Business Escrow'}
+                          {mode === 'own_keys' && 'Kendi API Anahtarları'}
+                          {mode === 'ki_connect' && 'Stripe Connect'}
+                          {mode === 'direct' && 'Ki Business Direkt'}
+                        </span>
+                        <span className="block text-xs text-gray-500 mt-0.5">{label}</span>
+                      </div>
+                    </label>
+                  ))}
+                </fieldset>
+
+                <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
+                  {submitting ? 'Kaydediliyor…' : 'Ödeme Modunu Kaydet'}
+                </Button>
+              </form>
+
+              {/* Stripe Connect OAuth */}
+              {(selectedMode === 'ki_connect' || selectedMode === 'ki_escrow') && (
+                <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 space-y-3">
+                  <h3 className="text-sm font-semibold text-indigo-900">Stripe Connect Bağlantısı</h3>
+                  {connectAccountId ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
+                        <span className="text-sm text-gray-700 font-medium">Bağlı</span>
+                      </div>
+                      <p className="text-xs text-gray-500 font-mono break-all">{connectAccountId}</p>
+                      <button
+                        type="button"
+                        onClick={handleConnectOAuth}
+                        disabled={connectLoading || !paymentConsultantId.trim()}
+                        className="mt-2 rounded-xl border border-indigo-400 bg-white px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
+                      >
+                        {connectLoading ? 'Yönlendiriliyor…' : 'Yeniden Bağla'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-sm text-indigo-700">
+                        Danışman henüz Stripe Connect hesabı bağlamamış.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleConnectOAuth}
+                        disabled={connectLoading || !paymentConsultantId.trim()}
+                        className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                      >
+                        {connectLoading ? 'Yönlendiriliyor…' : 'Stripe Connect ile Bağla'}
+                      </button>
+                      {!paymentConsultantId.trim() && (
+                        <p className="text-xs text-indigo-500">Önce Danışman UID girin.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Stripe Tab */}
+          {activeTab === 'stripe' && (
+            <form onSubmit={handleStripe} className="space-y-4">
+              <p className="text-sm text-gray-500">
+                Danışmanın Firestore'da <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs">users/&lt;uid&gt;</code> belgesinin mevcut olması gerekir.
+              </p>
+              {(['consultant_id', 'api_key', 'webhook_secret'] as const).map((field) => (
+                <div key={field}>
+                  <label htmlFor={`stripe-${field}`} className="block text-sm font-medium text-gray-700 capitalize">
+                    {field === 'consultant_id' ? 'Danışman UID *' : field === 'api_key' ? 'Stripe Secret Key *' : 'Webhook Secret *'}
+                  </label>
+                  <input
+                    id={`stripe-${field}`}
+                    type={field === 'consultant_id' ? 'text' : 'password'}
+                    value={stripeForm[field]}
+                    onChange={set(setStripeForm, field)}
+                    required
+                    placeholder={field === 'consultant_id' ? 'firebase-uid…' : field === 'api_key' ? 'sk_live_…' : 'whsec_…'}
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  />
+                </div>
+              ))}
+              <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
+                {submitting ? 'Kaydediliyor…' : 'Stripe Ayarlarını Kaydet'}
+              </Button>
+            </form>
+          )}
+
+          {/* Profile Tab */}
+          {activeTab === 'profile' && (
+            <form onSubmit={handleProfile} className="space-y-4">
+              <p className="text-sm text-gray-500">
+                Danışmanın müşterilere gösterilen profil bilgileri. Bu bilgiler checkout formundaki danışman kartında görünür.
+              </p>
+              {[
+                { field: 'consultant_id', label: 'Danışman UID *', placeholder: 'firebase-uid…', required: true },
+                { field: 'name', label: 'Ad Soyad *', placeholder: 'Ahmet Yılmaz', required: true },
+                { field: 'title', label: 'Ünvan', placeholder: 'Kıdemli Yönetim Danışmanı', required: false },
+                { field: 'expertise', label: 'Uzmanlık Alanları', placeholder: 'Finansal Strateji, Operasyon, M&A', required: false },
+                { field: 'photo_url', label: 'Fotoğraf URL', placeholder: 'https://…', required: false },
+              ].map(({ field, label, placeholder, required }) => (
+                <div key={field}>
+                  <label htmlFor={`profile-${field}`} className="block text-sm font-medium text-gray-700">
+                    {label}
+                  </label>
+                  <input
+                    id={`profile-${field}`}
+                    type={field === 'photo_url' ? 'url' : 'text'}
+                    value={profileForm[field as keyof typeof profileForm]}
+                    onChange={set(setProfileForm, field as keyof typeof profileForm)}
+                    required={required}
+                    placeholder={placeholder}
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  />
+                </div>
+              ))}
+              <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
+                {submitting ? 'Kaydediliyor…' : 'Profili Güncelle'}
+              </Button>
+            </form>
+          )}
+
+          {/* Google Calendar Tab */}
+          {activeTab === 'google' && (
+            <form onSubmit={handleGoogle} className="space-y-4">
+              <p className="text-sm text-gray-500">
+                Google OAuth refresh token ve takvim ID'si. Takvim ID genellikle danışmanın Gmail adresidir.
+              </p>
+              {[
+                { field: 'consultant_id', label: 'Danışman UID *', type: 'text', placeholder: 'firebase-uid…' },
+                { field: 'refresh_token', label: 'Google Refresh Token *', type: 'password', placeholder: '1//…' },
+                { field: 'calendar_id', label: 'Takvim ID *', type: 'text', placeholder: 'primary veya email@gmail.com' },
+              ].map(({ field, label, type, placeholder }) => (
+                <div key={field}>
+                  <label htmlFor={`google-${field}`} className="block text-sm font-medium text-gray-700">{label}</label>
+                  <input
+                    id={`google-${field}`}
+                    type={type}
+                    value={googleForm[field as keyof typeof googleForm]}
+                    onChange={set(setGoogleForm, field as keyof typeof googleForm)}
+                    required
+                    placeholder={placeholder}
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  />
+                </div>
+              ))}
+              <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
+                {submitting ? 'Kaydediliyor…' : 'Google Takvim Bağla'}
+              </Button>
+            </form>
+          )}
+
+          {/* Outlook Calendar Tab */}
+          {activeTab === 'outlook' && (
+            <form onSubmit={handleOutlook} className="space-y-4">
+              <p className="text-sm text-gray-500">
+                Microsoft OAuth refresh token. Azure AD uygulaması üzerinden Calendars.ReadWrite yetkisi gereklidir.
+              </p>
+              {[
+                { field: 'consultant_id', label: 'Danışman UID *', type: 'text', placeholder: 'firebase-uid…' },
+                { field: 'refresh_token', label: 'Microsoft Refresh Token *', type: 'password', placeholder: 'M.R3_…' },
+              ].map(({ field, label, type, placeholder }) => (
+                <div key={field}>
+                  <label htmlFor={`outlook-${field}`} className="block text-sm font-medium text-gray-700">{label}</label>
+                  <input
+                    id={`outlook-${field}`}
+                    type={type}
+                    value={outlookForm[field as keyof typeof outlookForm]}
+                    onChange={set(setOutlookForm, field as keyof typeof outlookForm)}
+                    required
+                    placeholder={placeholder}
+                    className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  />
+                </div>
+              ))}
+              <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
+                {submitting ? 'Kaydediliyor…' : 'Outlook Takvim Bağla'}
+              </Button>
+            </form>
+          )}
         </div>
-
-        <form onSubmit={handleSubmit} className="grid gap-6">
-          {feedback && <div className="rounded-2xl bg-slate-100 p-4 text-sm text-slate-800">{feedback}</div>}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Consultant UID *</label>
-            <input
-              type="text"
-              value={consultantId}
-              onChange={(event) => setConsultantId(event.target.value)}
-              required
-              placeholder="e.g. consultant123"
-              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500/20"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Stripe Secret Key *</label>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(event) => setApiKey(event.target.value)}
-              required
-              placeholder="sk_live_..."
-              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500/20"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Stripe Webhook Secret *</label>
-            <input
-              type="password"
-              value={webhookSecret}
-              onChange={(event) => setWebhookSecret(event.target.value)}
-              required
-              placeholder="whsec_..."
-              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500/20"
-            />
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-slate-500">Make sure the consultant record exists in Firestore under <code className="rounded bg-slate-100 px-1.5 py-0.5">users/&lt;uid&gt;</code>.</p>
-            <Button type="submit" disabled={loading} variant="primary">
-              {loading ? 'Saving …' : 'Save Stripe Integration'}
-            </Button>
-          </div>
-        </form>
       </div>
     </section>
   );

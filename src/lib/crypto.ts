@@ -35,7 +35,7 @@ export function encryptSensitiveData(plaintext: string): {
 
 export function decryptSensitiveData(encryptedData: string, iv: string, authTag: string): string {
   const calculatedAuthTag = computeAuthTag(iv, encryptedData);
-  if (!crypto.timingSafeEqual(Buffer.from(calculatedAuthTag, 'hex'), Buffer.from(authTag, 'hex'))) {
+  if (!crypto.timingSafeEqual(new Uint8Array(Buffer.from(calculatedAuthTag, 'hex')), new Uint8Array(Buffer.from(authTag, 'hex')))) {
     throw new Error('Failed to verify encrypted data integrity');
   }
 

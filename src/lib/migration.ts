@@ -30,6 +30,7 @@ export async function initializeConsultantProfile(
     name,
     role,
     is_active: true,
+    payment_mode: 'own_keys',
     stripe_settings: {
       is_active: false,
     },
@@ -175,7 +176,6 @@ export const FIRESTORE_INDEXES = [
     ],
   },
   {
-    collectionId: 'consultants',
     collectionId: 'appointments',
     fields: [
       { fieldPath: 'consultant_id', order: 'ASCENDING' },

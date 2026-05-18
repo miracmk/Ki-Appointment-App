@@ -4,7 +4,7 @@
  */
 
 import { getAdminFirestore } from './firebase-admin';
-import { encryptSensitiveData, decryptSensitiveData } from './crypto';
+import { encryptSensitiveData } from './encryption';
 import { ConsultantProfile, StripeSettings, GoogleCalendarIntegration, OutlookCalendarIntegration } from '@/types/marketplace';
 
 /**
