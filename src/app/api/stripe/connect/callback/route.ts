@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import Stripe from 'stripe';
 import { getAdminFirestore } from '@/lib/firebase-admin';
+import { getActiveKiStripePosConfig } from '@/lib/stripe-pos';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,12 +38,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${appUrl}/admin/integrations?connect_error=invalid_state`);
     }
 
-    const secretKey = process.env.STRIPE_SECRET_KEY;
-    if (!secretKey) {
-      return NextResponse.redirect(`${appUrl}/admin/integrations?connect_error=no_stripe_key`);
-    }
-
-    const stripe = new Stripe(secretKey, { apiVersion: '2023-10-16' });
+    const activeConfig = await getActiveKiStripePosConfig();
+    const stripe = new Stripe(activeConfig.secretKey, { apiVersion: '2023-10-16' });
 
     const response = await stripe.oauth.token({
       grant_type: 'authorization_code',

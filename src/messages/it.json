@@ -1,0 +1,23 @@
+{
+  "nav.home": "Home",
+  "nav.marketplace": "Marketplace",
+  "nav.consultants": "Consulenti",
+  "nav.dashboard": "Dashboard",
+  "nav.login": "Accedi",
+  "nav.admin": "Admin",
+  "section.howItWorks": "Come Funziona",
+  "section.about": "Informazioni",
+  "section.services": "Servizi",
+  "action.learnMore": "Maggiori informazioni",
+  "action.bookNow": "Prenota ora",
+  "pos.title": "Rotazione Stripe POS",
+  "pos.description": "Ruota in modo sicuro le chiavi di pagamento della piattaforma e attiva la slot POS corrente.",
+  "pos.activeLabel": "Slot attivo",
+  "pos.addSlot": "Aggiungi nuova slot POS",
+  "pos.save": "Salva slot",
+  "pos.activate": "Attiva",
+  "pos.placeholderLabel": "Etichetta slot",
+  "pos.placeholderPublicKey": "Chiave pubblicabile",
+  "pos.placeholderSecretKey": "Chiave segreta",
+  "pos.placeholderWebhook": "Segreto firma webhook"
+}

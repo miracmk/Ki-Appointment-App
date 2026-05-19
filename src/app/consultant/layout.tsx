@@ -114,7 +114,7 @@ export default function ConsultantLayout({ children }: { children: React.ReactNo
       <aside className={`fixed left-0 top-0 z-30 flex h-full w-64 flex-col border-r border-white/[0.06] bg-[#0D0E14] transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex h-16 items-center border-b border-white/[0.06] px-6">
           <Link href="/">
-            <img src="https://media.base44.com/images/public/6a06e6fe65cabb7bc81457a9/e0090f321_KiBusinessLogoYatayBeyazYenipng.png" alt="Ki Business" className="h-7 w-auto" />
+            <img src="/logo.svg" alt="Ki Business" className="h-7 w-auto" />
           </Link>
         </div>
 

@@ -49,7 +49,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className="hidden w-56 flex-col border-r border-white/[0.06] bg-[#0D0E14] lg:flex">
         <div className="flex h-16 items-center border-b border-white/[0.06] px-5">
           <Link href="/">
-            <img src="https://media.base44.com/images/public/6a06e6fe65cabb7bc81457a9/e0090f321_KiBusinessLogoYatayBeyazYenipng.png" alt="Ki Business" className="h-7 w-auto" />
+            <img src="/logo.svg" alt="Ki Business" className="h-7 w-auto" />
           </Link>
         </div>
         <div className="border-b border-white/[0.06] px-4 py-3">

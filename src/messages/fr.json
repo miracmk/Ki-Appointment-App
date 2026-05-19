@@ -1,0 +1,23 @@
+{
+  "nav.home": "Accueil",
+  "nav.marketplace": "Marketplace",
+  "nav.consultants": "Consultants",
+  "nav.dashboard": "Tableau",
+  "nav.login": "Connexion",
+  "nav.admin": "Administration",
+  "section.howItWorks": "Comment ça marche",
+  "section.about": "À propos",
+  "section.services": "Services",
+  "action.learnMore": "En savoir plus",
+  "action.bookNow": "Réserver maintenant",
+  "pos.title": "Rotation Stripe POS",
+  "pos.description": "Faites pivoter en toute sécurité les clés de paiement de la plateforme et activez la fente POS actuelle.",
+  "pos.activeLabel": "Fente active",
+  "pos.addSlot": "Ajouter une nouvelle fente POS",
+  "pos.save": "Enregistrer la fente",
+  "pos.activate": "Activer",
+  "pos.placeholderLabel": "Étiquette de la fente",
+  "pos.placeholderPublicKey": "Clé publique",
+  "pos.placeholderSecretKey": "Clé secrète",
+  "pos.placeholderWebhook": "Secret de signature webhook"
+}

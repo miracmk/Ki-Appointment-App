@@ -1,0 +1,23 @@
+{
+  "nav.home": "Home",
+  "nav.marketplace": "Marketplace",
+  "nav.consultants": "Consultants",
+  "nav.dashboard": "Dashboard",
+  "nav.login": "Login",
+  "nav.admin": "Admin",
+  "section.howItWorks": "How It Works",
+  "section.about": "About",
+  "section.services": "Services",
+  "action.learnMore": "Learn more",
+  "action.bookNow": "Book now",
+  "pos.title": "Stripe POS Rotation",
+  "pos.description": "Securely rotate platform payment keys and activate the current gateway slot.",
+  "pos.activeLabel": "Active slot",
+  "pos.addSlot": "Add new POS slot",
+  "pos.save": "Save slot",
+  "pos.activate": "Activate",
+  "pos.placeholderLabel": "Slot label",
+  "pos.placeholderPublicKey": "Publishable key",
+  "pos.placeholderSecretKey": "Secret key",
+  "pos.placeholderWebhook": "Webhook signing secret"
+}

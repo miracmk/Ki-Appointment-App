@@ -6,6 +6,7 @@ import {
   createAppointment,
   calculateFees,
 } from '@/lib/marketplace';
+import { getActiveKiStripePosConfig } from '@/lib/stripe-pos';
 import { AppointmentMetadata, PaymentMode } from '@/types/marketplace';
 
 const pricingMap: Record<string, { amount: number; name: string }> = {
@@ -172,11 +173,8 @@ export async function POST(request: NextRequest) {
           { status: 503 }
         );
       }
-      const platformKey = process.env.STRIPE_SECRET_KEY;
-      if (!platformKey) {
-        return NextResponse.json({ error: 'Platform Stripe yapılandırılmamış.' }, { status: 503 });
-      }
-      const stripe = new Stripe(platformKey, { apiVersion: '2023-10-16' });
+      const activeConfig = await getActiveKiStripePosConfig();
+      const stripe = new Stripe(activeConfig.secretKey, { apiVersion: '2023-10-16' });
       session = await stripe.checkout.sessions.create({
         ...baseSessionParams,
         payment_intent_data: {
@@ -187,11 +185,8 @@ export async function POST(request: NextRequest) {
 
     } else if (paymentMode === 'ki_escrow' || paymentMode === 'direct') {
       // ── Ki Business collects all (escrow or direct) ───────────────────
-      const platformKey = process.env.STRIPE_SECRET_KEY;
-      if (!platformKey) {
-        return NextResponse.json({ error: 'Platform Stripe yapılandırılmamış.' }, { status: 503 });
-      }
-      const stripe = new Stripe(platformKey, { apiVersion: '2023-10-16' });
+      const activeConfig = await getActiveKiStripePosConfig();
+      const stripe = new Stripe(activeConfig.secretKey, { apiVersion: '2023-10-16' });
       session = await stripe.checkout.sessions.create(baseSessionParams);
 
     } else {

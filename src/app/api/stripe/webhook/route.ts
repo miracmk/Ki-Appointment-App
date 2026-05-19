@@ -11,6 +11,7 @@ import {
 import { syncToGoogleCalendar, syncToOutlookCalendar, generateICS } from '@/lib/calendar-sync';
 import { createMeetLink } from '@/lib/google-meet';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase-admin';
+import { getActiveKiStripePosConfig } from '@/lib/stripe-pos';
 import { AppointmentMetadata, Appointment, FlatAppointment, PaymentMode } from '@/types/marketplace';
 import nodemailer from 'nodemailer';
 
@@ -197,8 +198,9 @@ export async function POST(request: NextRequest) {
       stripeApiKey = consultantApiKey;
     } else {
       // ki_escrow, ki_connect, direct → use platform keys
-      webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? null;
-      stripeApiKey = process.env.STRIPE_SECRET_KEY ?? null;
+      const activeConfig = await getActiveKiStripePosConfig();
+      webhookSecret = activeConfig.webhookSecret;
+      stripeApiKey = activeConfig.secretKey;
     }
 
     if (!webhookSecret) {

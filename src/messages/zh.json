@@ -1,0 +1,23 @@
+{
+  "nav.home": "首页",
+  "nav.marketplace": "商城",
+  "nav.consultants": "顾问",
+  "nav.dashboard": "仪表板",
+  "nav.login": "登录",
+  "nav.admin": "管理",
+  "section.howItWorks": "如何运作",
+  "section.about": "关于",
+  "section.services": "服务",
+  "action.learnMore": "了解更多",
+  "action.bookNow": "立即预订",
+  "pos.title": "Stripe POS 轮换",
+  "pos.description": "安全轮换平台付款密钥，并激活当前 POS 插槽。",
+  "pos.activeLabel": "活动插槽",
+  "pos.addSlot": "添加新的 POS 插槽",
+  "pos.save": "保存插槽",
+  "pos.activate": "激活",
+  "pos.placeholderLabel": "插槽标签",
+  "pos.placeholderPublicKey": "可发布密钥",
+  "pos.placeholderSecretKey": "秘密密钥",
+  "pos.placeholderWebhook": "Webhook 签名密钥"
+}

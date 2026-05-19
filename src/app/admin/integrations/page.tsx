@@ -8,7 +8,7 @@ import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import type { PaymentMode } from '@/types/marketplace';
 
-type ActiveTab = 'payment' | 'stripe' | 'profile' | 'google' | 'outlook';
+type ActiveTab = 'payment' | 'stripe' | 'profile' | 'google' | 'outlook' | 'pos';
 
 const paymentModeLabels: Record<PaymentMode, string> = {
   ki_escrow: 'Ki Business Escrow (platform tahsil eder, danışmana transfer)',
@@ -30,6 +30,9 @@ export default function ConsultantIntegrationsPage() {
   const [profileForm, setProfileForm] = useState({ consultant_id: '', name: '', title: '', expertise: '', photo_url: '' });
   const [googleForm, setGoogleForm] = useState({ consultant_id: '', refresh_token: '', calendar_id: 'primary' });
   const [outlookForm, setOutlookForm] = useState({ consultant_id: '', refresh_token: '' });
+  const [posSlots, setPosSlots] = useState<any[]>([]);
+  const [posForm, setPosForm] = useState({ slot_id: '', label: '', publishable_key: '', secret_key: '', webhook_secret: '' });
+  const [posLoading, setPosLoading] = useState(false);
 
   // Payment mode tab state
   const [paymentConsultantId, setPaymentConsultantId] = useState('');
@@ -181,6 +184,88 @@ export default function ConsultantIntegrationsPage() {
     }
   };
 
+  useEffect(() => {
+    if (activeTab !== 'pos' || !userEmail) return;
+
+    const loadPosSlots = async () => {
+      setPosLoading(true);
+      setFeedback(null);
+      try {
+        const token = await getToken();
+        const res = await fetch('/api/admin/pos-settings', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'POS slotları yüklenemedi.');
+        setPosSlots(data.slots || []);
+      } catch (err: any) {
+        setFeedback({ message: err.message || 'POS slotları yüklenemedi.', ok: false });
+      } finally {
+        setPosLoading(false);
+      }
+    };
+
+    loadPosSlots();
+  }, [activeTab, userEmail]);
+
+  const callPosApi = async (body: Record<string, string>) => {
+    setSubmitting(true);
+    setFeedback(null);
+    try {
+      const token = await getToken();
+      const res = await fetch('/api/admin/pos-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'İşlem başarısız.');
+      setFeedback({ message: data.message || 'Kaydedildi.', ok: true });
+      if (body.action === 'save_slot' || body.action === 'activate_slot' || body.action === 'delete_slot') {
+        const slotsRes = await fetch('/api/admin/pos-settings', { headers: { Authorization: `Bearer ${token}` } });
+        const slotsData = await slotsRes.json();
+        if (slotsRes.ok) {
+          setPosSlots(slotsData.slots || []);
+        }
+      }
+    } catch (err: any) {
+      setFeedback({ message: err.message || 'Hata oluştu.', ok: false });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePosSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await callPosApi({
+      action: 'save_slot',
+      slot_id: posForm.slot_id,
+      label: posForm.label,
+      publishable_key: posForm.publishable_key,
+      secret_key: posForm.secret_key,
+      webhook_secret: posForm.webhook_secret,
+    });
+    setPosForm({ slot_id: '', label: '', publishable_key: '', secret_key: '', webhook_secret: '' });
+  };
+
+  const handlePosActivate = async (slotId: string) => {
+    await callPosApi({ action: 'activate_slot', slot_id: slotId });
+  };
+
+  const handlePosDelete = async (slotId: string) => {
+    await callPosApi({ action: 'delete_slot', slot_id: slotId });
+  };
+
+  const handlePosEdit = (slot: any) => {
+    setPosForm({
+      slot_id: slot.id,
+      label: slot.label,
+      publishable_key: '',
+      secret_key: '',
+      webhook_secret: '',
+    });
+  };
+
   const set = <T extends Record<string, string>>(setter: React.Dispatch<React.SetStateAction<T>>, field: keyof T) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
       setter((prev) => ({ ...prev, [field]: e.target.value }));
@@ -225,6 +310,7 @@ export default function ConsultantIntegrationsPage() {
     { id: 'profile', label: 'Profil' },
     { id: 'google', label: 'Google Takvim' },
     { id: 'outlook', label: 'Outlook Takvim' },
+    { id: 'pos', label: 'POS Döndürme' },
   ];
 
   return (
@@ -499,6 +585,121 @@ export default function ConsultantIntegrationsPage() {
                 {submitting ? 'Kaydediliyor…' : 'Outlook Takvim Bağla'}
               </Button>
             </form>
+          )}
+
+          {/* POS Rotation Tab */}
+          {activeTab === 'pos' && (
+            <div className="space-y-6">
+              <p className="text-sm text-gray-500">
+                Platform ödeme anahtarlarını Firestore üzerinden yönetebilir, yeni POS yuvaları ekleyebilir ve aktif slotu değiştirebilirsiniz.
+              </p>
+
+              <div className="space-y-4 rounded-3xl border border-dashed border-gray-200 bg-gray-50 p-5">
+                {posLoading ? (
+                  <p className="text-sm text-gray-600">POS slotları yükleniyor…</p>
+                ) : posSlots.length === 0 ? (
+                  <p className="text-sm text-gray-600">Henüz POS yuvası eklenmemiş.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {posSlots.map((slot) => (
+                      <div key={slot.id} className="rounded-2xl border border-gray-200 bg-white p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="font-medium text-gray-900">{slot.label}</p>
+                            <p className="text-xs text-gray-500">ID: {slot.id}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {slot.isActive && <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Etkin</span>}
+                            <button
+                              type="button"
+                              onClick={() => handlePosActivate(slot.id)}
+                              className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                              disabled={submitting}
+                            >
+                              Etkinleştir
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePosEdit(slot)}
+                              className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                            >
+                              Düzenle
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePosDelete(slot.id)}
+                              className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100"
+                              disabled={submitting}
+                            >
+                              Sil
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <form onSubmit={handlePosSave} className="space-y-4 rounded-3xl border border-gray-200 bg-white p-6">
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div>
+                    <label htmlFor="pos-label" className="block text-sm font-medium text-gray-700">Yuva Etiketi *</label>
+                    <input
+                      id="pos-label"
+                      type="text"
+                      value={posForm.label}
+                      onChange={set(setPosForm, 'label')}
+                      required
+                      placeholder="Ana POS, Yedek POS"
+                      className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="pos-publishable" className="block text-sm font-medium text-gray-700">Publishable Key *</label>
+                    <input
+                      id="pos-publishable"
+                      type="text"
+                      value={posForm.publishable_key}
+                      onChange={set(setPosForm, 'publishable_key')}
+                      required
+                      placeholder="pk_live_..."
+                      className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="pos-secret" className="block text-sm font-medium text-gray-700">Secret Key *</label>
+                    <input
+                      id="pos-secret"
+                      type="password"
+                      value={posForm.secret_key}
+                      onChange={set(setPosForm, 'secret_key')}
+                      required
+                      placeholder="sk_live_..."
+                      className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="pos-webhook" className="block text-sm font-medium text-gray-700">Webhook Secret *</label>
+                    <input
+                      id="pos-webhook"
+                      type="password"
+                      value={posForm.webhook_secret}
+                      onChange={set(setPosForm, 'webhook_secret')}
+                      required
+                      placeholder="whsec_..."
+                      className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <Button type="submit" variant="primary" className="w-full sm:w-auto" disabled={submitting}>
+                    {submitting ? 'Kaydediliyor…' : posForm.slot_id ? 'Yuvayı Güncelle' : 'Yeni Yuva Kaydet'}
+                  </Button>
+                  <p className="text-xs text-gray-500">Her slot canlı ödemelerinde kullanılabilir. Bir slotu etkinleştirerek platformun hangi Stripe anahtarını kullandığını seçin.</p>
+                </div>
+              </form>
+            </div>
           )}
         </div>
       </div>

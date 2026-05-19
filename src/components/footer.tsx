@@ -10,7 +10,7 @@ export function Footer() {
           <div className="lg:col-span-1">
             <Link href="/">
               <img
-                src="https://media.base44.com/images/public/6a06e6fe65cabb7bc81457a9/e0090f321_KiBusinessLogoYatayBeyazYenipng.png"
+                src="/logo.svg"
                 alt="Ki Business Solutions"
                 className="h-8 w-auto"
               />

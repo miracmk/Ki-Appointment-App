@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import Stripe from 'stripe';
 import { getAdminFirestore } from '@/lib/firebase-admin';
+import { getActiveKiStripePosConfig } from '@/lib/stripe-pos';
 
 const KYC_FEE_CENTS = 500; // $5
 
@@ -12,11 +13,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'consultant_id zorunlu.' }, { status: 400 });
     }
 
-    const platformKey = process.env.STRIPE_SECRET_KEY;
-    if (!platformKey) {
-      return NextResponse.json({ error: 'Platform Stripe yapılandırılmamış.' }, { status: 503 });
-    }
-
+    const activeConfig = await getActiveKiStripePosConfig();
     const db  = getAdminFirestore();
     const doc = await db.collection('users').doc(consultant_id).get();
     if (!doc.exists) {
@@ -28,7 +25,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'KYC ücreti zaten ödenmiş.' }, { status: 409 });
     }
 
-    const stripe  = new Stripe(platformKey, { apiVersion: '2023-10-16' });
+    const stripe  = new Stripe(activeConfig.secretKey, { apiVersion: '2023-10-16' });
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 
     // Create $5 payment session

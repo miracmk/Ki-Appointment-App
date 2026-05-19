@@ -60,7 +60,7 @@ export default function LoginPage() {
         <div className="mb-8 text-center">
           <a href="/">
             <img
-              src="https://media.base44.com/images/public/6a06e6fe65cabb7bc81457a9/e0090f321_KiBusinessLogoYatayBeyazYenipng.png"
+              src="/logo.svg"
               alt="Ki Business Solutions"
               className="mx-auto h-10 w-auto"
             />

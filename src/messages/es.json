@@ -1,0 +1,23 @@
+{
+  "nav.home": "Inicio",
+  "nav.marketplace": "Marketplace",
+  "nav.consultants": "Consultores",
+  "nav.dashboard": "Panel",
+  "nav.login": "Iniciar sesión",
+  "nav.admin": "Administración",
+  "section.howItWorks": "Cómo Funciona",
+  "section.about": "Acerca de",
+  "section.services": "Servicios",
+  "action.learnMore": "Más información",
+  "action.bookNow": "Reservar ahora",
+  "pos.title": "Rotación Stripe POS",
+  "pos.description": "Rota de forma segura las claves de pago de la plataforma y activa la ranura POS actual.",
+  "pos.activeLabel": "Ranura activa",
+  "pos.addSlot": "Agregar nueva ranura POS",
+  "pos.save": "Guardar ranura",
+  "pos.activate": "Activar",
+  "pos.placeholderLabel": "Etiqueta de la ranura",
+  "pos.placeholderPublicKey": "Clave pública",
+  "pos.placeholderSecretKey": "Clave secreta",
+  "pos.placeholderWebhook": "Secreto de firma de webhook"
+}

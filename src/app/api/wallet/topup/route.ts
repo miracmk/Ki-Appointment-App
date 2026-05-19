@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import Stripe from 'stripe';
 import { getAdminFirestore } from '@/lib/firebase-admin';
+import { getActiveKiStripePosConfig } from '@/lib/stripe-pos';
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,10 +17,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Minimum yükleme tutarı $10 (1000 cent).' }, { status: 400 });
     }
 
-    const platformKey = process.env.STRIPE_SECRET_KEY;
-    if (!platformKey) {
-      return NextResponse.json({ error: 'Platform Stripe yapılandırılmamış.' }, { status: 503 });
-    }
+    const activeConfig = await getActiveKiStripePosConfig();
 
     // Verify consultant exists
     const db  = getAdminFirestore();
@@ -28,7 +26,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Danışman bulunamadı.' }, { status: 404 });
     }
 
-    const stripe  = new Stripe(platformKey, { apiVersion: '2023-10-16' });
+    const stripe  = new Stripe(activeConfig.secretKey, { apiVersion: '2023-10-16' });
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 
     const session = await stripe.checkout.sessions.create({

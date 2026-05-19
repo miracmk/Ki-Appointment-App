@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import Stripe from 'stripe';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase-admin';
 import { getConsultantProfile } from '@/lib/marketplace';
+import { getActiveKiStripePosConfig } from '@/lib/stripe-pos';
 
 /**
  * POST /api/admin/payout
@@ -64,12 +65,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const platformKey = process.env.STRIPE_SECRET_KEY;
-    if (!platformKey) {
-      return NextResponse.json({ error: 'Platform Stripe yapılandırılmamış.' }, { status: 503 });
-    }
-
-    const stripe = new Stripe(platformKey, { apiVersion: '2023-10-16' });
+    const activeConfig = await getActiveKiStripePosConfig();
+    const stripe = new Stripe(activeConfig.secretKey, { apiVersion: '2023-10-16' });
 
     const transferAmount: number = appt.consultant_payout_cents;
     if (!transferAmount || transferAmount <= 0) {

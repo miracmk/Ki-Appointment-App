@@ -107,7 +107,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex h-16 items-center border-b border-white/[0.06] px-6">
           <Link href="/">
             <img
-              src="https://media.base44.com/images/public/6a06e6fe65cabb7bc81457a9/e0090f321_KiBusinessLogoYatayBeyazYenipng.png"
+              src="/logo.svg"
               alt="Ki Business"
               className="h-7 w-auto"
             />

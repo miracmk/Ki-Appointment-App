@@ -71,6 +71,27 @@ export interface StripeSettings {
   updated_at?: number;
 }
 
+export interface KiStripePosSlot {
+  id: string;
+  label: string;
+  isActive: boolean;
+  publishable_key_encrypted?: string;
+  publishable_key_iv?: string;
+  publishable_key_authTag?: string;
+  secret_key_encrypted?: string;
+  secret_key_iv?: string;
+  secret_key_authTag?: string;
+  webhook_secret_encrypted?: string;
+  webhook_secret_iv?: string;
+  webhook_secret_authTag?: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface PlatformSettings {
+  ki_stripe_pos?: KiStripePosSlot[];
+}
+
 // ─── Calendar Integrations ──────────────────────────────────────────────────
 
 export interface GoogleCalendarIntegration {

@@ -3,16 +3,18 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { CATEGORIES } from '@/lib/categories';
+import { useTranslations } from '@/lib/use-translations';
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const { t } = useTranslations();
 
   return (
     <nav className="fixed top-0 z-50 w-full border-b border-white/[0.08] bg-[#0A0B0F]/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <Link href="/" className="flex shrink-0 items-center gap-2">
-          <img src="https://media.base44.com/images/public/6a06e6fe65cabb7bc81457a9/e0090f321_KiBusinessLogoYatayBeyazYenipng.png" alt="Ki Business Solutions" className="h-8 w-auto" />
+          <img src="/logo.svg" alt="Ki Business Solutions" className="h-8 w-auto" />
         </Link>
 
         <div className="hidden items-center gap-8 lg:flex">
@@ -40,13 +42,13 @@ export function Navbar() {
               </div>
             )}
           </div>
-          <Link href="/marketplace" className="text-sm font-medium text-white/70 transition hover:text-white">Marketplace</Link>
-          <Link href="/#how-it-works" className="text-sm font-medium text-white/70 transition hover:text-white">Nasil Calisir</Link>
+          <Link href="/marketplace" className="text-sm font-medium text-white/70 transition hover:text-white">{t('nav.marketplace')}</Link>
+          <Link href="/#how-it-works" className="text-sm font-medium text-white/70 transition hover:text-white">{t('section.howItWorks')}</Link>
         </div>
 
         <div className="hidden items-center gap-3 lg:flex">
-          <Link href="/login" className="text-sm font-medium text-white/70 transition hover:text-white">Giris Yap</Link>
-          <Link href="/marketplace" className="rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:opacity-90">Danishman Bul</Link>
+          <Link href="/login" className="text-sm font-medium text-white/70 transition hover:text-white">{t('nav.login')}</Link>
+          <Link href="/marketplace" className="rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:opacity-90">{t('action.bookNow')}</Link>
         </div>
 
         <button type="button" className="rounded-lg p-2 text-white/70 hover:text-white lg:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
@@ -63,8 +65,8 @@ export function Navbar() {
               </Link>
             ))}
             <div className="my-3 border-t border-white/[0.08]" />
-            <Link href="/login" className="block rounded-xl px-3 py-2.5 text-sm text-white/70 hover:bg-white/5 hover:text-white" onClick={() => setMobileOpen(false)}>Giris Yap</Link>
-            <Link href="/marketplace" className="mt-2 block rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] px-4 py-3 text-center text-sm font-semibold text-white" onClick={() => setMobileOpen(false)}>Danishman Bul</Link>
+            <Link href="/login" className="block rounded-xl px-3 py-2.5 text-sm text-white/70 hover:bg-white/5 hover:text-white" onClick={() => setMobileOpen(false)}>{t('nav.login')}</Link>
+            <Link href="/marketplace" className="mt-2 block rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] px-4 py-3 text-center text-sm font-semibold text-white" onClick={() => setMobileOpen(false)}>{t('action.bookNow')}</Link>
           </div>
         </div>
       )}

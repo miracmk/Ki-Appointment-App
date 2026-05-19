@@ -1,0 +1,23 @@
+{
+  "nav.home": "Главная",
+  "nav.marketplace": "Маркетплейс",
+  "nav.consultants": "Консультанты",
+  "nav.dashboard": "Панель",
+  "nav.login": "Вход",
+  "nav.admin": "Админ",
+  "section.howItWorks": "Как это работает",
+  "section.about": "О нас",
+  "section.services": "Услуги",
+  "action.learnMore": "Узнать больше",
+  "action.bookNow": "Забронировать сейчас",
+  "pos.title": "Ротация Stripe POS",
+  "pos.description": "Безопасно вращайте ключи оплаты платформы и активируйте текущий слот POS.",
+  "pos.activeLabel": "Активный слот",
+  "pos.addSlot": "Добавить новый POS слот",
+  "pos.save": "Сохранить слот",
+  "pos.activate": "Активировать",
+  "pos.placeholderLabel": "Название слота",
+  "pos.placeholderPublicKey": "Публичный ключ",
+  "pos.placeholderSecretKey": "Секретный ключ",
+  "pos.placeholderWebhook": "Секрет подписи webhook"
+}

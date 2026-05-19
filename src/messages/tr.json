@@ -1,0 +1,23 @@
+{
+  "nav.home": "Ana Sayfa",
+  "nav.marketplace": "Marketplace",
+  "nav.consultants": "Danışmanlar",
+  "nav.dashboard": "Panel",
+  "nav.login": "Giriş",
+  "nav.admin": "Yönetim",
+  "section.howItWorks": "Nasıl Çalışır?",
+  "section.about": "Hakkında",
+  "section.services": "Hizmetler",
+  "action.learnMore": "Daha fazla",
+  "action.bookNow": "Şimdi rezerve et",
+  "pos.title": "Stripe POS Döndürme",
+  "pos.description": "Platform ödeme anahtarlarını güvenle döndürün ve geçerli POS yuvasını etkinleştirin.",
+  "pos.activeLabel": "Etkin yuva",
+  "pos.addSlot": "Yeni POS yuvası ekle",
+  "pos.save": "Yuvayı kaydet",
+  "pos.activate": "Etkinleştir",
+  "pos.placeholderLabel": "Yuva etiketi",
+  "pos.placeholderPublicKey": "Yayınlanabilir anahtar",
+  "pos.placeholderSecretKey": "Gizli anahtar",
+  "pos.placeholderWebhook": "Webhook imza gizli anahtarı"
+}
