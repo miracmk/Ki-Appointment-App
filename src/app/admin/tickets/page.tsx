@@ -29,7 +29,13 @@ export default function AdminTicketsPage() {
       const db = getFirestoreClient();
       if (!db) { setLoading(false); return; }
       const snap = await getDocs(query(collection(db, 'tickets'), orderBy('created_at', 'desc')));
-      setTickets(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Ticket) })));
+      setTickets(
+        snap.docs.map((d) => {
+          const ticket = d.data() as Ticket;
+          const { id, ...ticketData } = ticket as Ticket;
+          return { id: d.id, ...ticketData };
+        })
+      );
       setLoading(false);
     })();
   }, []);

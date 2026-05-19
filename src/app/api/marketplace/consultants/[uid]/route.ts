@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebase-admin';
 import type { ConsultantProfile, PublicConsultantInfo } from '@/types/marketplace';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ uid: string }> }

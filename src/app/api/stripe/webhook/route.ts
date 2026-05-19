@@ -254,7 +254,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true }, { status: 200 });
       }
 
-      const appointmentId = eventMetadata.session_id || (eventMetadata as Record<string, string>).appointment_id;
+      const appointmentId = eventMetadata.session_id ?? (eventMetadata as { appointment_id?: string }).appointment_id;
 
       if (!appointmentId) {
         console.error('Webhook metadata içinde appointment ID yok', eventMetadata);

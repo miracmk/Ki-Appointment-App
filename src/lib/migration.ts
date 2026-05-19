@@ -21,10 +21,10 @@ export async function initializeConsultantProfile(
   email: string,
   name: string,
   role: 'admin' | 'consultant' = 'consultant'
-): Promise<ConsultantProfile> {
+): Promise<Partial<ConsultantProfile>> {
   const db = getAdminFirestore();
 
-  const profile: ConsultantProfile = {
+  const profile: Partial<ConsultantProfile> = {
     uid,
     email,
     name,

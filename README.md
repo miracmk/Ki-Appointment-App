@@ -60,6 +60,13 @@ Start the production server:
 npm start
 ```
 
+## Netlify Deployment
+
+This repository uses Netlify with `@netlify/plugin-nextjs` configured in `netlify.toml`.
+Make sure the site is connected to the `main` branch and that all required environment variables are configured in Netlify.
+
+Netlify will publish the `.next` output directory and run `npm run build` during deploy.
+
 ## Important Notes
 
 - `NEXT_PUBLIC_FIREBASE_*` values are used by the client for auth.

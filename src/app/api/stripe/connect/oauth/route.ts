@@ -1,6 +1,8 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getAdminAuth } from '@/lib/firebase-admin';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/stripe/connect/oauth?consultant_id=xxx
  *

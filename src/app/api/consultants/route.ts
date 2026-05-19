@@ -11,7 +11,7 @@ export async function GET() {
       .where('is_active', '==', true)
       .get();
 
-    const consultants: PublicConsultantInfo[] = snapshot.docs
+    const consultants = snapshot.docs
       .filter((doc) => doc.data().stripe_settings?.is_active === true)
       .map((doc) => ({
         uid: doc.id,

@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebase-admin';
 import type { ConsultantProfile, PublicConsultantInfo, MarketplaceCategory } from '@/types/marketplace';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;

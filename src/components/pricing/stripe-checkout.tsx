@@ -172,9 +172,11 @@ export function CheckoutButton({ packageId, packageName }: CheckoutButtonProps) 
                   {c.title && (
                     <p className="truncate text-xs text-gray-500">{c.title}</p>
                   )}
-                  {c.expertise && (
-                    <p className="mt-0.5 truncate text-xs text-primary-600">{c.expertise}</p>
-                  )}
+                  {c.sub_specialties?.length ? (
+                    <p className="mt-0.5 truncate text-xs text-primary-600">
+                      {c.sub_specialties.slice(0, 2).join(', ')}
+                    </p>
+                  ) : null}
                 </div>
                 {selectedConsultantId === c.uid && (
                   <span className="text-primary-600">✓</span>

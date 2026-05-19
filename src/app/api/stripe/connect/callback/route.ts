@@ -2,6 +2,8 @@ import { NextResponse, NextRequest } from 'next/server';
 import Stripe from 'stripe';
 import { getAdminFirestore } from '@/lib/firebase-admin';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/stripe/connect/callback?code=xxx&state=xxx
  *
