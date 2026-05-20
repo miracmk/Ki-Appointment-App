@@ -1,13 +1,28 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { getFirebaseAuth, getFirestoreClient } from '@/lib/firebase-client';
+import { getFirebaseAuth } from '@/lib/firebase-client';
 import { onAuthStateChanged } from 'firebase/auth';
-import {
-  addDoc, collection, deleteDoc, doc, getDoc, getDocs,
-  query, updateDoc, where,
-} from 'firebase/firestore';
 import { useUserRole } from '@/lib/use-user-role';
+
+async function getIdToken(): Promise<string | null> {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) return null;
+  try { return await auth.currentUser.getIdToken(); }
+  catch { return null; }
+}
+
+async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
+  const token = await getIdToken();
+  return fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options?.headers ?? {}),
+    },
+  });
+}
 import { CATEGORIES, SPECIALTIES, getCategoryLabel } from '@/lib/categories';
 import type { MarketplaceCategory } from '@/types/marketplace';
 import type {
@@ -561,27 +576,21 @@ function ConsultantListingsView({ uid, displayName, isAdmin }: { uid: string; di
 
   useEffect(() => {
     (async () => {
-      const db = getFirestoreClient();
-      if (!db) { setLoading(false); return; }
-
-      const [listingSnap, userSnap] = await Promise.all([
-        getDocs(query(collection(db, 'consultant_listings'), where('consultant_id', '==', uid))),
-        getDoc(doc(db, 'users', uid)),
-      ]);
-
-      setListings(listingSnap.docs
-        .map((d) => ({ id: d.id, ...(d.data() as Omit<ConsultantListing, 'id'>) }))
-        .sort((a, b) => b.created_at - a.created_at));
-
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-        setAllowedCats((data.categories ?? []) as MarketplaceCategory[]);
-        // Admin is always KYC-exempt; otherwise check kyc_status
-        setIsKycExempt(isAdmin || data.kyc_status === 'verified');
+      try {
+        const res  = await apiFetch(`/api/listings?consultant_id=${encodeURIComponent(uid)}&include_user=true`);
+        const data = await res.json();
+        if (res.ok) {
+          setListings(data.listings ?? []);
+          if (data.user) {
+            setAllowedCats((data.user.categories ?? []) as MarketplaceCategory[]);
+            setIsKycExempt(isAdmin || data.user.kyc_status === 'verified');
+          }
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     })();
-  }, [uid]);
+  }, [uid, isAdmin]);
 
   const openNew = () => {
     setDraft(emptyListing());
@@ -609,78 +618,89 @@ function ConsultantListingsView({ uid, displayName, isAdmin }: { uid: string; di
   const handleSave = async (data: ReturnType<typeof emptyListing>) => {
     setSaving(true);
     try {
-      const db = getFirestoreClient();
-      if (!db) throw new Error('Firestore unavailable');
-
       const requires_kyc      = data.pricing.amount_cents > KYC_PRICE_THRESHOLD_CENTS && !isAdmin && !isKycExempt;
       const requires_contract = data.pricing.amount_cents > CONTRACT_PRICE_THRESHOLD_CENTS && !isAdmin;
       const payload = { ...data, requires_kyc, requires_contract };
 
       if (editingId === 'new') {
-        const docRef = await addDoc(collection(db, 'consultant_listings'), {
-          ...payload, consultant_id: uid, consultant_name: displayName ?? '',
-          created_at: Date.now(), updated_at: Date.now(),
+        const res  = await apiFetch('/api/listings', {
+          method:  'POST',
+          body:    JSON.stringify({ listing: payload, uid, displayName: displayName ?? '' }),
         });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? 'Save failed');
+        const now = Date.now();
         setListings((prev) => [{
-          id: docRef.id, consultant_id: uid, consultant_name: displayName ?? '',
-          ...payload, created_at: Date.now(), updated_at: Date.now(),
+          id: json.id, consultant_id: uid, consultant_name: displayName ?? '',
+          ...payload, created_at: now, updated_at: now,
         }, ...prev]);
       } else if (editingId) {
-        await updateDoc(doc(db, 'consultant_listings', editingId), {
-          ...payload, updated_at: Date.now(),
+        const res = await apiFetch(`/api/listings/${editingId}`, {
+          method: 'PUT',
+          body:   JSON.stringify(payload),
         });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? 'Update failed');
         setListings((prev) => prev.map((l) =>
           l.id === editingId ? { ...l, ...payload, updated_at: Date.now() } : l
         ));
       }
       setEditingId(null);
-    } finally { setSaving(false); }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Kayıt sırasında bir hata oluştu.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleToggle = async (listing: ConsultantListing) => {
-    const db = getFirestoreClient();
-    if (!db) return;
-    await updateDoc(doc(db, 'consultant_listings', listing.id), {
-      is_active: !listing.is_active, updated_at: Date.now(),
+    const res = await apiFetch(`/api/listings/${listing.id}`, {
+      method: 'PUT',
+      body:   JSON.stringify({ is_active: !listing.is_active }),
     });
-    setListings((prev) => prev.map((l) =>
-      l.id === listing.id ? { ...l, is_active: !l.is_active } : l
-    ));
+    if (res.ok) {
+      setListings((prev) => prev.map((l) =>
+        l.id === listing.id ? { ...l, is_active: !l.is_active } : l
+      ));
+    }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this listing permanently?')) return;
-    const db = getFirestoreClient();
-    if (!db) return;
-    await deleteDoc(doc(db, 'consultant_listings', id));
-    setListings((prev) => prev.filter((l) => l.id !== id));
-    setSelected((prev) => { const s = new Set(prev); s.delete(id); return s; });
-    if (editingId === id) setEditingId(null);
+    if (!confirm('Bu ilanı kalıcı olarak sil?')) return;
+    const res = await apiFetch(`/api/listings/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setListings((prev) => prev.filter((l) => l.id !== id));
+      setSelected((prev) => { const s = new Set(prev); s.delete(id); return s; });
+      if (editingId === id) setEditingId(null);
+    }
   };
 
   const handleBulkDelete = async () => {
     if (selected.size === 0) return;
-    if (!confirm(`Delete ${selected.size} listing(s) permanently?`)) return;
-    const db = getFirestoreClient();
-    if (!db) return;
-    await Promise.all([...selected].map((id) => deleteDoc(doc(db, 'consultant_listings', id))));
+    if (!confirm(`${selected.size} ilanı kalıcı olarak sil?`)) return;
+    await Promise.all([...selected].map((id) =>
+      apiFetch(`/api/listings/${id}`, { method: 'DELETE' })
+    ));
     setListings((prev) => prev.filter((l) => !selected.has(l.id)));
     if (editingId && selected.has(editingId)) setEditingId(null);
     setSelected(new Set());
   };
 
   const handleDuplicate = async (listing: ConsultantListing) => {
-    const db = getFirestoreClient();
-    if (!db) return;
     const { id: _id, created_at: _ca, updated_at: _ua, ...rest } = listing;
-    const docRef = await addDoc(collection(db, 'consultant_listings'), {
-      ...rest, title: `${rest.title} (copy)`, is_active: false,
-      created_at: Date.now(), updated_at: Date.now(),
+    const copy = { ...rest, title: `${rest.title} (kopya)`, is_active: false };
+    const res  = await apiFetch('/api/listings', {
+      method: 'POST',
+      body:   JSON.stringify({ listing: copy, uid, displayName: displayName ?? '' }),
     });
-    setListings((prev) => [{
-      ...rest, id: docRef.id, title: `${rest.title} (copy)`, is_active: false,
-      created_at: Date.now(), updated_at: Date.now(),
-    }, ...prev]);
+    const json = await res.json();
+    if (res.ok) {
+      const now = Date.now();
+      setListings((prev) => [{
+        ...copy, id: json.id, consultant_id: uid, consultant_name: displayName ?? '',
+        created_at: now, updated_at: now,
+      }, ...prev]);
+    }
   };
 
   const toggleSelect = (id: string, checked: boolean) => {
@@ -852,15 +872,15 @@ function EngagementsView({ uid, email, role }: { uid: string; email: string; rol
 
   useEffect(() => {
     (async () => {
-      const db = getFirestoreClient();
-      if (!db) { setLoading(false); return; }
-      const snap = role === 'admin' || role === 'supervisor'
-        ? await getDocs(collection(db, 'consultant_listings'))
-        : await getDocs(query(collection(db, 'consultant_listings'), where('is_active', '==', true)));
-      setListings(snap.docs
-        .map((d) => ({ id: d.id, ...(d.data() as Omit<ConsultantListing, 'id'>) }))
-        .sort((a, b) => b.created_at - a.created_at));
-      setLoading(false);
+      try {
+        const isAdmin = role === 'admin' || role === 'supervisor';
+        const url = isAdmin ? '/api/listings?all=true' : '/api/listings?active_only=true';
+        const res  = await apiFetch(url);
+        const data = await res.json();
+        if (res.ok) setListings(data.listings ?? []);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [uid, role]);
 
@@ -965,15 +985,19 @@ export default function ConsultationsPage() {
     return () => unsub();
   }, []);
 
-  // Load modes from Firestore
+  // Load user modes via API (avoids Firestore security rules)
   useEffect(() => {
     if (!uid) return;
     (async () => {
-      const db = getFirestoreClient();
-      if (!db) { setModesLoaded(true); return; }
-      const snap = await getDoc(doc(db, 'users', uid));
-      setModes((snap.data()?.modes as string[]) ?? []);
-      setModesLoaded(true);
+      try {
+        const res  = await apiFetch(`/api/listings?consultant_id=${encodeURIComponent(uid)}&include_user=true`);
+        const data = await res.json();
+        if (res.ok && data.user?.modes) {
+          setModes(data.user.modes as string[]);
+        }
+      } finally {
+        setModesLoaded(true);
+      }
     })();
   }, [uid]);
 
