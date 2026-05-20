@@ -23,19 +23,19 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Stripe Connect OAuth error:', error, errorDescription);
       return NextResponse.redirect(
-        `${appUrl}/admin/integrations?connect_error=${encodeURIComponent(errorDescription || error)}`
+        `${appUrl}/dashboard/settings?tab=integrations&connect_error=${encodeURIComponent(errorDescription || error)}`
       );
     }
 
     if (!code || !stateRaw) {
-      return NextResponse.redirect(`${appUrl}/admin/integrations?connect_error=missing_params`);
+      return NextResponse.redirect(`${appUrl}/dashboard/settings?tab=integrations&connect_error=missing_params`);
     }
 
     let state: { consultant_id: string; admin_uid: string };
     try {
       state = JSON.parse(Buffer.from(stateRaw, 'base64').toString('utf8'));
     } catch {
-      return NextResponse.redirect(`${appUrl}/admin/integrations?connect_error=invalid_state`);
+      return NextResponse.redirect(`${appUrl}/dashboard/settings?tab=integrations&connect_error=invalid_state`);
     }
 
     const activeConfig = await getActiveKiStripePosConfig();
@@ -63,12 +63,12 @@ export async function GET(request: NextRequest) {
     console.log(`Stripe Connect linked: consultant=${state.consultant_id}, account=${connectedAccountId}`);
 
     return NextResponse.redirect(
-      `${appUrl}/admin/integrations?connect_success=1&account_id=${connectedAccountId}`
+      `${appUrl}/dashboard/settings?tab=integrations&connect_success=1&account_id=${connectedAccountId}`
     );
   } catch (err: any) {
     console.error('Stripe Connect callback error:', err);
     return NextResponse.redirect(
-      `${appUrl}/admin/integrations?connect_error=${encodeURIComponent(err.message || 'callback_error')}`
+      `${appUrl}/dashboard/settings?tab=integrations&connect_error=${encodeURIComponent(err.message || 'callback_error')}`
     );
   }
 }

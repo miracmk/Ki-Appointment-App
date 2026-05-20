@@ -6,7 +6,7 @@ import { useLocale } from 'next-intl';
 import { useRouter, usePathname } from 'next/navigation';
 import { getFirebaseAuth } from '@/lib/firebase-client';
 import { signOut } from 'firebase/auth';
-import { useUserRole } from '@/lib/use-user-role';
+import { useUserRole, hasConsultantAccess } from '@/lib/use-user-role';
 
 const NAV = [
   {
@@ -87,9 +87,8 @@ export default function ConsultantLayout({ children }: { children: React.ReactNo
       router.push('/login');
       return;
     }
-    // Superadmins can access consultant panel for testing/support
-    if (user.role !== 'consultant' && user.role !== 'superadmin') {
-      router.push('/unauthorized');
+    if (!hasConsultantAccess(user.role)) {
+      router.push('/dashboard');
     }
   }, [user, loading, router]);
 
@@ -100,7 +99,7 @@ export default function ConsultantLayout({ children }: { children: React.ReactNo
     router.push('/login');
   };
 
-  if (loading || !user || (user.role !== 'consultant' && user.role !== 'superadmin')) {
+  if (loading || !user || !hasConsultantAccess(user.role)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0A0B0F]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#B000FF] border-t-transparent" />

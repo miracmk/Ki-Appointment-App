@@ -8,54 +8,35 @@ import { getFirebaseAuth } from '@/lib/firebase-client';
 import { signOut } from 'firebase/auth';
 import { useUserRole } from '@/lib/use-user-role';
 
+// ─── Icons ────────────────────────────────────────────────────────────────────
+const Icon = {
+  overview:      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
+  consultations: <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+  appointments:  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
+  calendar:      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  wallet:        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>,
+  kyc:           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
+  settings:      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
+  signout:       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>,
+  menu:          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>,
+};
+
 const NAV = [
-  {
-    href: '/dashboard',
-    label: 'Overview',
-    icon: (
-      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-      </svg>
-    ),
-  },
-  {
-    href: '/dashboard/appointments',
-    label: 'My Appointments',
-    icon: (
-      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    ),
-  },
-  {
-    href: '/dashboard/billing',
-    label: 'Billing',
-    icon: (
-      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-      </svg>
-    ),
-  },
-  {
-    href: '/dashboard/kyc',
-    label: 'KYC Verification',
-    icon: (
-      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-      </svg>
-    ),
-  },
-  {
-    href: '/dashboard/settings',
-    label: 'Settings',
-    icon: (
-      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
-  },
-];
+  { href: '/dashboard/overview',       label: 'Overview',          icon: 'overview' },
+  { href: '/dashboard/consultations',  label: 'My Consultations',  icon: 'consultations' },
+  { href: '/dashboard/appointments',   label: 'My Appointments',   icon: 'appointments' },
+  { href: '/dashboard/calendar',       label: 'My Calendar',       icon: 'calendar' },
+  { href: '/dashboard/wallet',         label: 'Ki Wallet',         icon: 'wallet' },
+  { href: '/dashboard/kyc',            label: 'KYC Verification',  icon: 'kyc' },
+  { href: '/dashboard/settings',       label: 'Settings',          icon: 'settings' },
+] as const;
+
+const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
+  admin:      { label: 'Admin',      cls: 'border-[#B000FF]/30 bg-[#B000FF]/10 text-[#B000FF]' },
+  supervisor: { label: 'Supervisor', cls: 'border-red-500/30 bg-red-500/10 text-red-400' },
+  consultant: { label: 'Consultant', cls: 'border-[#00F0FF]/30 bg-[#00F0FF]/10 text-[#00F0FF]' },
+  client:     { label: 'Client',     cls: 'border-white/10 bg-white/5 text-white/50' },
+};
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
@@ -84,120 +65,84 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
+  const badge = ROLE_BADGE[user.role] ?? ROLE_BADGE.client;
+
   return (
     <div className="flex min-h-screen bg-[#0A0B0F]">
+      {/* Mobile overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-20 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div
+          className="fixed inset-0 z-20 bg-black/60 backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
 
+      {/* Sidebar */}
       <aside className={`fixed left-0 top-0 z-30 flex h-full w-64 flex-col border-r border-white/[0.06] bg-[#0D0E14] transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        {/* Logo */}
         <div className="flex h-16 items-center border-b border-white/[0.06] px-6">
-          <Link href={`/${locale}`}>
+          <Link href={`/${locale}`} onClick={() => setSidebarOpen(false)}>
             <img src="/logo.png" alt="Ki Business" className="h-7 w-auto" />
           </Link>
         </div>
 
         {/* Role badge */}
         <div className="border-b border-white/[0.06] px-4 py-3">
-          <span className={`rounded-lg border px-2.5 py-1 text-xs font-semibold ${
-            user.role === 'superadmin' ? 'border-[#B000FF]/30 bg-[#B000FF]/10 text-[#B000FF]' :
-            user.role === 'admin'      ? 'border-red-500/30 bg-red-500/10 text-red-400' :
-            user.role === 'consultant' ? 'border-[#00F0FF]/30 bg-[#00F0FF]/10 text-[#00F0FF]' :
-            'border-white/10 bg-white/5 text-white/50'
-          }`}>
-            {user.role}
+          <span className={`rounded-lg border px-2.5 py-1 text-xs font-semibold ${badge.cls}`}>
+            {badge.label}
           </span>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 py-4">
+        {/* Nav */}
+        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
           {NAV.map((item) => {
-            const active = item.href === '/dashboard'
-              ? pathname === '/dashboard'
-              : pathname.startsWith(item.href);
-            const isSettings = item.href === '/dashboard/settings';
+            const active = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
-              <div key={item.href}>
-                <Link
-                  href={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                    active
-                      ? 'bg-[#00F0FF]/10 text-[#00F0FF]'
-                      : 'text-white/50 hover:bg-white/5 hover:text-white'
-                  }`}
-                >
-                  {item.icon}
-                  {item.label}
-                </Link>
-
-                {/* Admin Panel sub-link under Settings */}
-                {isSettings && (user.role === 'admin' || user.role === 'superadmin') && (
-                  <Link
-                    href="/admin"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`ml-4 mt-0.5 flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium transition ${
-                      pathname.startsWith('/admin')
-                        ? 'bg-red-500/10 text-red-400'
-                        : 'text-red-400/50 hover:bg-white/5 hover:text-red-400'
-                    }`}
-                  >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-                    </svg>
-                    Admin Panel
-                  </Link>
-                )}
-
-                {/* Consultant Panel sub-link under Settings */}
-                {isSettings && user.role === 'consultant' && (
-                  <Link
-                    href="/consultant"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`ml-4 mt-0.5 flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium transition ${
-                      pathname.startsWith('/consultant')
-                        ? 'bg-[#B000FF]/10 text-[#B000FF]'
-                        : 'text-[#B000FF]/50 hover:bg-white/5 hover:text-[#B000FF]'
-                    }`}
-                  >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    Consultant Panel
-                  </Link>
-                )}
-              </div>
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                  active
+                    ? 'bg-[#00F0FF]/10 text-[#00F0FF]'
+                    : 'text-white/50 hover:bg-white/5 hover:text-white'
+                }`}
+              >
+                {Icon[item.icon as keyof typeof Icon]}
+                {item.label}
+              </Link>
             );
           })}
         </nav>
 
+        {/* User footer */}
         <div className="border-t border-white/[0.06] p-4">
           <div className="mb-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
             <p className="text-xs text-white/40">Signed in as</p>
-            <p className="mt-0.5 truncate text-sm text-white/70">{user.email}</p>
+            <p className="mt-0.5 truncate text-sm font-medium text-white/70">{user.displayName || user.email}</p>
+            <p className="truncate text-xs text-white/30">{user.email}</p>
           </div>
           <button
             type="button"
             onClick={handleLogout}
             className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-white/40 transition hover:bg-white/5 hover:text-white"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
+            {Icon.signout}
             Sign Out
           </button>
         </div>
       </aside>
 
+      {/* Main content */}
       <div className="flex flex-1 flex-col lg:pl-64">
+        {/* Top bar */}
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-white/[0.06] bg-[#0A0B0F]/80 px-4 backdrop-blur-xl sm:px-6">
           <button
             type="button"
             className="text-white/50 hover:text-white lg:hidden"
             onClick={() => setSidebarOpen(true)}
           >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+            {Icon.menu}
           </button>
           <div className="flex items-center gap-3 ml-auto">
             <Link

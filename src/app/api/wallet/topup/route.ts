@@ -46,8 +46,8 @@ export async function POST(req: NextRequest) {
         type:          'wallet_topup',
         consultant_id,
       },
-      success_url: `${baseUrl}/consultant/payments?topup=success`,
-      cancel_url:  `${baseUrl}/consultant/payments?topup=cancelled`,
+      success_url: `${baseUrl}/dashboard/wallet?topup=success`,
+      cancel_url:  `${baseUrl}/dashboard/wallet?topup=cancelled`,
     });
 
     return NextResponse.json({ sessionId: session.id, url: session.url });

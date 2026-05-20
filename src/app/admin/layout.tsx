@@ -27,12 +27,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       router.push('/login');
       return;
     }
-    if (user.role !== 'admin' && user.role !== 'superadmin') {
-      router.push('/unauthorized');
+    if (user.role !== 'admin' && user.role !== 'supervisor') {
+      router.push('/dashboard');
     }
   }, [user, loading, router]);
 
-  const isAdmin = user && (user.role === 'admin' || user.role === 'superadmin');
+  const isAdmin = user && (user.role === 'admin' || user.role === 'supervisor');
   if (loading || !isAdmin) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0A0B0F]">
@@ -53,9 +53,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-400">
             ADMIN
           </span>
-          {user?.role === 'superadmin' && (
-            <span className="rounded-lg border border-[#B000FF]/30 bg-[#B000FF]/10 px-2.5 py-1 text-xs font-bold text-[#B000FF]">
-              SUPER
+          {user?.role === 'supervisor' && (
+            <span className="rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-400">
+              SUPERVISOR
             </span>
           )}
         </div>
