@@ -47,9 +47,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  const locale = useLocale();
-  const localeHome = `/${locale}`;
-
   return (
     <div className="flex min-h-screen bg-[#0A0B0F]">
       <aside className="hidden w-56 flex-col border-r border-white/[0.06] bg-[#0D0E14] lg:flex">
