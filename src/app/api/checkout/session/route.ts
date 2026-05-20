@@ -56,6 +56,8 @@ export async function POST(request: NextRequest) {
       appointmentDate,
       appointmentTime,
       appointmentTimezone,
+      specialtyId,
+      categoryId,
     } = body;
 
     if (!consultantId || !packageId || !customerEmail || !appointmentDate || !appointmentTime) {
@@ -135,6 +137,8 @@ export async function POST(request: NextRequest) {
       platform_fee_cents: String(platformFeeCents),
       stripe_fee_cents: String(stripeFeeCents),
       total_charged_cents: String(totalChargedCents),
+      specialty_id: specialtyId ?? '',
+      category_id: categoryId ?? '',
     };
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || 'http://localhost:3000';

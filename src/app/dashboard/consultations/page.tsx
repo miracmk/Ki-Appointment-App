@@ -8,7 +8,7 @@ import {
   query, updateDoc, where,
 } from 'firebase/firestore';
 import { useUserRole } from '@/lib/use-user-role';
-import { CATEGORIES, SPECIALTIES, getCategoryLabel } from '@/lib/categories';
+import { CATEGORIES, SPECIALTIES, getCategoryLabel, specialtyRequiresKyc } from '@/lib/categories';
 import type { MarketplaceCategory } from '@/types/marketplace';
 import type {
   ConsultantListing, ListingCurrency, ListingPaymentMethod,
@@ -42,25 +42,28 @@ const CATEGORY_COLORS: Record<string, string> = {
 const INP  = 'w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-white/20 focus:border-[#00F0FF]/60 focus:outline-none transition';
 const LBL  = 'mb-1.5 block text-xs font-medium text-white/50';
 
+type SortMode = 'newest' | 'oldest' | 'active_first' | 'by_category';
+
 // ─── Empty form state ─────────────────────────────────────────────────────────
 
 function emptyListing(): Omit<ConsultantListing, 'id' | 'consultant_id' | 'consultant_name' | 'created_at' | 'updated_at'> {
   return {
-    category:       'accounting_tax',
-    specialty_id:   '',
-    specialty_label:'',
-    title:          '',
-    description:    '',
-    references:     [],
-    is_active:      true,
+    category:        'accounting_tax',
+    specialty_id:    '',
+    specialty_label: '',
+    title:           '',
+    description:     '',
+    references:      [],
+    requires_kyc:    false,
+    is_active:       true,
     pricing: {
-      type:            'hourly',
-      amount_cents:    15000,
-      currency:        'usd',
-      hours_included:  undefined,
-      sessions_included: undefined,
-      custom_note:     '',
-      payment_methods: ['card'],
+      type:               'hourly',
+      amount_cents:       15000,
+      currency:           'usd',
+      hours_included:     undefined,
+      sessions_included:  undefined,
+      custom_note:        '',
+      payment_methods:    ['card'],
     },
   };
 }
@@ -68,19 +71,37 @@ function emptyListing(): Omit<ConsultantListing, 'id' | 'consultant_id' | 'consu
 // ─── Listing Card ─────────────────────────────────────────────────────────────
 
 function ListingCard({
-  listing, onEdit, onToggle, onDelete,
+  listing, selected, onSelect, onEdit, onToggle, onDelete, onDuplicate,
 }: {
   listing: ConsultantListing;
+  selected: boolean;
+  onSelect: (id: string, checked: boolean) => void;
   onEdit: () => void;
   onToggle: () => void;
   onDelete: () => void;
+  onDuplicate: () => void;
 }) {
   const sym = CURRENCY_SYMBOLS[listing.pricing.currency];
   const amt = listing.pricing.amount_cents / 100;
 
   return (
-    <div className={`rounded-2xl border p-5 transition ${listing.is_active ? 'border-white/[0.08] bg-white/[0.03]' : 'border-white/[0.04] bg-white/[0.01] opacity-60'}`}>
-      <div className="flex items-start justify-between gap-3">
+    <div className={`rounded-2xl border p-5 transition ${
+      selected
+        ? 'border-[#00F0FF]/40 bg-[#00F0FF]/5'
+        : listing.is_active
+          ? 'border-white/[0.08] bg-white/[0.03]'
+          : 'border-white/[0.04] bg-white/[0.01] opacity-60'
+    }`}>
+      <div className="flex items-start gap-3">
+        {/* Bulk select checkbox */}
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={(e) => onSelect(listing.id, e.target.checked)}
+          className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded accent-[#00F0FF]"
+          aria-label={`Select listing ${listing.title}`}
+        />
+
         <div className="flex-1 min-w-0">
           {/* Category + specialty badges */}
           <div className="mb-2 flex flex-wrap gap-1.5">
@@ -112,12 +133,25 @@ function ListingCard({
           </div>
 
           {/* Payment methods */}
-          <div className="mt-1.5 flex gap-1.5">
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
             {listing.pricing.payment_methods.map((m) => (
               <span key={m} className="rounded border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-white/30 capitalize">
                 {m === 'card' ? 'Card' : 'Bank Transfer'}
               </span>
             ))}
+          </div>
+
+          {/* Escrow / KYC label */}
+          <div className="mt-2">
+            {listing.requires_kyc ? (
+              <span className="inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400">
+                🔒 KYC required
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-white/25">
+                15-day escrow
+              </span>
+            )}
           </div>
 
           {/* References count */}
@@ -134,13 +168,17 @@ function ListingCard({
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/60 transition hover:bg-white/10 hover:text-white">
             Edit
           </button>
+          <button type="button" onClick={onDuplicate}
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/40 transition hover:bg-white/10 hover:text-white">
+            Copy
+          </button>
           <button type="button" onClick={onToggle}
             className={`rounded-lg border px-3 py-1.5 text-xs transition ${
               listing.is_active
                 ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20'
                 : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
             }`}>
-            {listing.is_active ? 'Deactivate' : 'Activate'}
+            {listing.is_active ? 'Pause' : 'Activate'}
           </button>
           <button type="button" onClick={onDelete}
             className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs text-red-400 transition hover:bg-red-500/20">
@@ -218,11 +256,13 @@ function ListingForm({
   const [form, setForm] = useState(initialData);
 
   const setCategory = (cat: MarketplaceCategory) =>
-    setForm((f) => ({ ...f, category: cat, specialty_id: '', specialty_label: '' }));
+    setForm((f) => ({ ...f, category: cat, specialty_id: '', specialty_label: '', requires_kyc: false }));
 
   const setSpecialty = (id: string) => {
-    const label = (SPECIALTIES[form.category] ?? []).find((s) => s.id === id)?.label ?? id;
-    setForm((f) => ({ ...f, specialty_id: id, specialty_label: label }));
+    const spec = (SPECIALTIES[form.category] ?? []).find((s) => s.id === id);
+    const label = spec?.label ?? id;
+    const kyc   = spec?.requiresKyc ?? false;
+    setForm((f) => ({ ...f, specialty_id: id, specialty_label: label, requires_kyc: kyc }));
   };
 
   const setPricing = (patch: Partial<ListingPricing>) =>
@@ -233,7 +273,7 @@ function ListingForm({
     const next = current.includes(method)
       ? current.filter((m) => m !== method)
       : [...current, method];
-    if (next.length === 0) return; // at least one required
+    if (next.length === 0) return;
     setPricing({ payment_methods: next });
   };
 
@@ -241,6 +281,10 @@ function ListingForm({
   const needsSessions = form.pricing.type === 'package';
 
   const availableCats = allowedCategories.length > 0 ? allowedCategories : CATEGORIES.map((c) => c.id);
+
+  const kycRequired = form.specialty_id
+    ? specialtyRequiresKyc(form.category, form.specialty_id)
+    : false;
 
   return (
     <div className="space-y-5">
@@ -270,10 +314,24 @@ function ListingForm({
             className={INP}>
             <option value="">— Select specialty —</option>
             {(SPECIALTIES[form.category] ?? []).map((s) => (
-              <option key={s.id} value={s.id}>{s.label}</option>
+              <option key={s.id} value={s.id}>{s.label}{s.requiresKyc ? ' 🔒' : ''}</option>
             ))}
           </select>
         </div>
+
+        {/* KYC warning banner */}
+        {kycRequired && (
+          <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+            <span className="text-lg shrink-0">⚠️</span>
+            <div>
+              <p className="text-sm font-semibold text-amber-300">Credential verification required</p>
+              <p className="mt-0.5 text-xs text-amber-400/80">
+                This specialty is in a regulated field. Your listing will be held for KYC review before becoming
+                visible on the marketplace. Funds from bookings will be held in escrow until verification is complete.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Section 2: Listing Details ─────────────────── */}
@@ -413,7 +471,7 @@ function ListingForm({
   );
 }
 
-// ─── Consultant view ──────────────────────────────────────────────────────────
+// ─── Consultant listings view ─────────────────────────────────────────────────
 
 function ConsultantListingsView({ uid, displayName }: { uid: string; displayName?: string | null }) {
   const [listings, setListings]         = useState<ConsultantListing[]>([]);
@@ -422,9 +480,10 @@ function ConsultantListingsView({ uid, displayName }: { uid: string; displayName
   const [saving, setSaving]             = useState(false);
   const [allowedCats, setAllowedCats]   = useState<MarketplaceCategory[]>([]);
   const [filterCat, setFilterCat]       = useState<string>('all');
+  const [sortMode, setSortMode]         = useState<SortMode>('newest');
+  const [selected, setSelected]         = useState<Set<string>>(new Set());
   const formRef = useRef<HTMLDivElement>(null);
 
-  // Draft for current edit
   const [draft, setDraft] = useState<ReturnType<typeof emptyListing>>(emptyListing());
 
   useEffect(() => {
@@ -456,14 +515,15 @@ function ConsultantListingsView({ uid, displayName }: { uid: string; displayName
 
   const openEdit = (listing: ConsultantListing) => {
     setDraft({
-      category:       listing.category,
-      specialty_id:   listing.specialty_id,
-      specialty_label:listing.specialty_label,
-      title:          listing.title,
-      description:    listing.description,
-      references:     listing.references ?? [],
-      pricing:        listing.pricing,
-      is_active:      listing.is_active,
+      category:        listing.category,
+      specialty_id:    listing.specialty_id,
+      specialty_label: listing.specialty_label,
+      title:           listing.title,
+      description:     listing.description,
+      references:      listing.references ?? [],
+      requires_kyc:    listing.requires_kyc ?? false,
+      pricing:         listing.pricing,
+      is_active:       listing.is_active,
     });
     setEditingId(listing.id);
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
@@ -475,21 +535,24 @@ function ConsultantListingsView({ uid, displayName }: { uid: string; displayName
       const db = getFirestoreClient();
       if (!db) throw new Error('Firestore unavailable');
 
+      const requires_kyc = specialtyRequiresKyc(data.category, data.specialty_id);
+      const payload = { ...data, requires_kyc };
+
       if (editingId === 'new') {
         const docRef = await addDoc(collection(db, 'consultant_listings'), {
-          ...data, consultant_id: uid, consultant_name: displayName ?? '',
+          ...payload, consultant_id: uid, consultant_name: displayName ?? '',
           created_at: Date.now(), updated_at: Date.now(),
         });
         setListings((prev) => [{
           id: docRef.id, consultant_id: uid, consultant_name: displayName ?? '',
-          ...data, created_at: Date.now(), updated_at: Date.now(),
+          ...payload, created_at: Date.now(), updated_at: Date.now(),
         }, ...prev]);
       } else if (editingId) {
         await updateDoc(doc(db, 'consultant_listings', editingId), {
-          ...data, updated_at: Date.now(),
+          ...payload, updated_at: Date.now(),
         });
         setListings((prev) => prev.map((l) =>
-          l.id === editingId ? { ...l, ...data, updated_at: Date.now() } : l
+          l.id === editingId ? { ...l, ...payload, updated_at: Date.now() } : l
         ));
       }
       setEditingId(null);
@@ -513,13 +576,66 @@ function ConsultantListingsView({ uid, displayName }: { uid: string; displayName
     if (!db) return;
     await deleteDoc(doc(db, 'consultant_listings', id));
     setListings((prev) => prev.filter((l) => l.id !== id));
+    setSelected((prev) => { const s = new Set(prev); s.delete(id); return s; });
     if (editingId === id) setEditingId(null);
   };
 
-  const visibleListings = listings.filter((l) => filterCat === 'all' || l.category === filterCat);
+  const handleBulkDelete = async () => {
+    if (selected.size === 0) return;
+    if (!confirm(`Delete ${selected.size} listing(s) permanently?`)) return;
+    const db = getFirestoreClient();
+    if (!db) return;
+    await Promise.all([...selected].map((id) => deleteDoc(doc(db, 'consultant_listings', id))));
+    setListings((prev) => prev.filter((l) => !selected.has(l.id)));
+    if (editingId && selected.has(editingId)) setEditingId(null);
+    setSelected(new Set());
+  };
+
+  const handleDuplicate = async (listing: ConsultantListing) => {
+    const db = getFirestoreClient();
+    if (!db) return;
+    const { id: _id, created_at: _ca, updated_at: _ua, ...rest } = listing;
+    const docRef = await addDoc(collection(db, 'consultant_listings'), {
+      ...rest, title: `${rest.title} (copy)`, is_active: false,
+      created_at: Date.now(), updated_at: Date.now(),
+    });
+    setListings((prev) => [{
+      ...rest, id: docRef.id, title: `${rest.title} (copy)`, is_active: false,
+      created_at: Date.now(), updated_at: Date.now(),
+    }, ...prev]);
+  };
+
+  const toggleSelect = (id: string, checked: boolean) => {
+    setSelected((prev) => {
+      const s = new Set(prev);
+      checked ? s.add(id) : s.delete(id);
+      return s;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === visibleListings.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(visibleListings.map((l) => l.id)));
+    }
+  };
+
+  const sortListings = (lst: ConsultantListing[]): ConsultantListing[] => {
+    switch (sortMode) {
+      case 'oldest':       return [...lst].sort((a, b) => a.created_at - b.created_at);
+      case 'active_first': return [...lst].sort((a, b) => (b.is_active ? 1 : 0) - (a.is_active ? 1 : 0));
+      case 'by_category':  return [...lst].sort((a, b) => a.category.localeCompare(b.category));
+      default:             return [...lst].sort((a, b) => b.created_at - a.created_at);
+    }
+  };
+
+  const catFiltered  = listings.filter((l) => filterCat === 'all' || l.category === filterCat);
+  const visibleListings = sortListings(catFiltered);
 
   return (
     <div>
+      {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">My Listings</h1>
@@ -534,6 +650,44 @@ function ConsultantListingsView({ uid, displayName }: { uid: string; displayName
           </button>
         )}
       </div>
+
+      {/* Toolbar */}
+      {listings.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {/* Sort controls */}
+          <div className="flex items-center gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
+            {([
+              ['newest',       'Newest'],
+              ['oldest',       'Oldest'],
+              ['active_first', 'Active First'],
+              ['by_category',  'By Category'],
+            ] as [SortMode, string][]).map(([mode, label]) => (
+              <button key={mode} type="button" onClick={() => setSortMode(mode)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                  sortMode === mode
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/30 hover:text-white'
+                }`}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Select all */}
+          <button type="button" onClick={toggleSelectAll}
+            className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-1.5 text-xs text-white/40 transition hover:text-white">
+            {selected.size === visibleListings.length && visibleListings.length > 0 ? 'Deselect All' : 'Select All'}
+          </button>
+
+          {/* Bulk delete */}
+          {selected.size > 0 && (
+            <button type="button" onClick={handleBulkDelete}
+              className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 transition hover:bg-red-500/20">
+              Delete {selected.size} selected
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Category filter */}
       {listings.length > 0 && (
@@ -575,9 +729,12 @@ function ConsultantListingsView({ uid, displayName }: { uid: string; displayName
             <ListingCard
               key={listing.id}
               listing={listing}
+              selected={selected.has(listing.id)}
+              onSelect={toggleSelect}
               onEdit={() => openEdit(listing)}
               onToggle={() => handleToggle(listing)}
               onDelete={() => handleDelete(listing.id)}
+              onDuplicate={() => handleDuplicate(listing)}
             />
           ))}
         </div>
@@ -606,7 +763,7 @@ function ConsultantListingsView({ uid, displayName }: { uid: string; displayName
   );
 }
 
-// ─── Client / Management view (their consultation engagements) ────────────────
+// ─── Client / Management view (marketplace engagements) ───────────────────────
 
 function EngagementsView({ uid, email, role }: { uid: string; email: string; role: string }) {
   const [listings, setListings] = useState<ConsultantListing[]>([]);
@@ -647,6 +804,7 @@ function EngagementsView({ uid, email, role }: { uid: string; email: string; rol
         </div>
         <input type="text" placeholder="Search listings…" value={search}
           onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search listings"
           className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/30 focus:border-[#00F0FF]/50 focus:outline-none" />
       </div>
 
@@ -675,6 +833,11 @@ function EngagementsView({ uid, email, role }: { uid: string; email: string; rol
                   {(role === 'admin' || role === 'supervisor') && !l.is_active && (
                     <span className="rounded-lg border border-red-500/20 bg-red-500/10 px-2.5 py-0.5 text-xs text-red-400">
                       Inactive
+                    </span>
+                  )}
+                  {l.requires_kyc && (
+                    <span className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-xs text-amber-400">
+                      🔒 KYC verified
                     </span>
                   )}
                 </div>
@@ -706,8 +869,11 @@ function EngagementsView({ uid, email, role }: { uid: string; email: string; rol
 
 export default function ConsultationsPage() {
   const { user } = useUserRole();
-  const [uid, setUid]     = useState<string | null>(null);
-  const [email, setEmail] = useState('');
+  const [uid, setUid]       = useState<string | null>(null);
+  const [email, setEmail]   = useState('');
+  const [modes, setModes]   = useState<string[]>([]);
+  const [modesLoaded, setModesLoaded] = useState(false);
+  const [activeTab, setActiveTab] = useState<'listings' | 'engagements'>('listings');
 
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -719,15 +885,62 @@ export default function ConsultationsPage() {
     return () => unsub();
   }, []);
 
-  if (!uid || !user) return (
+  // Load modes from Firestore
+  useEffect(() => {
+    if (!uid) return;
+    (async () => {
+      const db = getFirestoreClient();
+      if (!db) { setModesLoaded(true); return; }
+      const snap = await getDoc(doc(db, 'users', uid));
+      setModes((snap.data()?.modes as string[]) ?? []);
+      setModesLoaded(true);
+    })();
+  }, [uid]);
+
+  if (!uid || !user || !modesLoaded) return (
     <div className="flex justify-center py-20">
       <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#00F0FF] border-t-transparent" />
     </div>
   );
 
-  if (user.role === 'consultant') {
-    return <ConsultantListingsView uid={uid} displayName={user.displayName} />;
+  const isManagement = user.role === 'admin' || user.role === 'supervisor';
+  const isConsultant = user.role === 'consultant' || isManagement;
+  const isClient     = user.role === 'client' || modes.includes('client');
+  const isBoth       = isConsultant && isClient;
+
+  // Determine what to render
+  if (!isBoth) {
+    if (isConsultant) return <ConsultantListingsView uid={uid} displayName={user.displayName} />;
+    return <EngagementsView uid={uid} email={email} role={user.role} />;
   }
 
-  return <EngagementsView uid={uid} email={email} role={user.role} />;
+  // Dual-mode: show tabs
+  return (
+    <div>
+      {/* Tab switcher */}
+      <div className="mb-6 flex items-center gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-1 w-fit">
+        <button type="button" onClick={() => setActiveTab('listings')}
+          className={`rounded-xl px-5 py-2 text-sm font-medium transition ${
+            activeTab === 'listings'
+              ? 'bg-[#00F0FF]/10 text-[#00F0FF]'
+              : 'text-white/40 hover:text-white'
+          }`}>
+          My Listings
+        </button>
+        <button type="button" onClick={() => setActiveTab('engagements')}
+          className={`rounded-xl px-5 py-2 text-sm font-medium transition ${
+            activeTab === 'engagements'
+              ? 'bg-[#00F0FF]/10 text-[#00F0FF]'
+              : 'text-white/40 hover:text-white'
+          }`}>
+          My Engagements
+        </button>
+      </div>
+
+      {activeTab === 'listings'
+        ? <ConsultantListingsView uid={uid} displayName={user.displayName} />
+        : <EngagementsView uid={uid} email={email} role={user.role} />
+      }
+    </div>
+  );
 }

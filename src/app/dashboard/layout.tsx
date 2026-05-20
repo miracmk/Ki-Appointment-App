@@ -23,7 +23,7 @@ const Icon = {
 
 const NAV = [
   { href: '/dashboard/overview',       label: 'Overview',          icon: 'overview' },
-  { href: '/dashboard/consultations',  label: 'My Consultations',  icon: 'consultations' },
+  { href: '/dashboard/consultations',  label: 'My Listings',       icon: 'consultations' },
   { href: '/dashboard/appointments',   label: 'My Appointments',   icon: 'appointments' },
   { href: '/dashboard/calendar',       label: 'My Calendar',       icon: 'calendar' },
   { href: '/dashboard/wallet',         label: 'Ki Wallet',         icon: 'wallet' },

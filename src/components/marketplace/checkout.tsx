@@ -7,6 +7,8 @@ import { POPULAR_TIMEZONES } from '@/lib/timezone';
 interface MarketplaceCheckoutProps {
   consultantId: string;
   packageId?: string;
+  specialtyId?: string;
+  categoryId?: string;
 }
 
 const PACKAGES = [
@@ -16,7 +18,7 @@ const PACKAGES = [
   { id: 'executive', label: 'Full Day',   price: '$10,000', description: 'Strategy & implementation' },
 ];
 
-export function MarketplaceCheckout({ consultantId, packageId }: MarketplaceCheckoutProps) {
+export function MarketplaceCheckout({ consultantId, packageId, specialtyId, categoryId }: MarketplaceCheckoutProps) {
   const [selectedPackage, setSelectedPackage] = useState(packageId ?? 'starter');
   const [email,      setEmail]      = useState('');
   const [name,       setName]       = useState('');
@@ -45,6 +47,8 @@ export function MarketplaceCheckout({ consultantId, packageId }: MarketplaceChec
           appointmentDate: date,
           appointmentTime: time,
           appointmentTimezone: timezone,
+          specialtyId: specialtyId ?? '',
+          categoryId: categoryId ?? '',
         }),
       });
 

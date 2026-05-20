@@ -10,6 +10,7 @@ export interface UserDocument {
   email: string;
   displayName: string;
   role: UserRole;
+  modes: ('consultant' | 'client')[];
   kycStatus: 'unverified' | 'pending' | 'verified' | 'rejected';
   walletBalance: number;   // stored in cents
   createdAt: number;
@@ -325,17 +326,63 @@ export type WalletTransactionType =
   | 'topup_stripe'
   | 'topup_bank'
   | 'deduction_platform_fee'
-  | 'refund';
+  | 'escrow_hold'
+  | 'escrow_release'
+  | 'escrow_refund'
+  | 'consulting_expense'
+  | 'payout'
+  | 'refund'
+  | 'adjustment'
+  | 'kyc_fee';
 
 export interface WalletTransaction {
   id: string;
-  consultant_id: string;
+  user_id: string;
   amount_cents: number;
+  direction: 'credit' | 'debit';
   type: WalletTransactionType;
   appointment_id?: string;
+  escrow_id?: string;
   stripe_session_id?: string;
   note?: string;
   created_at: number;
+}
+
+// ─── Escrow ──────────────────────────────────────────────────────────────────
+
+export type EscrowStatus =
+  | 'holding'       // standard 15-day hold
+  | 'held_for_kyc'  // blocked until consultant KYC verified
+  | 'released'
+  | 'refunded'
+  | 'disputed';
+
+export interface EscrowRecord {
+  id: string;
+  appointment_id: string;
+  consultant_id: string;
+  client_uid?: string;
+  amount_cents: number;
+  platform_fee_cents: number;
+  consultant_payout_cents: number;
+  status: EscrowStatus;
+  kyc_required: boolean;
+  release_at: number;   // epoch ms — 15 days after booking
+  released_at?: number;
+  refunded_at?: number;
+  created_at: number;
+  updated_at: number;
+}
+
+// ─── Wallet Summary ──────────────────────────────────────────────────────────
+
+export interface WalletSummary {
+  user_id: string;
+  available_cents: number;
+  held_cents: number;
+  total_earned_cents: number;
+  total_spent_cents: number;
+  last_updated: number;
 }
 
 // ─── Tickets ─────────────────────────────────────────────────────────────────
@@ -429,6 +476,7 @@ export interface ConsultantListing {
   description: string;
   references: ReferenceCase[];
   pricing: ListingPricing;
+  requires_kyc: boolean;
   is_active: boolean;
   created_at: number;
   updated_at: number;

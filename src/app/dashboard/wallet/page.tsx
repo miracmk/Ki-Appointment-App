@@ -11,14 +11,26 @@ const TX_TYPE_LABELS: Record<string, string> = {
   topup_stripe:          'Top-up (Card)',
   topup_bank:            'Top-up (Bank)',
   deduction_platform_fee:'Platform Fee Deduction',
+  escrow_hold:           'Escrow Hold',
+  escrow_release:        'Escrow Released',
+  escrow_refund:         'Escrow Refund',
+  consulting_expense:    'Consulting Session',
+  payout:                'Payout',
   refund:                'Refund',
+  adjustment:            'Adjustment',
+  kyc_fee:               'KYC Fee',
 };
 const TX_SIGN: Record<string, string> = {
-  topup_stripe: '+', topup_bank: '+', deduction_platform_fee: '-', refund: '+',
+  topup_stripe: '+', topup_bank: '+', deduction_platform_fee: '-',
+  escrow_hold: '-', escrow_release: '+', escrow_refund: '+',
+  consulting_expense: '-', payout: '+', refund: '+', adjustment: '±', kyc_fee: '-',
 };
 const TX_COLOR: Record<string, string> = {
   topup_stripe: 'text-emerald-400', topup_bank: 'text-emerald-400',
-  deduction_platform_fee: 'text-red-400', refund: 'text-emerald-400',
+  deduction_platform_fee: 'text-red-400',
+  escrow_hold: 'text-amber-400', escrow_release: 'text-emerald-400', escrow_refund: 'text-emerald-400',
+  consulting_expense: 'text-red-400', payout: 'text-emerald-400',
+  refund: 'text-emerald-400', adjustment: 'text-white/50', kyc_fee: 'text-red-400',
 };
 const STATUS_LABELS: Record<string, string> = {
   confirmed: 'Confirmed', pending: 'Pending', cancelled: 'Cancelled', completed: 'Completed',
@@ -145,7 +157,7 @@ function ConsultantWallet({ uid }: { uid: string }) {
       if (!db) { setLoadingTx(false); return; }
       const [userSnap, txSnap] = await Promise.all([
         getDocs(query(collection(db, 'users'), where('__name__', '==', uid))),
-        getDocs(query(collection(db, 'wallet_transactions'), where('consultant_id', '==', uid))),
+        getDocs(query(collection(db, 'wallet_transactions'), where('user_id', '==', uid))),
       ]);
       if (!userSnap.empty) setWalletCents(userSnap.docs[0].data().ki_wallet_cents ?? 0);
       setTx(txSnap.docs

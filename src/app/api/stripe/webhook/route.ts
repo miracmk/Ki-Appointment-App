@@ -12,7 +12,9 @@ import { syncToCalendar, syncToOutlookCalendar, generateICS } from '@/lib/calend
 import { createVideoCallLink } from '@/lib/video-call';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase-admin';
 import { getActiveKiStripePosConfig } from '@/lib/stripe-pos';
+import { specialtyRequiresKyc } from '@/lib/categories';
 import { AppointmentMetadata, Appointment, FlatAppointment, PaymentMode } from '@/types/marketplace';
+import type { MarketplaceCategory } from '@/types/marketplace';
 import nodemailer from 'nodemailer';
 
 const pricingMap: Record<string, { amount: number; name: string }> = {
@@ -246,8 +248,9 @@ export async function POST(request: NextRequest) {
           const cur  = (snap.data()?.ki_wallet_cents as number) ?? 0;
           tx.update(ref, { ki_wallet_cents: cur + amountCents, updated_at: Date.now() });
           tx.set(db.collection('wallet_transactions').doc(), {
-            consultant_id:     consultantId,
+            user_id:           consultantId,
             amount_cents:      amountCents,
+            direction:         'credit',
             type:              'topup_stripe',
             stripe_session_id: sessionObj.id,
             created_at:        Date.now(),
@@ -288,8 +291,9 @@ export async function POST(request: NextRequest) {
             const cur  = (snap.data()?.ki_wallet_cents as number) ?? 0;
             tx.update(ref, { ki_wallet_cents: Math.max(0, cur - fees.platform_fee_cents), updated_at: Date.now() });
             tx.set(db.collection('wallet_transactions').doc(), {
-              consultant_id:  consultantId,
-              amount_cents:   -fees.platform_fee_cents,
+              user_id:        consultantId,
+              amount_cents:   fees.platform_fee_cents,
+              direction:      'debit',
               type:           'deduction_platform_fee',
               appointment_id: appointmentId,
               created_at:     Date.now(),
@@ -304,6 +308,66 @@ export async function POST(request: NextRequest) {
           sessionObj.id,
           paymentMode
         );
+
+        // ── Escrow record + wallet transactions ────────────────────────
+        try {
+          const db = getAdminFirestore();
+          const fees = calculateFees(appointment.payment_amount);
+          const specialtyId = (eventMetadata as any).specialty_id ?? '';
+          const categoryId  = (eventMetadata as any).category_id  ?? '';
+          const kycRequired = (specialtyId && categoryId)
+            ? specialtyRequiresKyc(categoryId as MarketplaceCategory, specialtyId)
+            : false;
+          const now      = Date.now();
+          const escrowRef = db.collection('escrow_records').doc();
+          const escrowId  = escrowRef.id;
+
+          let clientUid: string | undefined;
+          try {
+            const clientUser = await getAdminAuth().getUserByEmail(eventMetadata.customer_email);
+            clientUid = clientUser.uid;
+          } catch { /* client not yet created */ }
+
+          await escrowRef.set({
+            appointment_id:          appointmentId,
+            consultant_id:           consultantId,
+            client_uid:              clientUid ?? null,
+            amount_cents:            appointment.payment_amount,
+            platform_fee_cents:      fees.platform_fee_cents,
+            consultant_payout_cents: fees.consultant_payout_cents,
+            status:     kycRequired ? 'held_for_kyc' : 'holding',
+            kyc_required: kycRequired,
+            release_at:   now + 15 * 24 * 60 * 60 * 1000,
+            created_at:   now,
+            updated_at:   now,
+          });
+
+          await db.collection('wallet_transactions').doc().set({
+            user_id:        consultantId,
+            amount_cents:   fees.consultant_payout_cents,
+            direction:      'debit',
+            type:           'escrow_hold',
+            appointment_id: appointmentId,
+            escrow_id:      escrowId,
+            note: kycRequired ? 'Held pending KYC verification' : '15-day escrow hold',
+            created_at: now,
+          });
+
+          if (clientUid) {
+            await db.collection('wallet_transactions').doc().set({
+              user_id:        clientUid,
+              amount_cents:   appointment.payment_amount,
+              direction:      'debit',
+              type:           'consulting_expense',
+              appointment_id: appointmentId,
+              escrow_id:      escrowId,
+              note:           'Consulting session booked',
+              created_at:     now,
+            });
+          }
+        } catch (escrowErr) {
+          console.error('Escrow record write error:', escrowErr);
+        }
 
         // ── Video call auto-generation ─────────────────────────────────
         try {
