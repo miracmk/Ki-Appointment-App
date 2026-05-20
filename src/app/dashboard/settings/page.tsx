@@ -244,8 +244,8 @@ export default function SettingsPage() {
             {/* Specialties (Uzmanlıklar) - Only for Consultants */}
             {user?.role === 'consultant' && (
               <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6">
-                <h2 className="mb-4 text-lg font-semibold text-white">Specialties (Uzmanlıklar)</h2>
-                <p className="mb-4 text-sm text-white/50">Adding a new specialty requires KYC approval. Pending specialties are marked and will be activated once approved by admin.</p>
+                <h2 className="mb-4 text-lg font-semibold text-white">Specialties</h2>
+                <p className="mb-4 text-sm text-white/50">Adding a new specialty requires admin approval. New specialties are marked as pending until reviewed.</p>
 
                 <form onSubmit={handleAddSpecialty} className="mb-4 flex gap-2">
                   <input

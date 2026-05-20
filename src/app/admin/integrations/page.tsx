@@ -3,108 +3,102 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getFirebaseAuth, getFirebaseClientApp } from '@/lib/firebase-client';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { Button } from '@/components/ui/button';
 import type { PaymentMode } from '@/types/marketplace';
 
 type ActiveTab = 'payment' | 'stripe' | 'profile' | 'calendar' | 'outlook' | 'pos';
 
-const paymentModeLabels: Record<PaymentMode, string> = {
-  ki_escrow: 'Ki Business Escrow (platform collects, transfers to consultant)',
-  own_keys: 'Own API Keys (consultant collects, 10% contract)',
-  ki_connect: 'Stripe Connect (automatic 10% deduction)',
-  direct: 'Ki Business Direct (platform is the consultant)',
-};
+const MODE_DETAILS: { mode: PaymentMode; label: string; desc: string }[] = [
+  { mode: 'ki_escrow',  label: 'Ki Escrow',       desc: 'Platform collects, transfers to consultant minus fees' },
+  { mode: 'own_keys',   label: 'Own Stripe Keys',  desc: 'Consultant collects directly; owes 10% per booking' },
+  { mode: 'ki_connect', label: 'Stripe Connect',   desc: 'Automatic 10% deduction at checkout via Connect' },
+  { mode: 'direct',     label: 'Ki Direct',        desc: 'Ki Business is the consultant — no platform fee' },
+];
+
+const INPUT_CLS = 'w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/25 focus:border-[#00F0FF]/50 focus:outline-none';
+const LABEL_CLS = 'mb-1.5 block text-xs font-medium text-white/60';
 
 export default function ConsultantIntegrationsPage() {
   const searchParams = useSearchParams();
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('payment');
-  const [feedback, setFeedback] = useState<{ message: string; ok: boolean } | null>(null);
+  const [loading,    setLoading]    = useState(true);
+  const [activeTab,  setActiveTab]  = useState<ActiveTab>('payment');
+  const [feedback,   setFeedback]   = useState<{ message: string; ok: boolean } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [stripeForm, setStripeForm] = useState({ consultant_id: '', api_key: '', webhook_secret: '' });
+  const [stripeForm,  setStripeForm]  = useState({ consultant_id: '', api_key: '', webhook_secret: '' });
   const [profileForm, setProfileForm] = useState({ consultant_id: '', name: '', title: '', expertise: '', photo_url: '' });
   const [calendarForm, setCalendarForm] = useState({ consultant_id: '', refresh_token: '', calendar_id: 'primary' });
-  const [outlookForm, setOutlookForm] = useState({ consultant_id: '', refresh_token: '' });
-  const [posSlots, setPosSlots] = useState<any[]>([]);
-  const [posForm, setPosForm] = useState({ slot_id: '', label: '', publishable_key: '', secret_key: '', webhook_secret: '' });
+  const [outlookForm,  setOutlookForm]  = useState({ consultant_id: '', refresh_token: '' });
+  const [posSlots,  setPosSlots]  = useState<any[]>([]);
+  const [posForm,   setPosForm]   = useState({ slot_id: '', label: '', publishable_key: '', secret_key: '', webhook_secret: '' });
   const [posLoading, setPosLoading] = useState(false);
 
-  // Payment mode tab state
   const [paymentConsultantId, setPaymentConsultantId] = useState('');
-  const [selectedMode, setSelectedMode] = useState<PaymentMode>('own_keys');
+  const [selectedMode, setSelectedMode]   = useState<PaymentMode>('own_keys');
   const [connectAccountId, setConnectAccountId] = useState<string | null>(null);
   const [connectLoading, setConnectLoading] = useState(false);
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || 'https://ki-appointment.netlify.app';
+  const webhookUrl = `${appUrl}/api/stripe/webhook`;
 
   useEffect(() => {
     const auth = getFirebaseAuth();
     if (!auth) { setLoading(false); return; }
-
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) { setUserEmail(null); setIsAdmin(false); setLoading(false); return; }
-
-      const email = user.email ?? '';
-      setUserEmail(email);
-      const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? 'admin@kibusiness.co')
-        .split(',')
-        .map((e) => e.trim().toLowerCase());
-      setIsAdmin(adminEmails.includes(email.toLowerCase()));
+    const unsub = onAuthStateChanged(auth, (u) => {
       setLoading(false);
     });
-
-    return () => unsubscribe();
+    return () => unsub();
   }, []);
 
-  // Handle Stripe Connect OAuth redirect params
   useEffect(() => {
-    const connectSuccess = searchParams.get('connect_success');
-    const connectError = searchParams.get('connect_error');
-    const accountId = searchParams.get('account_id');
-
-    if (connectSuccess) {
+    const ok  = searchParams.get('connect_success');
+    const err = searchParams.get('connect_error');
+    const acct = searchParams.get('account_id');
+    if (ok) {
       setActiveTab('payment');
-      setFeedback({ message: `Stripe Connect linked! Account: ${accountId || ''}`, ok: true });
-      if (accountId) setConnectAccountId(accountId);
-    } else if (connectError) {
+      setFeedback({ message: `Stripe Connect linked! Account: ${acct || ''}`, ok: true });
+      if (acct) setConnectAccountId(acct);
+    } else if (err) {
       setActiveTab('payment');
-      setFeedback({ message: `Stripe Connect error: ${decodeURIComponent(connectError)}`, ok: false });
+      setFeedback({ message: `Stripe Connect error: ${decodeURIComponent(err)}`, ok: false });
     }
   }, [searchParams]);
 
-  // Load consultant's current payment mode and connect account when consultant_id changes
   useEffect(() => {
     if (!paymentConsultantId.trim()) { setConnectAccountId(null); return; }
-
-    const loadConsultantData = async () => {
+    (async () => {
       try {
         const app = getFirebaseClientApp();
         if (!app) return;
-        const db = getFirestore(app);
+        const db   = getFirestore(app);
         const snap = await getDoc(doc(db, 'users', paymentConsultantId.trim()));
         if (snap.exists()) {
-          const data = snap.data();
-          if (data.payment_mode) setSelectedMode(data.payment_mode as PaymentMode);
-          setConnectAccountId(data.stripe_connect_account_id ?? null);
+          const d = snap.data();
+          if (d.payment_mode) setSelectedMode(d.payment_mode as PaymentMode);
+          setConnectAccountId(d.stripe_connect_account_id ?? null);
         }
-      } catch {
-        // silently ignore
-      }
-    };
-
-    loadConsultantData();
+      } catch { /* ignore */ }
+    })();
   }, [paymentConsultantId]);
 
-  const handleLogout = async () => {
-    const auth = getFirebaseAuth();
-    if (!auth) return;
-    await signOut(auth);
-    setUserEmail(null);
-    setIsAdmin(false);
-  };
+  useEffect(() => {
+    if (activeTab !== 'pos') return;
+    (async () => {
+      setPosLoading(true);
+      try {
+        const token = await getToken();
+        const res   = await fetch('/api/admin/pos-settings', { headers: { Authorization: `Bearer ${token}` } });
+        const data  = await res.json();
+        if (res.ok) setPosSlots(data.slots || []);
+        else setFeedback({ message: data.error || 'Failed to load POS slots.', ok: false });
+      } catch (e: any) {
+        setFeedback({ message: e.message, ok: false });
+      } finally {
+        setPosLoading(false);
+      }
+    })();
+  }, [activeTab]);
 
   const getToken = async (): Promise<string> => {
     const auth = getFirebaseAuth();
@@ -118,7 +112,7 @@ export default function ConsultantIntegrationsPage() {
     setFeedback(null);
     try {
       const token = await getToken();
-      const res = await fetch('/api/admin/consultant-settings', {
+      const res  = await fetch('/api/admin/consultant-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
@@ -126,94 +120,19 @@ export default function ConsultantIntegrationsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Operation failed.');
       setFeedback({ message: data.message || 'Saved.', ok: true });
-    } catch (err: any) {
-      setFeedback({ message: err.message || 'An error occurred.', ok: false });
+    } catch (e: any) {
+      setFeedback({ message: e.message, ok: false });
     } finally {
       setSubmitting(false);
     }
   };
-
-  const handleStripe = (e: React.FormEvent) => {
-    e.preventDefault();
-    callApi({ action: 'update_stripe', ...stripeForm });
-  };
-
-  const handleProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    callApi({ action: 'update_profile', ...profileForm });
-  };
-
-  const handleCalendar = (e: React.FormEvent) => {
-    e.preventDefault();
-    callApi({ action: 'update_calendar', ...calendarForm });
-  };
-
-  const handleOutlook = (e: React.FormEvent) => {
-    e.preventDefault();
-    callApi({ action: 'update_outlook', ...outlookForm });
-  };
-
-  const handlePaymentMode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!paymentConsultantId.trim()) {
-      setFeedback({ message: 'Please enter a Consultant UID.', ok: false });
-      return;
-    }
-    callApi({ action: 'update_payment_mode', consultant_id: paymentConsultantId.trim(), payment_mode: selectedMode });
-  };
-
-  const handleConnectOAuth = async () => {
-    if (!paymentConsultantId.trim()) {
-      setFeedback({ message: 'Please enter a Consultant UID first.', ok: false });
-      return;
-    }
-    setConnectLoading(true);
-    setFeedback(null);
-    try {
-      const token = await getToken();
-      const res = await fetch(`/api/stripe/connect/oauth?consultant_id=${encodeURIComponent(paymentConsultantId.trim())}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Could not create OAuth URL.');
-      window.location.href = data.oauth_url;
-    } catch (err: any) {
-      setFeedback({ message: err.message || 'An error occurred.', ok: false });
-    } finally {
-      setConnectLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab !== 'pos' || !userEmail) return;
-
-    const loadPosSlots = async () => {
-      setPosLoading(true);
-      setFeedback(null);
-      try {
-        const token = await getToken();
-        const res = await fetch('/api/admin/pos-settings', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to load POS slots.');
-        setPosSlots(data.slots || []);
-      } catch (err: any) {
-        setFeedback({ message: err.message || 'Failed to load POS slots.', ok: false });
-      } finally {
-        setPosLoading(false);
-      }
-    };
-
-    loadPosSlots();
-  }, [activeTab, userEmail]);
 
   const callPosApi = async (body: Record<string, string>) => {
     setSubmitting(true);
     setFeedback(null);
     try {
       const token = await getToken();
-      const res = await fetch('/api/admin/pos-settings', {
+      const res  = await fetch('/api/admin/pos-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
@@ -221,511 +140,333 @@ export default function ConsultantIntegrationsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Operation failed.');
       setFeedback({ message: data.message || 'Saved.', ok: true });
-      if (body.action === 'save_slot' || body.action === 'activate_slot' || body.action === 'delete_slot') {
-        const slotsRes = await fetch('/api/admin/pos-settings', { headers: { Authorization: `Bearer ${token}` } });
-        const slotsData = await slotsRes.json();
-        if (slotsRes.ok) {
-          setPosSlots(slotsData.slots || []);
-        }
+      if (['save_slot', 'activate_slot', 'delete_slot'].includes(body.action)) {
+        const r2 = await fetch('/api/admin/pos-settings', { headers: { Authorization: `Bearer ${token}` } });
+        const d2 = await r2.json();
+        if (r2.ok) setPosSlots(d2.slots || []);
       }
-    } catch (err: any) {
-      setFeedback({ message: err.message || 'An error occurred.', ok: false });
+    } catch (e: any) {
+      setFeedback({ message: e.message, ok: false });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handlePosSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await callPosApi({
-      action: 'save_slot',
-      slot_id: posForm.slot_id,
-      label: posForm.label,
-      publishable_key: posForm.publishable_key,
-      secret_key: posForm.secret_key,
-      webhook_secret: posForm.webhook_secret,
-    });
-    setPosForm({ slot_id: '', label: '', publishable_key: '', secret_key: '', webhook_secret: '' });
+  const set = <T extends Record<string, string>>(
+    setter: React.Dispatch<React.SetStateAction<T>>, field: keyof T
+  ) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setter((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const handleConnectOAuth = async () => {
+    if (!paymentConsultantId.trim()) { setFeedback({ message: 'Enter a Consultant UID first.', ok: false }); return; }
+    setConnectLoading(true);
+    setFeedback(null);
+    try {
+      const token = await getToken();
+      const res  = await fetch(`/api/stripe/connect/oauth?consultant_id=${encodeURIComponent(paymentConsultantId.trim())}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not create OAuth URL.');
+      window.location.href = data.oauth_url;
+    } catch (e: any) {
+      setFeedback({ message: e.message, ok: false });
+    } finally {
+      setConnectLoading(false);
+    }
   };
-
-  const handlePosActivate = async (slotId: string) => {
-    await callPosApi({ action: 'activate_slot', slot_id: slotId });
-  };
-
-  const handlePosDelete = async (slotId: string) => {
-    await callPosApi({ action: 'delete_slot', slot_id: slotId });
-  };
-
-  const handlePosEdit = (slot: any) => {
-    setPosForm({
-      slot_id: slot.id,
-      label: slot.label,
-      publishable_key: '',
-      secret_key: '',
-      webhook_secret: '',
-    });
-  };
-
-  const set = <T extends Record<string, string>>(setter: React.Dispatch<React.SetStateAction<T>>, field: keyof T) =>
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      setter((prev) => ({ ...prev, [field]: e.target.value }));
-
-  if (loading) return null;
-
-  if (!userEmail) {
-    return (
-      <section className="min-h-screen bg-slate-50 py-20">
-        <div className="mx-auto max-w-2xl rounded-3xl bg-white p-10 shadow-sm text-center">
-          <h1 className="text-2xl font-semibold text-gray-900">Consultant Integrations</h1>
-          <p className="mt-3 text-gray-600">Please sign in to access this page.</p>
-          <div className="mt-6">
-            <a href="/login" className="rounded-full bg-primary-600 px-6 py-3 text-white hover:bg-primary-700">
-              Sign In
-            </a>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  if (!isAdmin) {
-    return (
-      <section className="min-h-screen bg-slate-50 py-20">
-        <div className="mx-auto max-w-2xl rounded-3xl bg-white p-10 shadow-sm text-center">
-          <h1 className="text-2xl font-semibold text-gray-900">Access Denied</h1>
-          <p className="mt-3 text-gray-600">This page is only accessible to admin users.</p>
-          <div className="mt-6">
-            <button type="button" onClick={handleLogout} className="rounded-full bg-primary-600 px-6 py-3 text-white hover:bg-primary-700">
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </section>
-    );
-  }
 
   const tabs: { id: ActiveTab; label: string }[] = [
-    { id: 'payment', label: 'Payment Mode' },
-    { id: 'stripe', label: 'Stripe' },
-    { id: 'profile', label: 'Profile' },
+    { id: 'payment',  label: 'Payment Mode' },
+    { id: 'stripe',   label: 'Stripe' },
+    { id: 'profile',  label: 'Profile' },
     { id: 'calendar', label: 'Calendar' },
-    { id: 'outlook', label: 'Outlook' },
-    { id: 'pos', label: 'POS Rotation' },
+    { id: 'outlook',  label: 'Outlook' },
+    { id: 'pos',      label: 'POS Slots' },
   ];
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-red-400 border-t-transparent" />
+      </div>
+    );
+  }
+
   return (
-    <section className="min-h-screen bg-slate-50 py-20">
-      <div className="mx-auto max-w-2xl px-4">
-        <div className="rounded-3xl bg-white p-8 shadow-sm">
-          {/* Header */}
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Consultant Integrations</h1>
-              <p className="mt-1 text-sm text-gray-500">Signed in as: {userEmail}</p>
-            </div>
-            <div className="flex gap-3">
-              <a
-                href="/admin"
-                className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Admin Panel
-              </a>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="inline-flex items-center justify-center rounded-full bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-              >
-                Sign Out
-              </button>
-            </div>
+    <div className="max-w-2xl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Consultant Integrations</h1>
+        <p className="mt-1 text-sm text-white/40">Configure payment modes, Stripe keys, and calendar connections per consultant.</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="mb-6 flex gap-1 overflow-x-auto border-b border-white/[0.06] pb-0">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => { setActiveTab(tab.id); setFeedback(null); }}
+            className={`shrink-0 rounded-t-lg px-4 py-2.5 text-sm font-medium transition ${
+              activeTab === tab.id
+                ? 'border-b-2 border-[#00F0FF] text-[#00F0FF]'
+                : 'text-white/40 hover:text-white'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {feedback && (
+        <div className={`mb-5 rounded-xl p-3.5 text-sm ${feedback.ok ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+          {feedback.message}
+        </div>
+      )}
+
+      {/* Payment Mode Tab */}
+      {activeTab === 'payment' && (
+        <div className="space-y-5">
+          <p className="text-sm text-white/40">Select how this consultant collects payment from clients.</p>
+
+          <div>
+            <label htmlFor="pay-uid" className={LABEL_CLS}>Consultant UID</label>
+            <input
+              id="pay-uid" type="text" value={paymentConsultantId}
+              onChange={(e) => setPaymentConsultantId(e.target.value)}
+              placeholder="firebase-uid…" className={INPUT_CLS}
+            />
           </div>
 
-          {/* Tabs */}
-          <div className="mb-6 flex gap-1 overflow-x-auto rounded-2xl bg-gray-100 p-1">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => { setActiveTab(tab.id); setFeedback(null); }}
-                className={`flex-shrink-0 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
+          <form onSubmit={(e) => { e.preventDefault(); callApi({ action: 'update_payment_mode', consultant_id: paymentConsultantId.trim(), payment_mode: selectedMode }); }} className="space-y-3">
+            <p className={LABEL_CLS}>Payment Mode</p>
+            {MODE_DETAILS.map(({ mode, label, desc }) => (
+              <label
+                key={mode}
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
+                  selectedMode === mode
+                    ? 'border-[#00F0FF]/40 bg-[#00F0FF]/5'
+                    : 'border-white/[0.08] bg-white/[0.02] hover:border-white/20'
                 }`}
               >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {feedback && (
-            <div className={`mb-4 rounded-2xl p-4 text-sm ${feedback.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-              {feedback.message}
-            </div>
-          )}
-
-          {/* Payment Mode Tab */}
-          {activeTab === 'payment' && (
-            <div className="space-y-6">
-              <p className="text-sm text-gray-500">
-                Select the consultant's payment collection method. Connect or Escrow modes require a Stripe Connect account.
-              </p>
-
-              <div>
-                <label htmlFor="payment-uid" className="block text-sm font-medium text-gray-700">
-                  Consultant UID *
-                </label>
                 <input
-                  id="payment-uid"
-                  type="text"
-                  value={paymentConsultantId}
-                  onChange={(e) => setPaymentConsultantId(e.target.value)}
-                  placeholder="firebase-uid…"
-                  className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  type="radio" name="payment_mode" value={mode}
+                  checked={selectedMode === mode}
+                  onChange={() => setSelectedMode(mode)}
+                  className="mt-0.5"
                 />
-              </div>
+                <div>
+                  <span className="block text-sm font-medium text-white">{label}</span>
+                  <span className="block text-xs text-white/40 mt-0.5">{desc}</span>
+                </div>
+              </label>
+            ))}
+            <button type="submit" disabled={submitting}
+              className="w-full rounded-xl bg-[#00F0FF]/10 py-2.5 text-sm font-medium text-[#00F0FF] transition hover:bg-[#00F0FF]/20 disabled:opacity-50">
+              {submitting ? 'Saving…' : 'Save Payment Mode'}
+            </button>
+          </form>
 
-              <form onSubmit={handlePaymentMode} className="space-y-4">
-                <fieldset className="space-y-2">
-                  <legend className="block text-sm font-medium text-gray-700 mb-2">Payment Mode</legend>
-                  {(Object.entries(paymentModeLabels) as [PaymentMode, string][]).map(([mode, label]) => (
-                    <label
-                      key={mode}
-                      className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-colors ${
-                        selectedMode === mode
-                          ? 'border-primary-500 bg-primary-50'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="payment_mode"
-                        value={mode}
-                        checked={selectedMode === mode}
-                        onChange={() => setSelectedMode(mode)}
-                        className="mt-0.5 accent-primary-600"
-                      />
-                      <div>
-                        <span className="block text-sm font-medium text-gray-900">
-                          {mode === 'ki_escrow' && 'Ki Business Escrow'}
-                          {mode === 'own_keys' && 'Own API Keys'}
-                          {mode === 'ki_connect' && 'Stripe Connect'}
-                          {mode === 'direct' && 'Ki Business Direct'}
-                        </span>
-                        <span className="block text-xs text-gray-500 mt-0.5">{label}</span>
-                      </div>
-                    </label>
-                  ))}
-                </fieldset>
-
-                <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
-                  {submitting ? 'Saving…' : 'Save Payment Mode'}
-                </Button>
-              </form>
-
-              {/* Stripe Connect OAuth */}
-              {(selectedMode === 'ki_connect' || selectedMode === 'ki_escrow') && (
-                <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 space-y-3">
-                  <h3 className="text-sm font-semibold text-indigo-900">Stripe Connect Link</h3>
-                  {connectAccountId ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
-                        <span className="text-sm text-gray-700 font-medium">Connected</span>
-                      </div>
-                      <p className="text-xs text-gray-500 font-mono break-all">{connectAccountId}</p>
-                      <button
-                        type="button"
-                        onClick={handleConnectOAuth}
-                        disabled={connectLoading || !paymentConsultantId.trim()}
-                        className="mt-2 rounded-xl border border-indigo-400 bg-white px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
-                      >
-                        {connectLoading ? 'Redirecting…' : 'Reconnect'}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-sm text-indigo-700">
-                        This consultant has not connected a Stripe Connect account yet.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleConnectOAuth}
-                        disabled={connectLoading || !paymentConsultantId.trim()}
-                        className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-                      >
-                        {connectLoading ? 'Redirecting…' : 'Connect with Stripe Connect'}
-                      </button>
-                      {!paymentConsultantId.trim() && (
-                        <p className="text-xs text-indigo-500">Enter a Consultant UID first.</p>
-                      )}
-                    </div>
-                  )}
+          {(selectedMode === 'ki_connect' || selectedMode === 'ki_escrow') && (
+            <div className="rounded-xl border border-[#0047FF]/30 bg-[#0047FF]/5 p-5 space-y-3">
+              <h3 className="text-sm font-semibold text-white">Stripe Connect</h3>
+              {connectAccountId ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                    <span className="text-sm text-emerald-400 font-medium">Connected</span>
+                  </div>
+                  <p className="font-mono text-xs text-white/40 break-all">{connectAccountId}</p>
+                  <button type="button" onClick={handleConnectOAuth} disabled={connectLoading || !paymentConsultantId.trim()}
+                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/70 transition hover:bg-white/10 disabled:opacity-50">
+                    {connectLoading ? 'Redirecting…' : 'Reconnect'}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-white/50">No Stripe Connect account linked yet.</p>
+                  <button type="button" onClick={handleConnectOAuth} disabled={connectLoading || !paymentConsultantId.trim()}
+                    className="rounded-xl bg-[#0047FF]/20 px-5 py-2.5 text-sm font-semibold text-[#6B9FFF] transition hover:bg-[#0047FF]/30 disabled:opacity-50">
+                    {connectLoading ? 'Redirecting…' : 'Link Stripe Connect Account'}
+                  </button>
+                  {!paymentConsultantId.trim() && <p className="text-xs text-white/30">Enter a Consultant UID first.</p>}
                 </div>
               )}
             </div>
           )}
-
-          {/* Stripe Tab */}
-          {activeTab === 'stripe' && (
-            <form onSubmit={handleStripe} className="space-y-4">
-              <p className="text-sm text-gray-500">
-                For consultants using <strong>Own API Keys</strong> mode — enter their personal Stripe credentials here.
-              </p>
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 space-y-1">
-                <p className="font-semibold">Consultant's Stripe Webhook URL:</p>
-                <p className="font-mono text-xs break-all select-all bg-white border border-amber-200 rounded-lg px-3 py-2">
-                  https://ki-appointment.netlify.app/api/stripe/webhook
-                </p>
-                <p className="text-xs mt-1">The consultant must add this URL in their Stripe dashboard under Webhooks and select the <strong>checkout.session.completed</strong> event.</p>
-              </div>
-              {(['consultant_id', 'api_key', 'webhook_secret'] as const).map((field) => (
-                <div key={field}>
-                  <label htmlFor={`stripe-${field}`} className="block text-sm font-medium text-gray-700 capitalize">
-                    {field === 'consultant_id' ? 'Consultant UID *' : field === 'api_key' ? 'Stripe Secret Key *' : 'Webhook Secret *'}
-                  </label>
-                  <input
-                    id={`stripe-${field}`}
-                    type={field === 'consultant_id' ? 'text' : 'password'}
-                    value={stripeForm[field]}
-                    onChange={set(setStripeForm, field)}
-                    required
-                    placeholder={field === 'consultant_id' ? 'firebase-uid…' : field === 'api_key' ? 'sk_live_…' : 'whsec_…'}
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
-                  />
-                </div>
-              ))}
-              <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
-                {submitting ? 'Saving…' : 'Save Stripe Settings'}
-              </Button>
-            </form>
-          )}
-
-          {/* Profile Tab */}
-          {activeTab === 'profile' && (
-            <form onSubmit={handleProfile} className="space-y-4">
-              <p className="text-sm text-gray-500">
-                Profile information shown to clients. This appears on the consultant card in the checkout form.
-              </p>
-              {[
-                { field: 'consultant_id', label: 'Consultant UID *', placeholder: 'firebase-uid…', required: true },
-                { field: 'name', label: 'Full Name *', placeholder: 'John Smith', required: true },
-                { field: 'title', label: 'Title', placeholder: 'Senior Management Consultant', required: false },
-                { field: 'expertise', label: 'Areas of Expertise', placeholder: 'Financial Strategy, Operations, M&A', required: false },
-                { field: 'photo_url', label: 'Photo URL', placeholder: 'https://…', required: false },
-              ].map(({ field, label, placeholder, required }) => (
-                <div key={field}>
-                  <label htmlFor={`profile-${field}`} className="block text-sm font-medium text-gray-700">
-                    {label}
-                  </label>
-                  <input
-                    id={`profile-${field}`}
-                    type={field === 'photo_url' ? 'url' : 'text'}
-                    value={profileForm[field as keyof typeof profileForm]}
-                    onChange={set(setProfileForm, field as keyof typeof profileForm)}
-                    required={required}
-                    placeholder={placeholder}
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
-                  />
-                </div>
-              ))}
-              <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
-                {submitting ? 'Saving…' : 'Update Profile'}
-              </Button>
-            </form>
-          )}
-
-          {/* Calendar Tab */}
-          {activeTab === 'calendar' && (
-            <form onSubmit={handleCalendar} className="space-y-4">
-              <p className="text-sm text-gray-500">
-                Calendar OAuth refresh token and calendar ID. The calendar ID is usually the consultant's email address.
-              </p>
-              {[
-                { field: 'consultant_id', label: 'Consultant UID *', type: 'text', placeholder: 'firebase-uid…' },
-                { field: 'refresh_token', label: 'Calendar Refresh Token *', type: 'password', placeholder: '1//…' },
-                { field: 'calendar_id', label: 'Calendar ID *', type: 'text', placeholder: 'primary or email@example.com' },
-              ].map(({ field, label, type, placeholder }) => (
-                <div key={field}>
-                  <label htmlFor={`calendar-${field}`} className="block text-sm font-medium text-gray-700">{label}</label>
-                  <input
-                    id={`calendar-${field}`}
-                    type={type}
-                    value={calendarForm[field as keyof typeof calendarForm]}
-                    onChange={set(setCalendarForm, field as keyof typeof calendarForm)}
-                    required
-                    placeholder={placeholder}
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
-                  />
-                </div>
-              ))}
-              <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
-                {submitting ? 'Saving…' : 'Connect Calendar'}
-              </Button>
-            </form>
-          )}
-
-          {/* Outlook Calendar Tab */}
-          {activeTab === 'outlook' && (
-            <form onSubmit={handleOutlook} className="space-y-4">
-              <p className="text-sm text-gray-500">
-                Microsoft OAuth refresh token. Requires Calendars.ReadWrite permission via an Azure AD application.
-              </p>
-              {[
-                { field: 'consultant_id', label: 'Consultant UID *', type: 'text', placeholder: 'firebase-uid…' },
-                { field: 'refresh_token', label: 'Microsoft Refresh Token *', type: 'password', placeholder: 'M.R3_…' },
-              ].map(({ field, label, type, placeholder }) => (
-                <div key={field}>
-                  <label htmlFor={`outlook-${field}`} className="block text-sm font-medium text-gray-700">{label}</label>
-                  <input
-                    id={`outlook-${field}`}
-                    type={type}
-                    value={outlookForm[field as keyof typeof outlookForm]}
-                    onChange={set(setOutlookForm, field as keyof typeof outlookForm)}
-                    required
-                    placeholder={placeholder}
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
-                  />
-                </div>
-              ))}
-              <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
-                {submitting ? 'Saving…' : 'Connect Outlook Calendar'}
-              </Button>
-            </form>
-          )}
-
-          {/* POS Rotation Tab */}
-          {activeTab === 'pos' && (
-            <div className="space-y-6">
-              <p className="text-sm text-gray-500">
-                Manage platform payment keys via Firestore, add new POS slots, and switch the active slot.
-              </p>
-
-              {/* Stripe Setup Instructions */}
-              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 space-y-3">
-                <h3 className="text-sm font-semibold text-blue-900">How to Set Up Stripe</h3>
-                <ol className="list-decimal list-inside space-y-2 text-sm text-blue-800">
-                  <li>Go to <strong>dashboard.stripe.com</strong> → Developers → API Keys</li>
-                  <li>Copy your <strong>Publishable key</strong> (pk_live_…) and <strong>Secret key</strong> (sk_live_…)</li>
-                  <li>Go to <strong>Developers → Webhooks → Add endpoint</strong></li>
-                  <li>Set the endpoint URL to:</li>
-                </ol>
-                <div className="rounded-xl bg-white border border-blue-200 px-4 py-3 font-mono text-xs text-gray-800 break-all select-all">
-                  https://ki-appointment.netlify.app/api/stripe/webhook
-                </div>
-                <p className="text-sm text-blue-800">5. Select event: <strong>checkout.session.completed</strong></p>
-                <p className="text-sm text-blue-800">6. Copy the <strong>Signing secret</strong> (whsec_…) and paste below.</p>
-              </div>
-
-              <div className="space-y-4 rounded-3xl border border-dashed border-gray-200 bg-gray-50 p-5">
-                {posLoading ? (
-                  <p className="text-sm text-gray-600">Loading POS slots…</p>
-                ) : posSlots.length === 0 ? (
-                  <p className="text-sm text-gray-600">No POS slots added yet.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {posSlots.map((slot) => (
-                      <div key={slot.id} className="rounded-2xl border border-gray-200 bg-white p-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <p className="font-medium text-gray-900">{slot.label}</p>
-                            <p className="text-xs text-gray-500">ID: {slot.id}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {slot.isActive && <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Active</span>}
-                            <button
-                              type="button"
-                              onClick={() => handlePosActivate(slot.id)}
-                              className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                              disabled={submitting}
-                            >
-                              Activate
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handlePosEdit(slot)}
-                              className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handlePosDelete(slot.id)}
-                              className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100"
-                              disabled={submitting}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <form onSubmit={handlePosSave} className="space-y-4 rounded-3xl border border-gray-200 bg-white p-6">
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <div>
-                    <label htmlFor="pos-label" className="block text-sm font-medium text-gray-700">Slot Label *</label>
-                    <input
-                      id="pos-label"
-                      type="text"
-                      value={posForm.label}
-                      onChange={set(setPosForm, 'label')}
-                      required
-                      placeholder="Primary POS, Backup POS"
-                      className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="pos-publishable" className="block text-sm font-medium text-gray-700">Publishable Key *</label>
-                    <input
-                      id="pos-publishable"
-                      type="text"
-                      value={posForm.publishable_key}
-                      onChange={set(setPosForm, 'publishable_key')}
-                      required
-                      placeholder="pk_live_..."
-                      className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="pos-secret" className="block text-sm font-medium text-gray-700">Secret Key *</label>
-                    <input
-                      id="pos-secret"
-                      type="password"
-                      value={posForm.secret_key}
-                      onChange={set(setPosForm, 'secret_key')}
-                      required
-                      placeholder="sk_live_..."
-                      className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="pos-webhook" className="block text-sm font-medium text-gray-700">Webhook Secret *</label>
-                    <input
-                      id="pos-webhook"
-                      type="password"
-                      value={posForm.webhook_secret}
-                      onChange={set(setPosForm, 'webhook_secret')}
-                      required
-                      placeholder="whsec_..."
-                      className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <Button type="submit" variant="primary" className="w-full sm:w-auto" disabled={submitting}>
-                    {submitting ? 'Saving…' : posForm.slot_id ? 'Update Slot' : 'Save New Slot'}
-                  </Button>
-                  <p className="text-xs text-gray-500">Each slot can be used for live payments. Activate a slot to choose which Stripe keys the platform uses.</p>
-                </div>
-              </form>
-            </div>
-          )}
         </div>
-      </div>
-    </section>
+      )}
+
+      {/* Stripe Tab */}
+      {activeTab === 'stripe' && (
+        <form onSubmit={(e) => { e.preventDefault(); callApi({ action: 'update_stripe', ...stripeForm }); }} className="space-y-4">
+          <p className="text-sm text-white/40">Consultant's own Stripe credentials (Own Keys mode only).</p>
+          <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 text-sm text-yellow-400/80 space-y-1">
+            <p className="font-semibold text-yellow-400">Consultant Webhook URL:</p>
+            <p className="font-mono text-xs break-all select-all">{webhookUrl}</p>
+            <p className="text-xs mt-1 text-yellow-400/60">Consultant must add this URL in Stripe → Developers → Webhooks with the <strong>checkout.session.completed</strong> event.</p>
+          </div>
+          {([
+            { f: 'consultant_id', l: 'Consultant UID', type: 'text',     ph: 'firebase-uid…' },
+            { f: 'api_key',       l: 'Stripe Secret Key', type: 'password', ph: 'sk_live_…' },
+            { f: 'webhook_secret',l: 'Webhook Secret',    type: 'password', ph: 'whsec_…' },
+          ] as { f: keyof typeof stripeForm; l: string; type: string; ph: string }[]).map(({ f, l, type, ph }) => (
+            <div key={f}>
+              <label htmlFor={`s-${f}`} className={LABEL_CLS}>{l}</label>
+              <input id={`s-${f}`} type={type} value={stripeForm[f]} onChange={set(setStripeForm, f)} required placeholder={ph} className={INPUT_CLS} />
+            </div>
+          ))}
+          <button type="submit" disabled={submitting}
+            className="w-full rounded-xl bg-[#00F0FF]/10 py-2.5 text-sm font-medium text-[#00F0FF] transition hover:bg-[#00F0FF]/20 disabled:opacity-50">
+            {submitting ? 'Saving…' : 'Save Stripe Settings'}
+          </button>
+        </form>
+      )}
+
+      {/* Profile Tab */}
+      {activeTab === 'profile' && (
+        <form onSubmit={(e) => { e.preventDefault(); callApi({ action: 'update_profile', ...profileForm }); }} className="space-y-4">
+          <p className="text-sm text-white/40">Profile displayed on the marketplace and checkout page.</p>
+          {([
+            { f: 'consultant_id', l: 'Consultant UID', type: 'text', ph: 'firebase-uid…' },
+            { f: 'name',         l: 'Full Name',       type: 'text', ph: 'John Smith' },
+            { f: 'title',        l: 'Title',           type: 'text', ph: 'Senior Tax Consultant' },
+            { f: 'expertise',    l: 'Expertise',       type: 'text', ph: 'Tax, Customs, Immigration' },
+            { f: 'photo_url',    l: 'Photo URL',       type: 'url',  ph: 'https://…' },
+          ] as { f: keyof typeof profileForm; l: string; type: string; ph: string }[]).map(({ f, l, type, ph }) => (
+            <div key={f}>
+              <label htmlFor={`p-${f}`} className={LABEL_CLS}>{l}</label>
+              <input id={`p-${f}`} type={type} value={profileForm[f]} onChange={set(setProfileForm, f)} placeholder={ph} className={INPUT_CLS} />
+            </div>
+          ))}
+          <button type="submit" disabled={submitting}
+            className="w-full rounded-xl bg-[#00F0FF]/10 py-2.5 text-sm font-medium text-[#00F0FF] transition hover:bg-[#00F0FF]/20 disabled:opacity-50">
+            {submitting ? 'Saving…' : 'Update Profile'}
+          </button>
+        </form>
+      )}
+
+      {/* Calendar Tab */}
+      {activeTab === 'calendar' && (
+        <form onSubmit={(e) => { e.preventDefault(); callApi({ action: 'update_calendar', ...calendarForm }); }} className="space-y-4">
+          <p className="text-sm text-white/40">Calendar OAuth refresh token for automatic appointment sync.</p>
+          {([
+            { f: 'consultant_id',  l: 'Consultant UID',      type: 'text',     ph: 'firebase-uid…' },
+            { f: 'refresh_token',  l: 'Calendar Refresh Token', type: 'password', ph: '1//…' },
+            { f: 'calendar_id',    l: 'Calendar ID',          type: 'text',     ph: 'primary' },
+          ] as { f: keyof typeof calendarForm; l: string; type: string; ph: string }[]).map(({ f, l, type, ph }) => (
+            <div key={f}>
+              <label htmlFor={`c-${f}`} className={LABEL_CLS}>{l}</label>
+              <input id={`c-${f}`} type={type} value={calendarForm[f]} onChange={set(setCalendarForm, f)} required placeholder={ph} className={INPUT_CLS} />
+            </div>
+          ))}
+          <button type="submit" disabled={submitting}
+            className="w-full rounded-xl bg-[#00F0FF]/10 py-2.5 text-sm font-medium text-[#00F0FF] transition hover:bg-[#00F0FF]/20 disabled:opacity-50">
+            {submitting ? 'Saving…' : 'Connect Calendar'}
+          </button>
+        </form>
+      )}
+
+      {/* Outlook Tab */}
+      {activeTab === 'outlook' && (
+        <form onSubmit={(e) => { e.preventDefault(); callApi({ action: 'update_outlook', ...outlookForm }); }} className="space-y-4">
+          <p className="text-sm text-white/40">Microsoft OAuth refresh token. Requires Calendars.ReadWrite permission.</p>
+          {([
+            { f: 'consultant_id', l: 'Consultant UID',     type: 'text',     ph: 'firebase-uid…' },
+            { f: 'refresh_token', l: 'Microsoft Refresh Token', type: 'password', ph: 'M.R3_…' },
+          ] as { f: keyof typeof outlookForm; l: string; type: string; ph: string }[]).map(({ f, l, type, ph }) => (
+            <div key={f}>
+              <label htmlFor={`o-${f}`} className={LABEL_CLS}>{l}</label>
+              <input id={`o-${f}`} type={type} value={outlookForm[f]} onChange={set(setOutlookForm, f)} required placeholder={ph} className={INPUT_CLS} />
+            </div>
+          ))}
+          <button type="submit" disabled={submitting}
+            className="w-full rounded-xl bg-[#00F0FF]/10 py-2.5 text-sm font-medium text-[#00F0FF] transition hover:bg-[#00F0FF]/20 disabled:opacity-50">
+            {submitting ? 'Saving…' : 'Connect Outlook Calendar'}
+          </button>
+        </form>
+      )}
+
+      {/* POS Rotation Tab */}
+      {activeTab === 'pos' && (
+        <div className="space-y-5">
+          <p className="text-sm text-white/40">Manage platform Stripe keys. Activate a slot to use it for all Ki Escrow/Direct payments.</p>
+
+          <div className="rounded-xl border border-[#00F0FF]/20 bg-[#00F0FF]/5 p-4 space-y-2">
+            <p className="text-xs font-semibold text-[#00F0FF]">Platform Webhook URL</p>
+            <p className="font-mono text-xs text-white/60 break-all select-all">{webhookUrl}</p>
+            <p className="text-xs text-white/30">Add this in Stripe → Webhooks with event <strong>checkout.session.completed</strong>.</p>
+          </div>
+
+          {/* Existing slots */}
+          <div className="space-y-3">
+            {posLoading ? (
+              <p className="text-sm text-white/30">Loading slots…</p>
+            ) : posSlots.length === 0 ? (
+              <p className="text-sm text-white/30">No POS slots yet.</p>
+            ) : (
+              posSlots.map((slot) => (
+                <div key={slot.id} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium text-white">{slot.label}</p>
+                      <p className="text-xs text-white/30">ID: {slot.id}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {slot.isActive && (
+                        <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">Active</span>
+                      )}
+                      <button type="button" onClick={() => callPosApi({ action: 'activate_slot', slot_id: slot.id })} disabled={submitting}
+                        className="rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-white/60 transition hover:bg-white/10 hover:text-white disabled:opacity-50">
+                        Activate
+                      </button>
+                      <button type="button" onClick={() => setPosForm({ slot_id: slot.id, label: slot.label, publishable_key: '', secret_key: '', webhook_secret: '' })}
+                        className="rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-white/60 transition hover:bg-white/10 hover:text-white">
+                        Edit
+                      </button>
+                      <button type="button" onClick={() => callPosApi({ action: 'delete_slot', slot_id: slot.id })} disabled={submitting}
+                        className="rounded-lg bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 transition hover:bg-red-500/20 disabled:opacity-50">
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Add / Edit form */}
+          <form onSubmit={(e) => { e.preventDefault(); callPosApi({ action: 'save_slot', ...posForm }); setPosForm({ slot_id: '', label: '', publishable_key: '', secret_key: '', webhook_secret: '' }); }}
+            className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-white">{posForm.slot_id ? 'Edit Slot' : 'New Slot'}</h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {([
+                { f: 'label',           l: 'Slot Label',      type: 'text',     ph: 'Primary POS' },
+                { f: 'publishable_key', l: 'Publishable Key', type: 'text',     ph: 'pk_live_…' },
+                { f: 'secret_key',      l: 'Secret Key',      type: 'password', ph: 'sk_live_…' },
+                { f: 'webhook_secret',  l: 'Webhook Secret',  type: 'password', ph: 'whsec_…' },
+              ] as { f: keyof typeof posForm; l: string; type: string; ph: string }[]).map(({ f, l, type, ph }) => (
+                <div key={f}>
+                  <label htmlFor={`pos-${f}`} className={LABEL_CLS}>{l}</label>
+                  <input id={`pos-${f}`} type={type} value={posForm[f]} onChange={set(setPosForm, f)} required placeholder={ph} className={INPUT_CLS} />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button type="submit" disabled={submitting}
+                className="flex-1 rounded-xl bg-[#00F0FF]/10 py-2.5 text-sm font-medium text-[#00F0FF] transition hover:bg-[#00F0FF]/20 disabled:opacity-50">
+                {submitting ? 'Saving…' : posForm.slot_id ? 'Update Slot' : 'Save New Slot'}
+              </button>
+              {posForm.slot_id && (
+                <button type="button" onClick={() => setPosForm({ slot_id: '', label: '', publishable_key: '', secret_key: '', webhook_secret: '' })}
+                  className="rounded-xl border border-white/10 px-4 text-sm text-white/40 hover:text-white">
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
   );
 }

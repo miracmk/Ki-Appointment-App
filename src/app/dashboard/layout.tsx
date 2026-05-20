@@ -114,37 +114,60 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             const active = item.href === '/dashboard'
               ? pathname === '/dashboard'
               : pathname.startsWith(item.href);
+            const isSettings = item.href === '/dashboard/settings';
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                  active
-                    ? 'bg-[#00F0FF]/10 text-[#00F0FF]'
-                    : 'text-white/50 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                {item.icon}
-                {item.label}
-              </Link>
+              <div key={item.href}>
+                <Link
+                  href={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                    active
+                      ? 'bg-[#00F0FF]/10 text-[#00F0FF]'
+                      : 'text-white/50 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  {item.icon}
+                  {item.label}
+                </Link>
+
+                {/* Admin Panel sub-link under Settings */}
+                {isSettings && (user.role === 'admin' || user.role === 'superadmin') && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`ml-4 mt-0.5 flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium transition ${
+                      pathname.startsWith('/admin')
+                        ? 'bg-red-500/10 text-red-400'
+                        : 'text-red-400/50 hover:bg-white/5 hover:text-red-400'
+                    }`}
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                    </svg>
+                    Admin Panel
+                  </Link>
+                )}
+
+                {/* Consultant Panel sub-link under Settings */}
+                {isSettings && user.role === 'consultant' && (
+                  <Link
+                    href="/consultant"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`ml-4 mt-0.5 flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium transition ${
+                      pathname.startsWith('/consultant')
+                        ? 'bg-[#B000FF]/10 text-[#B000FF]'
+                        : 'text-[#B000FF]/50 hover:bg-white/5 hover:text-[#B000FF]'
+                    }`}
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Consultant Panel
+                  </Link>
+                )}
+              </div>
             );
           })}
-
-          {/* Quick links based on role */}
-          {(user.role === 'admin' || user.role === 'superadmin') && (
-            <Link href="/admin" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-400/60 transition hover:bg-white/5 hover:text-red-400">
-              <span>📊</span> Admin Panel
-            </Link>
-          )}
-          {user.role === 'consultant' && (
-            <Link href="/consultant" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#B000FF]/60 transition hover:bg-white/5 hover:text-[#B000FF]">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              Consultant Panel
-            </Link>
-          )}
         </nav>
 
         <div className="border-t border-white/[0.06] p-4">
