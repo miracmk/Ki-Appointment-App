@@ -39,12 +39,12 @@ export default function IntegrationsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ consultantId: profile.uid, stripeApiKey: apiKey, stripeWebhookSecret: webhook }),
       });
-      if (!res.ok) throw new Error((await res.json()).error ?? 'Hata');
-      setMsg({ type: 'ok', text: 'Stripe ayarları kaydedildi.' });
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Error');
+      setMsg({ type: 'ok', text: 'Stripe settings saved successfully.' });
       setApiKey('');
       setWebhook('');
     } catch (err: unknown) {
-      setMsg({ type: 'err', text: err instanceof Error ? err.message : 'Hata oluştu.' });
+      setMsg({ type: 'err', text: err instanceof Error ? err.message : 'An error occurred.' });
     } finally {
       setSaving(false);
     }
@@ -58,22 +58,22 @@ export default function IntegrationsPage() {
     );
   }
 
-  const googleConnected  = profile?.google_calendar?.connected ?? false;
-  const outlookConnected = profile?.outlook_calendar?.connected ?? false;
+  const calendarConnected = profile?.google_calendar?.connected ?? false;
+  const outlookConnected  = profile?.outlook_calendar?.connected ?? false;
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold text-white">Entegrasyonlar</h1>
+      <h1 className="text-2xl font-bold text-white">Integrations</h1>
 
       {/* Stripe */}
       <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-white">Stripe</h2>
           <span className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${profile?.stripe_settings?.is_active ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' : 'border-white/10 bg-white/5 text-white/40'}`}>
-            {profile?.stripe_settings?.is_active ? 'Bağlı' : 'Bağlı Değil'}
+            {profile?.stripe_settings?.is_active ? 'Connected' : 'Not Connected'}
           </span>
         </div>
-        <p className="text-sm text-white/40">Kendi Stripe hesabınızı bağlayın (Mode B — Kendi Anahtarlar).</p>
+        <p className="text-sm text-white/40">Connect your own Stripe account (Mode B — Own API Keys).</p>
         <form onSubmit={handleStripeUpdate} className="space-y-3">
           <div>
             <label htmlFor="stripe-key" className="mb-1.5 block text-sm text-white/60">Stripe Secret Key</label>
@@ -85,30 +85,30 @@ export default function IntegrationsPage() {
           </div>
           {msg && <p className={`text-sm ${msg.type === 'ok' ? 'text-emerald-400' : 'text-red-400'}`}>{msg.text}</p>}
           <button type="submit" disabled={saving || !apiKey || !webhook} className="rounded-xl bg-gradient-to-r from-[#B000FF] to-[#0047FF] px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
-            {saving ? 'Kaydediliyor…' : 'Stripe Ayarlarını Kaydet'}
+            {saving ? 'Saving…' : 'Save Stripe Settings'}
           </button>
         </form>
       </div>
 
-      {/* Google Calendar */}
+      {/* Calendar Integration */}
       <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor">
-              <path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm-7.5 13.5a4.5 4.5 0 110-9 4.5 4.5 0 010 9z" className="text-[#4285F4]" />
+            <svg className="h-6 w-6 text-[#00F0FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <h2 className="font-semibold text-white">Google Calendar</h2>
+            <h2 className="font-semibold text-white">Calendar Integration</h2>
           </div>
-          <span className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${googleConnected ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' : 'border-white/10 bg-white/5 text-white/40'}`}>
-            {googleConnected ? 'Bağlı' : 'Bağlı Değil'}
+          <span className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${calendarConnected ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' : 'border-white/10 bg-white/5 text-white/40'}`}>
+            {calendarConnected ? 'Connected' : 'Not Connected'}
           </span>
         </div>
-        <p className="mt-2 text-sm text-white/40">Randevularınız otomatik olarak Google Calendar&apos;ınıza eklenir.</p>
+        <p className="mt-2 text-sm text-white/40">Appointments are automatically synced to your calendar.</p>
         <a
           href="/api/auth/google-calendar"
           className="mt-4 inline-block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
         >
-          {googleConnected ? 'Yeniden Bağla' : 'Google ile Bağla'}
+          {calendarConnected ? 'Reconnect Calendar' : 'Connect Calendar'}
         </a>
       </div>
 
@@ -122,15 +122,15 @@ export default function IntegrationsPage() {
             <h2 className="font-semibold text-white">Outlook Calendar</h2>
           </div>
           <span className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${outlookConnected ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' : 'border-white/10 bg-white/5 text-white/40'}`}>
-            {outlookConnected ? 'Bağlı' : 'Bağlı Değil'}
+            {outlookConnected ? 'Connected' : 'Not Connected'}
           </span>
         </div>
-        <p className="mt-2 text-sm text-white/40">Microsoft Outlook takvim entegrasyonu.</p>
+        <p className="mt-2 text-sm text-white/40">Microsoft Outlook calendar integration for appointment sync.</p>
         <a
           href="/api/auth/outlook-calendar"
           className="mt-4 inline-block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
         >
-          {outlookConnected ? 'Yeniden Bağla' : 'Outlook ile Bağla'}
+          {outlookConnected ? 'Reconnect Outlook' : 'Connect Outlook'}
         </a>
       </div>
     </div>

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const errorDescription = request.nextUrl.searchParams.get('error_description');
 
     if (error) {
-      console.error('Stripe Connect OAuth hata:', error, errorDescription);
+      console.error('Stripe Connect OAuth error:', error, errorDescription);
       return NextResponse.redirect(
         `${appUrl}/admin/integrations?connect_error=${encodeURIComponent(errorDescription || error)}`
       );
@@ -60,13 +60,13 @@ export async function GET(request: NextRequest) {
       { merge: true }
     );
 
-    console.log(`Stripe Connect bağlandı: consultant=${state.consultant_id}, account=${connectedAccountId}`);
+    console.log(`Stripe Connect linked: consultant=${state.consultant_id}, account=${connectedAccountId}`);
 
     return NextResponse.redirect(
       `${appUrl}/admin/integrations?connect_success=1&account_id=${connectedAccountId}`
     );
   } catch (err: any) {
-    console.error('Stripe Connect callback hatası:', err);
+    console.error('Stripe Connect callback error:', err);
     return NextResponse.redirect(
       `${appUrl}/admin/integrations?connect_error=${encodeURIComponent(err.message || 'callback_error')}`
     );

@@ -1,12 +1,6 @@
 import Link from 'next/link';
 
-type HeroProps = {
-  locale?: string;
-};
-
-export function Hero({ locale = 'en' }: HeroProps) {
-  const localeHref = (path: string) => (path === '/' ? `/${locale}` : `/${locale}${path}`);
-
+export function Hero() {
   return (
     <section className="relative overflow-hidden bg-[#0A0B0F] pt-32 pb-24">
       {/* Aurora blobs */}
@@ -25,38 +19,38 @@ export function Hero({ locale = 'en' }: HeroProps) {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00F0FF] opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-[#00F0FF]" />
             </span>
-            KYC Doğrulamalı Danışman Ağı
+            KYC-Verified Consultant Network
           </div>
 
           {/* Heading */}
           <h1 className="mb-6 text-5xl font-extrabold leading-tight tracking-tight text-white sm:text-6xl lg:text-7xl">
-            Uzman Danışmanlara{' '}
+            Instant Access to{' '}
             <span className="gradient-text">
-              Anında Erişin
+              Expert Consultants
             </span>
           </h1>
 
           <p className="mx-auto mb-10 max-w-2xl text-lg text-white/60 sm:text-xl">
-            Muhasebe, hukuk, göç, yatırım ve daha fazlası için doğrulanmış uzmanlarla bağlanın.
-            Güvenli ödeme, takvim entegrasyonu ve Google Meet ile profesyonel danışmanlık.
+            Connect with verified specialists in accounting, law, immigration, investment, and more.
+            Secure escrow payments, calendar integration, and encrypted video calls.
           </p>
 
           {/* CTAs */}
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
-              href={localeHref('/marketplace')}
+              href="/en/marketplace"
               className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] px-8 py-4 text-base font-semibold text-white shadow-[0_0_40px_rgba(0,71,255,0.4)] transition hover:opacity-90 hover:shadow-[0_0_60px_rgba(0,71,255,0.6)]"
             >
-              Danışman Bul
+              Browse Consultants
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
             </Link>
             <Link
-              href={localeHref('/#how-it-works')}
+              href="/en/#how-it-works"
               className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-base font-semibold text-white/80 backdrop-blur-sm transition hover:border-white/20 hover:bg-white/10 hover:text-white"
             >
-              Nasıl Çalışır?
+              How It Works
             </Link>
           </div>
 
@@ -66,25 +60,25 @@ export function Hero({ locale = 'en' }: HeroProps) {
               <svg className="h-5 w-5 text-[#00F0FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
-              KYC Doğrulanmış
+              KYC Verified
             </div>
             <div className="flex items-center gap-2">
               <svg className="h-5 w-5 text-[#00F0FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
-              Güvenli Escrow Ödeme
+              Secure Escrow Payment
             </div>
             <div className="flex items-center gap-2">
               <svg className="h-5 w-5 text-[#00F0FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.869V15.13a1 1 0 01-1.447.894L15 14M3 8h12a2 2 0 012 2v4a2 2 0 01-2 2H3a2 2 0 01-2-2V10a2 2 0 012-2z" />
               </svg>
-              Google Meet Entegrasyonu
+              Encrypted Video Calls
             </div>
             <div className="flex items-center gap-2">
               <svg className="h-5 w-5 text-[#00F0FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
               </svg>
-              6 Uzman Kategorisi
+              6 Expert Categories
             </div>
           </div>
         </div>

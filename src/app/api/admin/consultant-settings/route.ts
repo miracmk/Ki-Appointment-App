@@ -69,14 +69,14 @@ export async function POST(request: NextRequest) {
     if (action === 'update_profile') {
       const { name, title, expertise, photo_url } = body;
       if (!name) {
-        return NextResponse.json({ error: 'name alanı zorunlu.' }, { status: 400 });
+        return NextResponse.json({ error: 'name field is required.' }, { status: 400 });
       }
       const db = await import('@/lib/firebase-admin').then((m) => m.getAdminFirestore());
       await db.collection('users').doc(consultant_id).set(
         { name, title: title || '', expertise: expertise || '', photo_url: photo_url || '', updated_at: Date.now() },
         { merge: true }
       );
-      return NextResponse.json({ success: true, message: 'Profil güncellendi.' });
+      return NextResponse.json({ success: true, message: 'Profile updated.' });
     }
 
     if (action === 'update_stripe') {
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
       const validModes: PaymentMode[] = ['ki_escrow', 'own_keys', 'ki_connect', 'direct'];
       if (!payment_mode || !validModes.includes(payment_mode)) {
         return NextResponse.json(
-          { error: `Geçersiz payment_mode. Geçerli değerler: ${validModes.join(', ')}` },
+          { error: `Invalid payment_mode. Valid values: ${validModes.join(', ')}` },
           { status: 400 }
         );
       }
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
         { payment_mode, updated_at: Date.now() },
         { merge: true }
       );
-      return NextResponse.json({ success: true, message: 'Ödeme modu güncellendi.' });
+      return NextResponse.json({ success: true, message: 'Payment mode updated.' });
     }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });

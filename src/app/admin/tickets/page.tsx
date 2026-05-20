@@ -15,7 +15,7 @@ const PRIORITY_STYLES: Record<string, string> = {
   low:    'text-white/40', medium: 'text-yellow-400',
   high:   'text-orange-400', urgent: 'text-red-400',
 };
-const STATUS_LABELS: Record<string, string> = { open: 'Açık', in_progress: 'İşlemde', resolved: 'Çözüldü', closed: 'Kapalı' };
+const STATUS_LABELS: Record<string, string> = { open: 'Open', in_progress: 'In Progress', resolved: 'Resolved', closed: 'Closed' };
 
 export default function AdminTicketsPage() {
   const [tickets, setTickets]     = useState<(Ticket & { id: string })[]>([]);
@@ -120,8 +120,8 @@ export default function AdminTicketsPage() {
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
                 rows={2}
-                placeholder="Yanıtınız…"
-                aria-label="Ticket yanıtı"
+                placeholder="Your reply…"
+                aria-label="Ticket reply"
                 className="input-dark flex-1 resize-none text-sm"
               />
               <button
@@ -130,7 +130,7 @@ export default function AdminTicketsPage() {
                 disabled={sending || !reply.trim()}
                 className="self-end rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {sending ? '…' : 'Gönder'}
+                {sending ? '…' : 'Send'}
               </button>
             </div>
           </div>

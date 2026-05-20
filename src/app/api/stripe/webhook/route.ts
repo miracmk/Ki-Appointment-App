@@ -9,7 +9,7 @@ import {
   calculateFees,
 } from '@/lib/marketplace';
 import { syncToGoogleCalendar, syncToOutlookCalendar, generateICS } from '@/lib/calendar-sync';
-import { createMeetLink } from '@/lib/google-meet';
+import { createVideoCallLink } from '@/lib/video-call';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase-admin';
 import { getActiveKiStripePosConfig } from '@/lib/stripe-pos';
 import { AppointmentMetadata, Appointment, FlatAppointment, PaymentMode } from '@/types/marketplace';
@@ -101,7 +101,7 @@ async function sendConfirmationEmail(
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
   if (!smtpHost || !smtpUser || !smtpPassword) {
-    console.warn('SMTP yapılandırılmamış; onay emaili atlandı.');
+    console.warn('SMTP not configured; confirmation email skipped.');
     return;
   }
 
@@ -121,36 +121,36 @@ async function sendConfirmationEmail(
   const onboardingUrl = `${appUrl}/onboarding`;
 
   const portalSection = passwordResetLink
-    ? `\n\n=== MÜŞTERİ PORTALI ===\nRandevunuzu ve belgelerinizi görüntülemek için portal hesabınızı aktif edin:\n${passwordResetLink}\n\nBu link 24 saat geçerlidir.`
-    : `\n\n=== MÜŞTERİ PORTALI ===\nMevcut hesabınızla giriş yapabilirsiniz:\n${appUrl}/login`;
+    ? `\n\n=== CLIENT PORTAL ===\nActivate your portal account to view your appointment and documents:\n${passwordResetLink}\n\nThis link is valid for 24 hours.`
+    : `\n\n=== CLIENT PORTAL ===\nSign in with your existing account:\n${appUrl}/login`;
 
-  const mailBody = `Merhaba${appointment.customer_name ? ' ' + appointment.customer_name : ''},
+  const mailBody = `Hello${appointment.customer_name ? ' ' + appointment.customer_name : ''},
 
-Randevunuz onaylandı!
+Your appointment has been confirmed!
 
-Danışman  : ${consultantName} (${consultantEmail})
-Paket     : ${packageName}
-Tarih/Saat: ${appointmentDisplay}
+Consultant : ${consultantName} (${consultantEmail})
+Package    : ${packageName}
+Date/Time  : ${appointmentDisplay}
 ${portalSection}
 
-=== SONRAKI ADIM ===
-Danışmanlık sürecinizi başlatmak için lütfen aşağıdaki bağlantıdan kısa bir başlangıç formu doldurun:
+=== NEXT STEP ===
+To start your consulting process, please fill in a short onboarding form at the link below:
 ${onboardingUrl}
 
-Ekteki .ics dosyasını takviminize ekleyebilirsiniz.
+You can add the attached .ics file to your calendar.
 
-Herhangi bir sorunuz için danışmanınızla doğrudan iletişime geçebilirsiniz.
+For any questions, feel free to contact your consultant directly.
 
-Saygılarımızla,
+Best regards,
 Ki Business Solutions`;
 
   await transporter.sendMail({
     from: emailFrom,
     to,
-    subject: 'Randevunuz Onaylandı – Ki Business Solutions',
+    subject: 'Appointment Confirmed – Ki Business Solutions',
     text: mailBody,
     icalEvent: {
-      filename: 'randevu.ics',
+      filename: 'appointment.ics',
       method: 'REQUEST',
       content: icsContent,
     },
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
     const signature = request.headers.get('stripe-signature');
 
     if (!signature) {
-      return NextResponse.json({ error: 'Stripe-Signature başlığı eksik.' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing Stripe-Signature header.' }, { status: 400 });
     }
 
     // Parse raw JSON to read payment_mode from metadata before signature check
@@ -171,15 +171,15 @@ export async function POST(request: NextRequest) {
     try {
       rawEvent = JSON.parse(payload);
     } catch {
-      return NextResponse.json({ error: 'Geçersiz JSON.' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 });
     }
 
     const session = rawEvent.data?.object;
     const metadata = session?.metadata as AppointmentMetadata | undefined;
 
     if (!metadata?.consultant_id) {
-      console.error('Stripe metadata içinde consultant_id yok:', metadata);
-      return NextResponse.json({ error: 'consultant_id eksik.' }, { status: 400 });
+      console.error('Stripe metadata missing consultant_id:', metadata);
+      return NextResponse.json({ error: 'Missing consultant_id.' }, { status: 400 });
     }
 
     const consultantId = metadata.consultant_id;
@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!webhookSecret) {
-      console.error(`Webhook secret bulunamadı (mode=${paymentMode}, consultant=${consultantId})`);
+      console.error(`Webhook secret not found (mode=${paymentMode}, consultant=${consultantId})`);
       return NextResponse.json({ received: true }, { status: 200 });
     }
 
@@ -213,8 +213,8 @@ export async function POST(request: NextRequest) {
       const stripe = new Stripe(stripeApiKey || 'placeholder', { apiVersion: '2023-10-16' });
       event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
     } catch (err: any) {
-      console.error(`Webhook imza doğrulaması başarısız (${consultantId}):`, err);
-      return NextResponse.json({ error: `Webhook hatası: ${err.message}` }, { status: 400 });
+      console.error(`Webhook signature verification failed (${consultantId}):`, err);
+      return NextResponse.json({ error: `Webhook error: ${err.message}` }, { status: 400 });
     }
 
     if (event.type === 'checkout.session.completed') {
@@ -259,20 +259,20 @@ export async function POST(request: NextRequest) {
       const appointmentId = eventMetadata.session_id ?? (eventMetadata as { appointment_id?: string }).appointment_id;
 
       if (!appointmentId) {
-        console.error('Webhook metadata içinde appointment ID yok', eventMetadata);
+        console.error('Webhook metadata missing appointment ID', eventMetadata);
         return NextResponse.json({ received: true }, { status: 200 });
       }
 
       try {
         const appointment = await getAppointment(consultantId, appointmentId);
         if (!appointment) {
-          console.error(`Randevu bulunamadı: ${appointmentId}`);
+          console.error(`Appointment not found: ${appointmentId}`);
           return NextResponse.json({ received: true }, { status: 200 });
         }
 
         const consultant = await getConsultantProfile(consultantId);
         if (!consultant) {
-          console.error(`Danışman profili bulunamadı: ${consultantId}`);
+          console.error(`Consultant profile not found: ${consultantId}`);
           return NextResponse.json({ received: true }, { status: 200 });
         }
 
@@ -305,11 +305,11 @@ export async function POST(request: NextRequest) {
           paymentMode
         );
 
-        // ── Google Meet auto-generation ───────────────────────────────
+        // ── Video call auto-generation ─────────────────────────────────
         try {
           const startIso = appointment.appointment_date;
           const endIso   = new Date(new Date(startIso).getTime() + 60 * 60 * 1000).toISOString();
-          const meetLink = await createMeetLink({
+          const meetLink = await createVideoCallLink({
             title:          `Ki Business – ${consultant.name}`,
             startIso,
             endIso,
@@ -325,7 +325,7 @@ export async function POST(request: NextRequest) {
             ]);
           }
         } catch (meetErr) {
-          console.error('Google Meet oluşturma hatası:', meetErr);
+          console.error('Video call creation error:', meetErr);
         }
 
         let passwordResetLink: string | null = null;
@@ -342,7 +342,7 @@ export async function POST(request: NextRequest) {
             );
           }
         } catch (authErr) {
-          console.error('Firebase kullanıcı oluşturma hatası:', authErr);
+          console.error('Firebase user creation error:', authErr);
         }
 
         await Promise.allSettled([
@@ -358,15 +358,15 @@ export async function POST(request: NextRequest) {
           { ...appointment, id: appointmentId },
           icsContent,
           passwordResetLink
-        ).catch((err) => console.error('Email gönderilemedi:', err));
+        ).catch((err) => console.error('Email send failed:', err));
       } catch (err) {
-        console.error(`checkout.session.completed işleme hatası (${consultantId}):`, err);
+        console.error(`checkout.session.completed processing error (${consultantId}):`, err);
       }
     }
 
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (err: any) {
-    console.error('Webhook genel hata:', err);
+    console.error('Webhook general error:', err);
     return NextResponse.json({ received: true }, { status: 200 });
   }
 }

@@ -7,13 +7,13 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { WeeklyAvailability, DayAvailability } from '@/types/marketplace';
 
 const DAYS: { key: keyof WeeklyAvailability; label: string }[] = [
-  { key: 'monday',    label: 'Pazartesi' },
-  { key: 'tuesday',  label: 'Salı' },
-  { key: 'wednesday',label: 'Çarşamba' },
-  { key: 'thursday', label: 'Perşembe' },
-  { key: 'friday',   label: 'Cuma' },
-  { key: 'saturday', label: 'Cumartesi' },
-  { key: 'sunday',   label: 'Pazar' },
+  { key: 'monday',    label: 'Monday' },
+  { key: 'tuesday',  label: 'Tuesday' },
+  { key: 'wednesday',label: 'Wednesday' },
+  { key: 'thursday', label: 'Thursday' },
+  { key: 'friday',   label: 'Friday' },
+  { key: 'saturday', label: 'Saturday' },
+  { key: 'sunday',   label: 'Sunday' },
 ];
 
 const DEFAULT_DAY: DayAvailability = { enabled: false, start: '09:00', end: '18:00' };
@@ -65,9 +65,9 @@ export default function AvailabilityPage() {
       const db = getFirestoreClient();
       if (!db) throw new Error();
       await setDoc(doc(db, 'users', uid), { availability: avail, updated_at: Date.now() }, { merge: true });
-      setMsg({ type: 'ok', text: 'Müsaitlik kaydedildi.' });
+      setMsg({ type: 'ok', text: 'Availability saved successfully.' });
     } catch {
-      setMsg({ type: 'err', text: 'Kayıt sırasında hata oluştu.' });
+      setMsg({ type: 'err', text: 'An error occurred while saving.' });
     } finally {
       setSaving(false);
     }
@@ -83,8 +83,8 @@ export default function AvailabilityPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="mb-2 text-2xl font-bold text-white">Müsaitlik Saatleri</h1>
-      <p className="mb-6 text-white/50">Müşterilerin randevu alabileceği saat aralıklarını belirleyin.</p>
+      <h1 className="mb-2 text-2xl font-bold text-white">Availability Hours</h1>
+      <p className="mb-6 text-white/50">Set the time slots when clients can book appointments with you.</p>
 
       <form onSubmit={handleSave}>
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
@@ -108,7 +108,7 @@ export default function AvailabilityPage() {
                       type="time"
                       value={d.start}
                       onChange={(e) => updateDay(day.key, 'start', e.target.value)}
-                      aria-label={`${day.label} başlangıç saati`}
+                      aria-label={`${day.label} start time`}
                       className="input-dark w-28 text-sm"
                     />
                     <span className="text-white/30">—</span>
@@ -116,7 +116,7 @@ export default function AvailabilityPage() {
                       type="time"
                       value={d.end}
                       onChange={(e) => updateDay(day.key, 'end', e.target.value)}
-                      aria-label={`${day.label} bitiş saati`}
+                      aria-label={`${day.label} end time`}
                       className="input-dark w-28 text-sm"
                     />
                   </div>
@@ -129,7 +129,7 @@ export default function AvailabilityPage() {
         {msg && <p className={`mt-4 text-sm ${msg.type === 'ok' ? 'text-emerald-400' : 'text-red-400'}`}>{msg.text}</p>}
 
         <button type="submit" disabled={saving} className="mt-5 rounded-xl bg-gradient-to-r from-[#B000FF] to-[#0047FF] px-8 py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
-          {saving ? 'Kaydediliyor…' : 'Kaydet'}
+          {saving ? 'Saving…' : 'Save Availability'}
         </button>
       </form>
     </div>

@@ -10,19 +10,19 @@ export async function POST(req: NextRequest) {
     const { consultant_id } = await req.json() as { consultant_id: string };
 
     if (!consultant_id) {
-      return NextResponse.json({ error: 'consultant_id zorunlu.' }, { status: 400 });
+      return NextResponse.json({ error: 'consultant_id is required.' }, { status: 400 });
     }
 
     const activeConfig = await getActiveKiStripePosConfig();
     const db  = getAdminFirestore();
     const doc = await db.collection('users').doc(consultant_id).get();
     if (!doc.exists) {
-      return NextResponse.json({ error: 'Danışman bulunamadı.' }, { status: 404 });
+      return NextResponse.json({ error: 'Consultant not found.' }, { status: 404 });
     }
 
     const data = doc.data();
     if (data?.kyc_fee_paid) {
-      return NextResponse.json({ error: 'KYC ücreti zaten ödenmiş.' }, { status: 409 });
+      return NextResponse.json({ error: 'KYC fee already paid.' }, { status: 409 });
     }
 
     const stripe  = new Stripe(activeConfig.secretKey, { apiVersion: '2023-10-16' });
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
         {
           price_data: {
             currency: 'usd',
-            product_data: { name: 'KYC Doğrulama Ücreti' },
+            product_data: { name: 'KYC Verification Fee' },
             unit_amount: KYC_FEE_CENTS,
           },
           quantity: 1,
@@ -53,6 +53,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (err) {
     console.error('KYC fee session error:', err);
-    return NextResponse.json({ error: 'KYC ödeme oturumu oluşturulamadı.' }, { status: 500 });
+    return NextResponse.json({ error: 'Could not create KYC payment session.' }, { status: 500 });
   }
 }

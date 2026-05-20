@@ -11,7 +11,7 @@ function formatDate(isoDate: string, time: string, timezone: string): string {
   try {
     const dt = new Date(isoDate);
     return (
-      dt.toLocaleDateString('tr-TR', {
+      dt.toLocaleDateString('en-US', {
         timeZone: timezone || 'UTC',
         weekday: 'long',
         day: 'numeric',
@@ -61,32 +61,32 @@ export default function CheckoutSuccessPage() {
             </svg>
           </div>
 
-          <h1 className="text-center text-3xl font-bold text-gray-900">Ödeme Başarılı!</h1>
+          <h1 className="text-center text-3xl font-bold text-gray-900">Payment Successful!</h1>
           <p className="mt-3 text-center text-gray-600">
-            Randevunuz alındı. Onay ve giriş bilgileriniz email adresinize gönderilmiştir.
+            Your appointment has been booked. Confirmation and access details have been sent to your email.
           </p>
 
           {/* Appointment details */}
           {loadingAppt ? (
             <div className="mt-8 rounded-2xl bg-gray-50 p-5 text-center text-sm text-gray-500">
-              Randevu bilgileri yükleniyor…
+              Loading appointment details…
             </div>
           ) : appointment ? (
             <div className="mt-8 rounded-2xl bg-primary-50 p-6">
-              <h2 className="font-semibold text-primary-900">Randevu Özeti</h2>
+              <h2 className="font-semibold text-primary-900">Appointment Summary</h2>
               <dl className="mt-3 space-y-2 text-sm">
                 <div className="flex justify-between gap-2">
-                  <dt className="text-gray-500">Paket</dt>
+                  <dt className="text-gray-500">Package</dt>
                   <dd className="font-medium text-gray-900 text-right">{appointment.package_name}</dd>
                 </div>
                 {appointment.consultant_name && (
                   <div className="flex justify-between gap-2">
-                    <dt className="text-gray-500">Danışman</dt>
+                    <dt className="text-gray-500">Consultant</dt>
                     <dd className="font-medium text-gray-900 text-right">{appointment.consultant_name}</dd>
                   </div>
                 )}
                 <div className="flex justify-between gap-2">
-                  <dt className="text-gray-500">Tarih & Saat</dt>
+                  <dt className="text-gray-500">Date & Time</dt>
                   <dd className="font-medium text-gray-900 text-right">
                     {formatDate(
                       appointment.appointment_date,
@@ -96,7 +96,7 @@ export default function CheckoutSuccessPage() {
                   </dd>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <dt className="text-gray-500">Ödeme</dt>
+                  <dt className="text-gray-500">Payment</dt>
                   <dd className="font-medium text-gray-900">${(appointment.payment_amount / 100).toLocaleString()}</dd>
                 </div>
               </dl>
@@ -105,11 +105,11 @@ export default function CheckoutSuccessPage() {
 
           {/* Next steps */}
           <div className="mt-8 space-y-3 text-sm text-gray-600">
-            <p className="font-medium text-gray-900">Sonraki adımlar:</p>
+            <p className="font-medium text-gray-900">Next steps:</p>
             <ol className="list-inside list-decimal space-y-2 pl-1">
-              <li>Email gelen kutunuzu kontrol edin ve hesabınızı aktifleştirin.</li>
-              <li>Email doğrulandıktan sonra başlangıç formunu doldurun.</li>
-              <li>Danışmanınız form bilgilerinizi inceleyerek sizinle iletişime geçecektir.</li>
+              <li>Check your email inbox and activate your account.</li>
+              <li>After verifying your email, complete the onboarding form.</li>
+              <li>Your consultant will review your details and get in touch.</li>
             </ol>
           </div>
 
@@ -118,13 +118,13 @@ export default function CheckoutSuccessPage() {
               href="/onboarding"
               className="inline-flex items-center justify-center rounded-full bg-primary-600 px-6 py-3 font-medium text-white hover:bg-primary-700"
             >
-              Başlangıç Formunu Doldur
+              Complete Onboarding Form
             </Link>
             <Link
               href="/login"
               className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white px-6 py-3 font-medium text-gray-700 hover:bg-gray-50"
             >
-              Portale Giriş Yap
+              Sign In to Portal
             </Link>
           </div>
         </div>

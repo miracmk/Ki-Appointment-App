@@ -6,9 +6,9 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
 const STEPS = [
-  { label: 'Başvuru Yapıldı',   key: 'submitted' },
-  { label: 'İnceleniyor',       key: 'pending' },
-  { label: 'Doğrulandı',        key: 'verified' },
+  { label: 'Submitted',   key: 'submitted' },
+  { label: 'Under Review', key: 'pending' },
+  { label: 'Verified',    key: 'verified' },
 ];
 
 export default function ClientKycPage() {
@@ -37,8 +37,8 @@ export default function ClientKycPage() {
 
   return (
     <div>
-      <h1 className="mb-2 text-2xl font-bold text-white">KYC Doğrulama</h1>
-      <p className="mb-8 text-white/50">Kimlik doğrulama durumunuzu buradan takip edebilirsiniz.</p>
+      <h1 className="mb-2 text-2xl font-bold text-white">KYC Verification</h1>
+      <p className="mb-8 text-white/50">Track your identity verification status here.</p>
 
       {loading ? (
         <div className="flex justify-center py-20">
@@ -70,18 +70,18 @@ export default function ClientKycPage() {
               )}
               <div>
                 <h2 className="text-lg font-semibold text-white">
-                  {status === 'verified' ? 'KYC Doğrulandı' :
-                   status === 'rejected' ? 'KYC Reddedildi' :
-                   status === 'pending'  ? 'İnceleme Devam Ediyor' :
-                   'KYC Başvurusu Yapılmadı'}
+                  {status === 'verified' ? 'KYC Verified' :
+                   status === 'rejected' ? 'KYC Rejected' :
+                   status === 'pending'  ? 'Review in Progress' :
+                   'KYC Not Submitted'}
                 </h2>
                 <p className="text-sm text-white/40">
-                  {status === 'verified' ? 'Kimliğiniz başarıyla doğrulanmıştır.' :
-                   status === 'rejected' ? 'Başvurunuz reddedildi.' :
-                   status === 'pending'  ? 'Belgeleriniz inceleniyor, 1-3 iş günü sürebilir.' :
-                   'Kimlik doğrulaması için henüz başvuru yapılmadı.'}
+                  {status === 'verified' ? 'Your identity has been successfully verified.' :
+                   status === 'rejected' ? 'Your application was rejected.' :
+                   status === 'pending'  ? 'Your documents are under review, this may take 1-3 business days.' :
+                   'No identity verification application has been submitted yet.'}
                 </p>
-                {reason && <p className="mt-1 text-sm text-red-400">Red sebebi: {reason}</p>}
+                {reason && <p className="mt-1 text-sm text-red-400">Rejection reason: {reason}</p>}
               </div>
             </div>
 
@@ -111,11 +111,10 @@ export default function ClientKycPage() {
 
           {/* Info */}
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6">
-            <h3 className="mb-3 font-semibold text-white">KYC Hakkında</h3>
+            <h3 className="mb-3 font-semibold text-white">About KYC</h3>
             <p className="text-sm leading-relaxed text-white/50">
-              Ki Business platformunda kimlik doğrulaması (KYC), güvenli bir danışmanlık deneyimi için gereklidir.
-              Yüksek değerli hizmetlerde kimlik doğrulaması zorunlu tutulabilir. Belge yükleme ve doğrulama işlemi
-              Stripe Identity üzerinden güvenle gerçekleştirilir.
+              Identity verification (KYC) on the Ki Business platform is required for a secure consulting experience.
+              KYC may be mandatory for high-value services. Document upload and verification is handled securely via Stripe Identity.
             </p>
           </div>
         </div>

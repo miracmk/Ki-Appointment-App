@@ -11,10 +11,10 @@ import type { PaymentMode } from '@/types/marketplace';
 type ActiveTab = 'payment' | 'stripe' | 'profile' | 'google' | 'outlook' | 'pos';
 
 const paymentModeLabels: Record<PaymentMode, string> = {
-  ki_escrow: 'Ki Business Escrow (platform tahsil eder, danışmana transfer)',
-  own_keys: 'Kendi API Anahtarları (danışman tahsil eder, %10 sözleşme)',
-  ki_connect: 'Stripe Connect (otomatik %10 kesinti)',
-  direct: 'Ki Business Direkt (platform danışmanın kendisi)',
+  ki_escrow: 'Ki Business Escrow (platform collects, transfers to consultant)',
+  own_keys: 'Own API Keys (consultant collects, 10% contract)',
+  ki_connect: 'Stripe Connect (automatic 10% deduction)',
+  direct: 'Ki Business Direct (platform is the consultant)',
 };
 
 export default function ConsultantIntegrationsPage() {
@@ -67,11 +67,11 @@ export default function ConsultantIntegrationsPage() {
 
     if (connectSuccess) {
       setActiveTab('payment');
-      setFeedback({ message: `Stripe Connect bağlandı! Hesap: ${accountId || ''}`, ok: true });
+      setFeedback({ message: `Stripe Connect linked! Account: ${accountId || ''}`, ok: true });
       if (accountId) setConnectAccountId(accountId);
     } else if (connectError) {
       setActiveTab('payment');
-      setFeedback({ message: `Stripe Connect hatası: ${decodeURIComponent(connectError)}`, ok: false });
+      setFeedback({ message: `Stripe Connect error: ${decodeURIComponent(connectError)}`, ok: false });
     }
   }, [searchParams]);
 
@@ -109,7 +109,7 @@ export default function ConsultantIntegrationsPage() {
   const getToken = async (): Promise<string> => {
     const auth = getFirebaseAuth();
     const user = auth?.currentUser;
-    if (!user) throw new Error('Oturum bulunamadı.');
+    if (!user) throw new Error('No active session.');
     return user.getIdToken();
   };
 
@@ -124,10 +124,10 @@ export default function ConsultantIntegrationsPage() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'İşlem başarısız.');
-      setFeedback({ message: data.message || 'Kaydedildi.', ok: true });
+      if (!res.ok) throw new Error(data.error || 'Operation failed.');
+      setFeedback({ message: data.message || 'Saved.', ok: true });
     } catch (err: any) {
-      setFeedback({ message: err.message || 'Hata oluştu.', ok: false });
+      setFeedback({ message: err.message || 'An error occurred.', ok: false });
     } finally {
       setSubmitting(false);
     }
@@ -156,7 +156,7 @@ export default function ConsultantIntegrationsPage() {
   const handlePaymentMode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!paymentConsultantId.trim()) {
-      setFeedback({ message: 'Danışman UID giriniz.', ok: false });
+      setFeedback({ message: 'Please enter a Consultant UID.', ok: false });
       return;
     }
     callApi({ action: 'update_payment_mode', consultant_id: paymentConsultantId.trim(), payment_mode: selectedMode });
@@ -164,7 +164,7 @@ export default function ConsultantIntegrationsPage() {
 
   const handleConnectOAuth = async () => {
     if (!paymentConsultantId.trim()) {
-      setFeedback({ message: 'Önce Danışman UID giriniz.', ok: false });
+      setFeedback({ message: 'Please enter a Consultant UID first.', ok: false });
       return;
     }
     setConnectLoading(true);
@@ -175,10 +175,10 @@ export default function ConsultantIntegrationsPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'OAuth URL oluşturulamadı.');
+      if (!res.ok) throw new Error(data.error || 'Could not create OAuth URL.');
       window.location.href = data.oauth_url;
     } catch (err: any) {
-      setFeedback({ message: err.message || 'Hata oluştu.', ok: false });
+      setFeedback({ message: err.message || 'An error occurred.', ok: false });
     } finally {
       setConnectLoading(false);
     }
@@ -196,10 +196,10 @@ export default function ConsultantIntegrationsPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'POS slotları yüklenemedi.');
+        if (!res.ok) throw new Error(data.error || 'Failed to load POS slots.');
         setPosSlots(data.slots || []);
       } catch (err: any) {
-        setFeedback({ message: err.message || 'POS slotları yüklenemedi.', ok: false });
+        setFeedback({ message: err.message || 'Failed to load POS slots.', ok: false });
       } finally {
         setPosLoading(false);
       }
@@ -219,8 +219,8 @@ export default function ConsultantIntegrationsPage() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'İşlem başarısız.');
-      setFeedback({ message: data.message || 'Kaydedildi.', ok: true });
+      if (!res.ok) throw new Error(data.error || 'Operation failed.');
+      setFeedback({ message: data.message || 'Saved.', ok: true });
       if (body.action === 'save_slot' || body.action === 'activate_slot' || body.action === 'delete_slot') {
         const slotsRes = await fetch('/api/admin/pos-settings', { headers: { Authorization: `Bearer ${token}` } });
         const slotsData = await slotsRes.json();
@@ -229,7 +229,7 @@ export default function ConsultantIntegrationsPage() {
         }
       }
     } catch (err: any) {
-      setFeedback({ message: err.message || 'Hata oluştu.', ok: false });
+      setFeedback({ message: err.message || 'An error occurred.', ok: false });
     } finally {
       setSubmitting(false);
     }
@@ -276,11 +276,11 @@ export default function ConsultantIntegrationsPage() {
     return (
       <section className="min-h-screen bg-slate-50 py-20">
         <div className="mx-auto max-w-2xl rounded-3xl bg-white p-10 shadow-sm text-center">
-          <h1 className="text-2xl font-semibold text-gray-900">Danışman Entegrasyonları</h1>
-          <p className="mt-3 text-gray-600">Erişmek için giriş yapın.</p>
+          <h1 className="text-2xl font-semibold text-gray-900">Consultant Integrations</h1>
+          <p className="mt-3 text-gray-600">Please sign in to access this page.</p>
           <div className="mt-6">
             <a href="/login" className="rounded-full bg-primary-600 px-6 py-3 text-white hover:bg-primary-700">
-              Giriş Yap
+              Sign In
             </a>
           </div>
         </div>
@@ -292,11 +292,11 @@ export default function ConsultantIntegrationsPage() {
     return (
       <section className="min-h-screen bg-slate-50 py-20">
         <div className="mx-auto max-w-2xl rounded-3xl bg-white p-10 shadow-sm text-center">
-          <h1 className="text-2xl font-semibold text-gray-900">Erişim Reddedildi</h1>
-          <p className="mt-3 text-gray-600">Bu sayfa sadece admin kullanıcılara açıktır.</p>
+          <h1 className="text-2xl font-semibold text-gray-900">Access Denied</h1>
+          <p className="mt-3 text-gray-600">This page is only accessible to admin users.</p>
           <div className="mt-6">
             <button type="button" onClick={handleLogout} className="rounded-full bg-primary-600 px-6 py-3 text-white hover:bg-primary-700">
-              Çıkış Yap
+              Sign Out
             </button>
           </div>
         </div>
@@ -305,12 +305,12 @@ export default function ConsultantIntegrationsPage() {
   }
 
   const tabs: { id: ActiveTab; label: string }[] = [
-    { id: 'payment', label: 'Ödeme Modu' },
+    { id: 'payment', label: 'Payment Mode' },
     { id: 'stripe', label: 'Stripe' },
-    { id: 'profile', label: 'Profil' },
-    { id: 'google', label: 'Google Takvim' },
-    { id: 'outlook', label: 'Outlook Takvim' },
-    { id: 'pos', label: 'POS Döndürme' },
+    { id: 'profile', label: 'Profile' },
+    { id: 'google', label: 'Calendar' },
+    { id: 'outlook', label: 'Outlook' },
+    { id: 'pos', label: 'POS Rotation' },
   ];
 
   return (
@@ -320,22 +320,22 @@ export default function ConsultantIntegrationsPage() {
           {/* Header */}
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Danışman Entegrasyonları</h1>
-              <p className="mt-1 text-sm text-gray-500">Giriş: {userEmail}</p>
+              <h1 className="text-2xl font-bold text-gray-900">Consultant Integrations</h1>
+              <p className="mt-1 text-sm text-gray-500">Signed in as: {userEmail}</p>
             </div>
             <div className="flex gap-3">
               <a
                 href="/admin"
                 className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
-                Admin Paneli
+                Admin Panel
               </a>
               <button
                 type="button"
                 onClick={handleLogout}
                 className="inline-flex items-center justify-center rounded-full bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
               >
-                Çıkış
+                Sign Out
               </button>
             </div>
           </div>
@@ -368,12 +368,12 @@ export default function ConsultantIntegrationsPage() {
           {activeTab === 'payment' && (
             <div className="space-y-6">
               <p className="text-sm text-gray-500">
-                Danışmanın ödeme alma yöntemini seçin. Connect veya Escrow modları için Stripe Connect hesabı gereklidir.
+                Select the consultant's payment collection method. Connect or Escrow modes require a Stripe Connect account.
               </p>
 
               <div>
                 <label htmlFor="payment-uid" className="block text-sm font-medium text-gray-700">
-                  Danışman UID *
+                  Consultant UID *
                 </label>
                 <input
                   id="payment-uid"
@@ -387,7 +387,7 @@ export default function ConsultantIntegrationsPage() {
 
               <form onSubmit={handlePaymentMode} className="space-y-4">
                 <fieldset className="space-y-2">
-                  <legend className="block text-sm font-medium text-gray-700 mb-2">Ödeme Modu</legend>
+                  <legend className="block text-sm font-medium text-gray-700 mb-2">Payment Mode</legend>
                   {(Object.entries(paymentModeLabels) as [PaymentMode, string][]).map(([mode, label]) => (
                     <label
                       key={mode}
@@ -408,9 +408,9 @@ export default function ConsultantIntegrationsPage() {
                       <div>
                         <span className="block text-sm font-medium text-gray-900">
                           {mode === 'ki_escrow' && 'Ki Business Escrow'}
-                          {mode === 'own_keys' && 'Kendi API Anahtarları'}
+                          {mode === 'own_keys' && 'Own API Keys'}
                           {mode === 'ki_connect' && 'Stripe Connect'}
-                          {mode === 'direct' && 'Ki Business Direkt'}
+                          {mode === 'direct' && 'Ki Business Direct'}
                         </span>
                         <span className="block text-xs text-gray-500 mt-0.5">{label}</span>
                       </div>
@@ -419,19 +419,19 @@ export default function ConsultantIntegrationsPage() {
                 </fieldset>
 
                 <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
-                  {submitting ? 'Kaydediliyor…' : 'Ödeme Modunu Kaydet'}
+                  {submitting ? 'Saving…' : 'Save Payment Mode'}
                 </Button>
               </form>
 
               {/* Stripe Connect OAuth */}
               {(selectedMode === 'ki_connect' || selectedMode === 'ki_escrow') && (
                 <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 space-y-3">
-                  <h3 className="text-sm font-semibold text-indigo-900">Stripe Connect Bağlantısı</h3>
+                  <h3 className="text-sm font-semibold text-indigo-900">Stripe Connect Link</h3>
                   {connectAccountId ? (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
-                        <span className="text-sm text-gray-700 font-medium">Bağlı</span>
+                        <span className="text-sm text-gray-700 font-medium">Connected</span>
                       </div>
                       <p className="text-xs text-gray-500 font-mono break-all">{connectAccountId}</p>
                       <button
@@ -440,13 +440,13 @@ export default function ConsultantIntegrationsPage() {
                         disabled={connectLoading || !paymentConsultantId.trim()}
                         className="mt-2 rounded-xl border border-indigo-400 bg-white px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
                       >
-                        {connectLoading ? 'Yönlendiriliyor…' : 'Yeniden Bağla'}
+                        {connectLoading ? 'Redirecting…' : 'Reconnect'}
                       </button>
                     </div>
                   ) : (
                     <div className="space-y-2">
                       <p className="text-sm text-indigo-700">
-                        Danışman henüz Stripe Connect hesabı bağlamamış.
+                        This consultant has not connected a Stripe Connect account yet.
                       </p>
                       <button
                         type="button"
@@ -454,10 +454,10 @@ export default function ConsultantIntegrationsPage() {
                         disabled={connectLoading || !paymentConsultantId.trim()}
                         className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
                       >
-                        {connectLoading ? 'Yönlendiriliyor…' : 'Stripe Connect ile Bağla'}
+                        {connectLoading ? 'Redirecting…' : 'Connect with Stripe Connect'}
                       </button>
                       {!paymentConsultantId.trim() && (
-                        <p className="text-xs text-indigo-500">Önce Danışman UID girin.</p>
+                        <p className="text-xs text-indigo-500">Enter a Consultant UID first.</p>
                       )}
                     </div>
                   )}
@@ -470,12 +470,12 @@ export default function ConsultantIntegrationsPage() {
           {activeTab === 'stripe' && (
             <form onSubmit={handleStripe} className="space-y-4">
               <p className="text-sm text-gray-500">
-                Danışmanın Firestore'da <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs">users/&lt;uid&gt;</code> belgesinin mevcut olması gerekir.
+                The consultant's <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs">users/&lt;uid&gt;</code> document must exist in Firestore.
               </p>
               {(['consultant_id', 'api_key', 'webhook_secret'] as const).map((field) => (
                 <div key={field}>
                   <label htmlFor={`stripe-${field}`} className="block text-sm font-medium text-gray-700 capitalize">
-                    {field === 'consultant_id' ? 'Danışman UID *' : field === 'api_key' ? 'Stripe Secret Key *' : 'Webhook Secret *'}
+                    {field === 'consultant_id' ? 'Consultant UID *' : field === 'api_key' ? 'Stripe Secret Key *' : 'Webhook Secret *'}
                   </label>
                   <input
                     id={`stripe-${field}`}
@@ -489,7 +489,7 @@ export default function ConsultantIntegrationsPage() {
                 </div>
               ))}
               <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
-                {submitting ? 'Kaydediliyor…' : 'Stripe Ayarlarını Kaydet'}
+                {submitting ? 'Saving…' : 'Save Stripe Settings'}
               </Button>
             </form>
           )}
@@ -498,14 +498,14 @@ export default function ConsultantIntegrationsPage() {
           {activeTab === 'profile' && (
             <form onSubmit={handleProfile} className="space-y-4">
               <p className="text-sm text-gray-500">
-                Danışmanın müşterilere gösterilen profil bilgileri. Bu bilgiler checkout formundaki danışman kartında görünür.
+                Profile information shown to clients. This appears on the consultant card in the checkout form.
               </p>
               {[
-                { field: 'consultant_id', label: 'Danışman UID *', placeholder: 'firebase-uid…', required: true },
-                { field: 'name', label: 'Ad Soyad *', placeholder: 'Ahmet Yılmaz', required: true },
-                { field: 'title', label: 'Ünvan', placeholder: 'Kıdemli Yönetim Danışmanı', required: false },
-                { field: 'expertise', label: 'Uzmanlık Alanları', placeholder: 'Finansal Strateji, Operasyon, M&A', required: false },
-                { field: 'photo_url', label: 'Fotoğraf URL', placeholder: 'https://…', required: false },
+                { field: 'consultant_id', label: 'Consultant UID *', placeholder: 'firebase-uid…', required: true },
+                { field: 'name', label: 'Full Name *', placeholder: 'John Smith', required: true },
+                { field: 'title', label: 'Title', placeholder: 'Senior Management Consultant', required: false },
+                { field: 'expertise', label: 'Areas of Expertise', placeholder: 'Financial Strategy, Operations, M&A', required: false },
+                { field: 'photo_url', label: 'Photo URL', placeholder: 'https://…', required: false },
               ].map(({ field, label, placeholder, required }) => (
                 <div key={field}>
                   <label htmlFor={`profile-${field}`} className="block text-sm font-medium text-gray-700">
@@ -523,21 +523,21 @@ export default function ConsultantIntegrationsPage() {
                 </div>
               ))}
               <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
-                {submitting ? 'Kaydediliyor…' : 'Profili Güncelle'}
+                {submitting ? 'Saving…' : 'Update Profile'}
               </Button>
             </form>
           )}
 
-          {/* Google Calendar Tab */}
+          {/* Calendar Tab */}
           {activeTab === 'google' && (
             <form onSubmit={handleGoogle} className="space-y-4">
               <p className="text-sm text-gray-500">
-                Google OAuth refresh token ve takvim ID'si. Takvim ID genellikle danışmanın Gmail adresidir.
+                Calendar OAuth refresh token and calendar ID. The calendar ID is usually the consultant's email address.
               </p>
               {[
-                { field: 'consultant_id', label: 'Danışman UID *', type: 'text', placeholder: 'firebase-uid…' },
-                { field: 'refresh_token', label: 'Google Refresh Token *', type: 'password', placeholder: '1//…' },
-                { field: 'calendar_id', label: 'Takvim ID *', type: 'text', placeholder: 'primary veya email@gmail.com' },
+                { field: 'consultant_id', label: 'Consultant UID *', type: 'text', placeholder: 'firebase-uid…' },
+                { field: 'refresh_token', label: 'Calendar Refresh Token *', type: 'password', placeholder: '1//…' },
+                { field: 'calendar_id', label: 'Calendar ID *', type: 'text', placeholder: 'primary or email@example.com' },
               ].map(({ field, label, type, placeholder }) => (
                 <div key={field}>
                   <label htmlFor={`google-${field}`} className="block text-sm font-medium text-gray-700">{label}</label>
@@ -553,7 +553,7 @@ export default function ConsultantIntegrationsPage() {
                 </div>
               ))}
               <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
-                {submitting ? 'Kaydediliyor…' : 'Google Takvim Bağla'}
+                {submitting ? 'Saving…' : 'Connect Calendar'}
               </Button>
             </form>
           )}
@@ -562,10 +562,10 @@ export default function ConsultantIntegrationsPage() {
           {activeTab === 'outlook' && (
             <form onSubmit={handleOutlook} className="space-y-4">
               <p className="text-sm text-gray-500">
-                Microsoft OAuth refresh token. Azure AD uygulaması üzerinden Calendars.ReadWrite yetkisi gereklidir.
+                Microsoft OAuth refresh token. Requires Calendars.ReadWrite permission via an Azure AD application.
               </p>
               {[
-                { field: 'consultant_id', label: 'Danışman UID *', type: 'text', placeholder: 'firebase-uid…' },
+                { field: 'consultant_id', label: 'Consultant UID *', type: 'text', placeholder: 'firebase-uid…' },
                 { field: 'refresh_token', label: 'Microsoft Refresh Token *', type: 'password', placeholder: 'M.R3_…' },
               ].map(({ field, label, type, placeholder }) => (
                 <div key={field}>
@@ -582,7 +582,7 @@ export default function ConsultantIntegrationsPage() {
                 </div>
               ))}
               <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
-                {submitting ? 'Kaydediliyor…' : 'Outlook Takvim Bağla'}
+                {submitting ? 'Saving…' : 'Connect Outlook Calendar'}
               </Button>
             </form>
           )}
@@ -591,14 +591,14 @@ export default function ConsultantIntegrationsPage() {
           {activeTab === 'pos' && (
             <div className="space-y-6">
               <p className="text-sm text-gray-500">
-                Platform ödeme anahtarlarını Firestore üzerinden yönetebilir, yeni POS yuvaları ekleyebilir ve aktif slotu değiştirebilirsiniz.
+                Manage platform payment keys via Firestore, add new POS slots, and switch the active slot.
               </p>
 
               <div className="space-y-4 rounded-3xl border border-dashed border-gray-200 bg-gray-50 p-5">
                 {posLoading ? (
-                  <p className="text-sm text-gray-600">POS slotları yükleniyor…</p>
+                  <p className="text-sm text-gray-600">Loading POS slots…</p>
                 ) : posSlots.length === 0 ? (
-                  <p className="text-sm text-gray-600">Henüz POS yuvası eklenmemiş.</p>
+                  <p className="text-sm text-gray-600">No POS slots added yet.</p>
                 ) : (
                   <div className="space-y-3">
                     {posSlots.map((slot) => (
@@ -609,21 +609,21 @@ export default function ConsultantIntegrationsPage() {
                             <p className="text-xs text-gray-500">ID: {slot.id}</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            {slot.isActive && <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Etkin</span>}
+                            {slot.isActive && <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Active</span>}
                             <button
                               type="button"
                               onClick={() => handlePosActivate(slot.id)}
                               className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
                               disabled={submitting}
                             >
-                              Etkinleştir
+                              Activate
                             </button>
                             <button
                               type="button"
                               onClick={() => handlePosEdit(slot)}
                               className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
                             >
-                              Düzenle
+                              Edit
                             </button>
                             <button
                               type="button"
@@ -631,7 +631,7 @@ export default function ConsultantIntegrationsPage() {
                               className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100"
                               disabled={submitting}
                             >
-                              Sil
+                              Delete
                             </button>
                           </div>
                         </div>
@@ -644,14 +644,14 @@ export default function ConsultantIntegrationsPage() {
               <form onSubmit={handlePosSave} className="space-y-4 rounded-3xl border border-gray-200 bg-white p-6">
                 <div className="grid gap-4 lg:grid-cols-2">
                   <div>
-                    <label htmlFor="pos-label" className="block text-sm font-medium text-gray-700">Yuva Etiketi *</label>
+                    <label htmlFor="pos-label" className="block text-sm font-medium text-gray-700">Slot Label *</label>
                     <input
                       id="pos-label"
                       type="text"
                       value={posForm.label}
                       onChange={set(setPosForm, 'label')}
                       required
-                      placeholder="Ana POS, Yedek POS"
+                      placeholder="Primary POS, Backup POS"
                       className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
                     />
                   </div>
@@ -694,9 +694,9 @@ export default function ConsultantIntegrationsPage() {
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <Button type="submit" variant="primary" className="w-full sm:w-auto" disabled={submitting}>
-                    {submitting ? 'Kaydediliyor…' : posForm.slot_id ? 'Yuvayı Güncelle' : 'Yeni Yuva Kaydet'}
+                    {submitting ? 'Saving…' : posForm.slot_id ? 'Update Slot' : 'Save New Slot'}
                   </Button>
-                  <p className="text-xs text-gray-500">Her slot canlı ödemelerinde kullanılabilir. Bir slotu etkinleştirerek platformun hangi Stripe anahtarını kullandığını seçin.</p>
+                  <p className="text-xs text-gray-500">Each slot can be used for live payments. Activate a slot to choose which Stripe keys the platform uses.</p>
                 </div>
               </form>
             </div>

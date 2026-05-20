@@ -42,7 +42,7 @@ export default function ConsultantOverview() {
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold text-white">
-        Hoş geldiniz{profile?.name ? `, ${profile.name}` : ''}
+        Welcome back{profile?.name ? `, ${profile.name}` : ''}
       </h1>
 
       {/* KYC banner */}
@@ -53,16 +53,16 @@ export default function ConsultantOverview() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <div>
-              <p className="font-medium text-yellow-300">KYC Doğrulaması Gerekiyor</p>
+              <p className="font-medium text-yellow-300">KYC Verification Required</p>
               <p className="mt-0.5 text-sm text-yellow-400/70">
                 {profile?.kyc_status === 'pending'
-                  ? 'Başvurunuz inceleniyor, 1-3 iş günü sürebilir.'
-                  : 'Marketplace\'te görünmek için KYC doğrulamanızı tamamlayın.'}
+                  ? 'Your application is under review. This typically takes 1–3 business days.'
+                  : 'Complete your KYC verification to appear on the marketplace.'}
               </p>
             </div>
           </div>
           <Link href="/consultant/kyc" className="shrink-0 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-1.5 text-sm font-medium text-yellow-400 transition hover:bg-yellow-500/20">
-            KYC Başla
+            Start KYC
           </Link>
         </div>
       )}
@@ -70,10 +70,10 @@ export default function ConsultantOverview() {
       {/* Stats */}
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-4">
         {[
-          { label: 'Yaklaşan Randevu',   value: upcoming.length,    color: 'text-[#B000FF]' },
-          { label: 'Toplam Randevu',     value: appointments.length, color: 'text-white' },
-          { label: 'Tahmini Gelir',       value: `$${(totalRevenue / 100).toLocaleString()}`, color: 'text-emerald-400' },
-          { label: 'Ki Wallet',           value: `$${((profile?.ki_wallet_cents ?? 0) / 100).toFixed(2)}`, color: 'text-[#00F0FF]' },
+          { label: 'Upcoming Sessions',  value: upcoming.length,    color: 'text-[#B000FF]' },
+          { label: 'Total Appointments', value: appointments.length, color: 'text-white' },
+          { label: 'Estimated Revenue',  value: `$${(totalRevenue / 100).toLocaleString()}`, color: 'text-emerald-400' },
+          { label: 'Ki Wallet',          value: `$${((profile?.ki_wallet_cents ?? 0) / 100).toFixed(2)}`, color: 'text-[#00F0FF]' },
         ].map((s) => (
           <div key={s.label} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
             <p className="text-sm text-white/40">{s.label}</p>
@@ -85,10 +85,10 @@ export default function ConsultantOverview() {
       {/* Quick links */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {[
-          { href: '/consultant/profile',       label: 'Profili Düzenle',       icon: '👤' },
-          { href: '/consultant/availability',  label: 'Müsaitliği Ayarla',     icon: '📅' },
-          { href: '/consultant/payments',      label: 'Ödeme Yöntemi',         icon: '💳' },
-          { href: '/consultant/integrations',  label: 'Entegrasyonlar',        icon: '🔗' },
+          { href: '/consultant/profile',       label: 'Edit Profile',         icon: '👤' },
+          { href: '/consultant/availability',  label: 'Set Availability',     icon: '📅' },
+          { href: '/consultant/payments',      label: 'Payment Settings',     icon: '💳' },
+          { href: '/consultant/integrations',  label: 'Integrations',         icon: '🔗' },
         ].map((item) => (
           <Link
             key={item.href}

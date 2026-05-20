@@ -10,10 +10,10 @@ interface MarketplaceCheckoutProps {
 }
 
 const PACKAGES = [
-  { id: 'starter',   label: '30 Dakika',  price: '$200',  description: 'Hızlı danışmanlık' },
-  { id: 'growth',    label: '60 Dakika',  price: '$1,000', description: 'Kapsamlı görüşme' },
-  { id: 'scale',     label: '3 Saat',     price: '$5,000', description: 'Detaylı analiz' },
-  { id: 'executive', label: 'Tam Gün',    price: '$10,000', description: 'Strateji & uygulama' },
+  { id: 'starter',   label: '30 Minutes', price: '$200',   description: 'Quick consultation' },
+  { id: 'growth',    label: '60 Minutes', price: '$1,000', description: 'Comprehensive session' },
+  { id: 'scale',     label: '3 Hours',    price: '$5,000', description: 'In-depth analysis' },
+  { id: 'executive', label: 'Full Day',   price: '$10,000', description: 'Strategy & implementation' },
 ];
 
 export function MarketplaceCheckout({ consultantId, packageId }: MarketplaceCheckoutProps) {
@@ -32,7 +32,7 @@ export function MarketplaceCheckout({ consultantId, packageId }: MarketplaceChec
     setError(null);
 
     try {
-      if (!email || !date || !time) throw new Error('Lütfen tüm zorunlu alanları doldurun.');
+      if (!email || !date || !time) throw new Error('Please fill in all required fields.');
 
       const res = await fetch('/api/checkout/session', {
         method: 'POST',
@@ -49,18 +49,18 @@ export function MarketplaceCheckout({ consultantId, packageId }: MarketplaceChec
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Ödeme oturumu oluşturulamadı.');
+      if (!res.ok) throw new Error(data.error ?? 'Could not create checkout session.');
 
       const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-      if (!key) throw new Error('Stripe yapılandırılmamış.');
+      if (!key) throw new Error('Stripe is not configured.');
 
       const stripe = await loadStripe(key);
-      if (!stripe) throw new Error('Stripe yüklenemedi.');
+      if (!stripe) throw new Error('Could not load Stripe.');
 
       const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
-      if (result.error) throw new Error(result.error.message ?? 'Yönlendirme hatası.');
+      if (result.error) throw new Error(result.error.message ?? 'Redirect failed.');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Bir hata oluştu.');
+      setError(err instanceof Error ? err.message : 'An error occurred.');
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ export function MarketplaceCheckout({ consultantId, packageId }: MarketplaceChec
     <form onSubmit={handleCheckout} className="space-y-6">
       {/* Package selector */}
       <div>
-        <label className="mb-3 block text-sm font-medium text-white/70">Paket Seçin</label>
+        <label className="mb-3 block text-sm font-medium text-white/70">Select Package</label>
         <div className="grid grid-cols-2 gap-2">
           {PACKAGES.map((pkg) => (
             <button
@@ -99,32 +99,32 @@ export function MarketplaceCheckout({ consultantId, packageId }: MarketplaceChec
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-white/70">
-            Ad Soyad
+            Full Name
           </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Adınız Soyadınız"
+            placeholder="Your Full Name"
             className="input-dark w-full"
           />
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium text-white/70">
-            E-posta <span className="text-[#FF006E]">*</span>
+            Email <span className="text-[#FF006E]">*</span>
           </label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            placeholder="eposta@example.com"
+            placeholder="you@example.com"
             className="input-dark w-full"
           />
         </div>
         <div>
           <label htmlFor="appt-date" className="mb-1.5 block text-sm font-medium text-white/70">
-            Tarih <span className="text-[#FF006E]">*</span>
+            Date <span className="text-[#FF006E]">*</span>
           </label>
           <input
             id="appt-date"
@@ -138,7 +138,7 @@ export function MarketplaceCheckout({ consultantId, packageId }: MarketplaceChec
         </div>
         <div>
           <label htmlFor="appt-time" className="mb-1.5 block text-sm font-medium text-white/70">
-            Saat <span className="text-[#FF006E]">*</span>
+            Time <span className="text-[#FF006E]">*</span>
           </label>
           <input
             id="appt-time"
@@ -152,7 +152,7 @@ export function MarketplaceCheckout({ consultantId, packageId }: MarketplaceChec
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-white/70">Saat Dilimi</label>
+        <label className="mb-1.5 block text-sm font-medium text-white/70">Timezone</label>
         <select
           value={timezone}
           onChange={(e) => setTimezone(e.target.value)}
@@ -181,10 +181,10 @@ export function MarketplaceCheckout({ consultantId, packageId }: MarketplaceChec
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            İşleniyor...
+            Processing...
           </span>
         ) : (
-          'Ödemeye Geç'
+          'Proceed to Payment'
         )}
       </button>
 
@@ -192,7 +192,7 @@ export function MarketplaceCheckout({ consultantId, packageId }: MarketplaceChec
         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
-        Stripe ile güvenli ödeme
+        Secured by Stripe
       </p>
     </form>
   );

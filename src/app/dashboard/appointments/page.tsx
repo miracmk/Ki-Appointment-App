@@ -8,9 +8,9 @@ import { detectUserTimezone, formatAppointmentDateTime } from '@/lib/timezone';
 import type { FlatAppointment } from '@/types/marketplace';
 
 const TABS = [
-  { key: 'upcoming',  label: 'Yaklaşan' },
-  { key: 'past',      label: 'Geçmiş' },
-  { key: 'cancelled', label: 'İptal' },
+  { key: 'upcoming',  label: 'Upcoming' },
+  { key: 'past',      label: 'Past' },
+  { key: 'cancelled', label: 'Cancelled' },
 ] as const;
 
 const STATUS_STYLES: Record<string, string> = {
@@ -20,7 +20,7 @@ const STATUS_STYLES: Record<string, string> = {
   completed: 'bg-[#00F0FF]/10 text-[#00F0FF] border-[#00F0FF]/20',
 };
 const STATUS_LABELS: Record<string, string> = {
-  confirmed: 'Onaylandı', pending: 'Beklemede', cancelled: 'İptal', completed: 'Tamamlandı',
+  confirmed: 'Confirmed', pending: 'Pending', cancelled: 'Cancelled', completed: 'Completed',
 };
 
 type Tab = typeof TABS[number]['key'];
@@ -60,7 +60,7 @@ export default function AppointmentsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-white">Randevularım</h1>
+      <h1 className="mb-6 text-2xl font-bold text-white">My Appointments</h1>
 
       {/* Tabs */}
       <div className="mb-6 flex gap-2">
@@ -86,7 +86,7 @@ export default function AppointmentsPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] py-16 text-center">
-          <p className="text-white/40">Bu kategoride randevu bulunamadı.</p>
+          <p className="text-white/40">No appointments found in this category.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -109,7 +109,7 @@ export default function AppointmentsPage() {
                       </span>
                     </div>
                     {appt.consultant_name && (
-                      <p className="mt-1 text-sm text-white/50">Danışman: {appt.consultant_name}</p>
+                      <p className="mt-1 text-sm text-white/50">Consultant: {appt.consultant_name}</p>
                     )}
                     <p className="mt-1 flex items-center gap-1.5 text-sm text-white/40">
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -127,19 +127,19 @@ export default function AppointmentsPage() {
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.869V15.13a1 1 0 01-1.447.894L15 14M3 8h12a2 2 0 012 2v4a2 2 0 01-2 2H3a2 2 0 01-2-2V10a2 2 0 012-2z" />
                         </svg>
-                        Google Meet'e Katıl
+                        Join Video Call
                       </a>
                     )}
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="text-lg font-bold text-white">${(appt.payment_amount / 100).toLocaleString()}</p>
-                    <p className="text-xs text-white/30">ödeme</p>
+                    <p className="text-xs text-white/30">paid</p>
                     {appt.onboarding_status === 'form_pending' && (
                       <a
                         href="/onboarding"
                         className="mt-2 inline-block text-xs font-medium text-orange-400 hover:text-orange-300"
                       >
-                        Başlangıç Formunu Doldur →
+                        Complete Onboarding Form →
                       </a>
                     )}
                   </div>

@@ -54,7 +54,7 @@ export function CheckoutButton({ packageId, packageName }: CheckoutButtonProps) 
     setError(null);
 
     if (!customerEmail || !appointmentDate || !appointmentTime || !selectedConsultantId) {
-      setError('Lütfen danışman seçin, email, tarih ve saati doldurun.');
+      setError('Please select a consultant and fill in your email, date, and time.');
       setLoading(false);
       return;
     }
@@ -76,25 +76,25 @@ export function CheckoutButton({ packageId, packageName }: CheckoutButtonProps) 
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || 'Checkout oturumu oluşturulamadı.');
+        throw new Error(data.error || 'Could not create checkout session.');
       }
 
       if (!data.sessionId) {
-        throw new Error('Stripe oturumu oluşturulamadı.');
+        throw new Error('Could not create Stripe session.');
       }
 
       if (!stripePromise) {
-        throw new Error('Stripe yapılandırılmamış.');
+        throw new Error('Stripe is not configured.');
       }
 
       const stripe = await stripePromise;
-      if (!stripe) throw new Error('Stripe yüklenemedi.');
+      if (!stripe) throw new Error('Could not load Stripe.');
 
       const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
-      if (result.error) throw new Error(result.error.message || 'Stripe yönlendirmesi başarısız.');
+      if (result.error) throw new Error(result.error.message || 'Stripe redirect failed.');
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Beklenmeyen bir hata oluştu.');
+      setError(err.message || 'An unexpected error occurred.');
     } finally {
       setLoading(false);
     }
@@ -107,7 +107,7 @@ export function CheckoutButton({ packageId, packageName }: CheckoutButtonProps) 
         onClick={() => setFormOpen(true)}
         className="mt-8 w-full rounded-full bg-primary-600 py-3 text-sm font-semibold text-white hover:bg-primary-700"
       >
-        {packageName} Paketi Rezerve Et
+        Book {packageName} Package
       </button>
     );
   }
@@ -120,7 +120,7 @@ export function CheckoutButton({ packageId, packageName }: CheckoutButtonProps) 
       className="mt-6 space-y-4 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
     >
       <div className="flex items-center justify-between">
-        <h4 className="font-semibold text-gray-900">Randevu Bilgileri</h4>
+        <h4 className="font-semibold text-gray-900">Appointment Details</h4>
         <button
           type="button"
           onClick={() => setFormOpen(false)}
@@ -131,12 +131,12 @@ export function CheckoutButton({ packageId, packageName }: CheckoutButtonProps) 
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Danışman Seçin *</label>
+        <label className="block text-sm font-medium text-gray-700">Select Consultant *</label>
         {consultantsLoading ? (
-          <p className="mt-2 text-sm text-gray-500">Danışmanlar yükleniyor…</p>
+          <p className="mt-2 text-sm text-gray-500">Loading consultants…</p>
         ) : consultants.length === 0 ? (
           <p className="mt-2 text-sm text-red-600">
-            Şu an randevu alabileceğiniz danışman bulunmamaktadır.
+            No consultants are currently available for booking.
           </p>
         ) : (
           <div className="mt-2 grid gap-2">
@@ -195,17 +195,17 @@ export function CheckoutButton({ packageId, packageName }: CheckoutButtonProps) 
             value={customerEmail}
             onChange={(e) => setCustomerEmail(e.target.value)}
             required
-            placeholder="email@adresiniz.com"
+            placeholder="your@email.com"
             className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Ad Soyad</label>
+          <label className="block text-sm font-medium text-gray-700">Full Name</label>
           <input
             type="text"
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
-            placeholder="Adınız Soyadınız"
+            placeholder="Your Full Name"
             className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
           />
         </div>
@@ -214,7 +214,7 @@ export function CheckoutButton({ packageId, packageName }: CheckoutButtonProps) 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor={`date-${packageId}`} className="block text-sm font-medium text-gray-700">
-            Tarih *
+            Date *
           </label>
           <input
             id={`date-${packageId}`}
@@ -223,13 +223,13 @@ export function CheckoutButton({ packageId, packageName }: CheckoutButtonProps) 
             onChange={(e) => setAppointmentDate(e.target.value)}
             min={new Date().toISOString().split('T')[0]}
             required
-            title="Randevu tarihi"
+            title="Appointment date"
             className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
           />
         </div>
         <div>
           <label htmlFor={`time-${packageId}`} className="block text-sm font-medium text-gray-700">
-            Saat *
+            Time *
           </label>
           <input
             id={`time-${packageId}`}
@@ -237,7 +237,7 @@ export function CheckoutButton({ packageId, packageName }: CheckoutButtonProps) 
             value={appointmentTime}
             onChange={(e) => setAppointmentTime(e.target.value)}
             required
-            title="Randevu saati"
+            title="Appointment time"
             className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
           />
         </div>
@@ -245,21 +245,21 @@ export function CheckoutButton({ packageId, packageName }: CheckoutButtonProps) 
 
       <div>
         <label htmlFor={`tz-${packageId}`} className="block text-sm font-medium text-gray-700">
-          Saat Dilimi
+          Timezone
         </label>
         <select
           id={`tz-${packageId}`}
           value={appointmentTimezone}
           onChange={(e) => setAppointmentTimezone(e.target.value)}
-          title="Saat dilimi"
+          title="Timezone"
           className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
         >
-          <option value="Europe/Istanbul">İstanbul (TRT)</option>
+          <option value="Europe/Istanbul">Istanbul (TRT)</option>
           <option value="America/New_York">New York (ET)</option>
           <option value="America/Chicago">Chicago (CT)</option>
           <option value="America/Denver">Denver (MT)</option>
           <option value="America/Los_Angeles">Los Angeles (PT)</option>
-          <option value="Europe/London">Londra (GMT)</option>
+          <option value="Europe/London">London (GMT)</option>
           <option value="Europe/Paris">Paris (CET)</option>
           <option value="Asia/Dubai">Dubai (GST)</option>
           <option value="Asia/Tokyo">Tokyo (JST)</option>
@@ -276,10 +276,10 @@ export function CheckoutButton({ packageId, packageName }: CheckoutButtonProps) 
         className="w-full"
       >
         {loading
-          ? 'İşleniyor…'
+          ? 'Processing…'
           : selectedConsultant
-          ? `${selectedConsultant.name} ile Rezerve Et`
-          : `${packageName} Paketi Öde`}
+          ? `Book with ${selectedConsultant.name}`
+          : `Pay for ${packageName} Package`}
       </Button>
     </form>
   );

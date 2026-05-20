@@ -40,12 +40,12 @@ export default async function MarketplacePage({ searchParams }: PageProps) {
         <div className="pointer-events-none absolute top-0 right-1/4 h-64 w-64 rounded-full bg-[#B000FF]/10 blur-[80px]" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <h1 className="mb-3 text-4xl font-bold text-white sm:text-5xl">
-            {activeCategory ? `${activeCategory.icon} ${activeCategory.label}` : 'Tüm Danışmanlar'}
+            {activeCategory ? `${activeCategory.icon} ${activeCategory.label}` : 'All Consultants'}
           </h1>
           <p className="text-white/50">
             {activeCategory
               ? activeCategory.description
-              : 'KYC doğrulamalı uzman danışmanlarla bağlanın.'}
+              : 'Connect with KYC-verified expert consultants.'}
           </p>
 
           {/* Category quick links */}
@@ -58,7 +58,7 @@ export default async function MarketplacePage({ searchParams }: PageProps) {
                   : 'border-white/10 bg-white/5 text-white/50 hover:border-white/20 hover:text-white'
               }`}
             >
-              Tümü
+              All
             </a>
             {CATEGORIES.map((cat) => (
               <a
@@ -90,11 +90,11 @@ export default async function MarketplacePage({ searchParams }: PageProps) {
                 <svg className="mb-4 h-12 w-12 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <p className="text-white/40">Bu kriterlere uygun danışman bulunamadı.</p>
+                <p className="text-white/40">No consultants found matching these criteria.</p>
               </div>
             ) : (
               <>
-                <p className="mb-6 text-sm text-white/40">{consultants.length} danışman bulundu</p>
+                <p className="mb-6 text-sm text-white/40">{consultants.length} consultant{consultants.length !== 1 ? 's' : ''} found</p>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
                   {consultants.map((c) => (
                     <ConsultantCard key={c.uid} consultant={c} />

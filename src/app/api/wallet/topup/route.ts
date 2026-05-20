@@ -11,10 +11,10 @@ export async function POST(req: NextRequest) {
     };
 
     if (!consultant_id) {
-      return NextResponse.json({ error: 'consultant_id zorunlu.' }, { status: 400 });
+      return NextResponse.json({ error: 'consultant_id is required.' }, { status: 400 });
     }
     if (!amount_cents || amount_cents < 1000) {
-      return NextResponse.json({ error: 'Minimum yükleme tutarı $10 (1000 cent).' }, { status: 400 });
+      return NextResponse.json({ error: 'Minimum top-up amount is $10 (1000 cents).' }, { status: 400 });
     }
 
     const activeConfig = await getActiveKiStripePosConfig();
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const db  = getAdminFirestore();
     const doc = await db.collection('users').doc(consultant_id).get();
     if (!doc.exists) {
-      return NextResponse.json({ error: 'Danışman bulunamadı.' }, { status: 404 });
+      return NextResponse.json({ error: 'Consultant not found.' }, { status: 404 });
     }
 
     const stripe  = new Stripe(activeConfig.secretKey, { apiVersion: '2023-10-16' });
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
         {
           price_data: {
             currency: 'usd',
-            product_data: { name: 'Ki Wallet Bakiye Yükleme' },
+            product_data: { name: 'Ki Wallet Top-up' },
             unit_amount: amount_cents,
           },
           quantity: 1,
@@ -53,6 +53,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (err) {
     console.error('Wallet topup error:', err);
-    return NextResponse.json({ error: 'Bakiye yükleme oturumu oluşturulamadı.' }, { status: 500 });
+    return NextResponse.json({ error: 'Could not create top-up session.' }, { status: 500 });
   }
 }

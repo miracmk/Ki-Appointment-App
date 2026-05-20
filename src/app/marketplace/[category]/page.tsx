@@ -50,7 +50,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         <div className="pointer-events-none absolute top-0 right-1/4 h-64 w-64 rounded-full bg-[#B000FF]/10 blur-[80px]" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-4 flex items-center gap-2 text-sm text-white/40">
-            <a href="/marketplace" className="transition hover:text-white">Tüm Danışmanlar</a>
+            <a href="/marketplace" className="transition hover:text-white">All Consultants</a>
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
@@ -86,11 +86,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
             {consultants.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.03] py-20 text-center">
                 <span className="mb-4 text-5xl">{meta.icon}</span>
-                <p className="text-white/40">Bu kategoride henüz danışman bulunamadı.</p>
+                <p className="text-white/40">No consultants found in this category yet.</p>
               </div>
             ) : (
               <>
-                <p className="mb-6 text-sm text-white/40">{consultants.length} danışman bulundu</p>
+                <p className="mb-6 text-sm text-white/40">{consultants.length} consultant{consultants.length !== 1 ? 's' : ''} found</p>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
                   {consultants.map((c) => (
                     <ConsultantCard key={c.uid} consultant={c} />

@@ -11,9 +11,9 @@ const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map
 
 const NAV = [
   { href: '/admin', label: 'Dashboard', icon: '📊' },
-  { href: '/admin/consultants', label: 'Danışmanlar', icon: '👥' },
-  { href: '/admin/tickets', label: 'Destek Talepleri', icon: '🎫' },
-  { href: '/admin/integrations', label: 'Ayarlar', icon: '⚙️' },
+  { href: '/admin/consultants', label: 'Consultants', icon: '👥' },
+  { href: '/admin/tickets', label: 'Support Tickets', icon: '🎫' },
+  { href: '/admin/integrations', label: 'Settings', icon: '⚙️' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -83,7 +83,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             onClick={async () => { const a = getFirebaseAuth(); if (a) { await signOut(a); router.push('/login'); } }}
             className="text-xs text-white/30 hover:text-white"
           >
-            Çıkış Yap
+            Sign Out
           </button>
         </div>
       </aside>

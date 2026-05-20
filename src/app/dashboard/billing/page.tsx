@@ -7,7 +7,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import type { FlatAppointment } from '@/types/marketplace';
 
 const STATUS_LABELS: Record<string, string> = {
-  confirmed: 'Onaylandı', pending: 'Beklemede', cancelled: 'İptal', completed: 'Tamamlandı',
+  confirmed: 'Confirmed', pending: 'Pending', cancelled: 'Cancelled', completed: 'Completed',
 };
 
 export default function BillingPage() {
@@ -37,12 +37,12 @@ export default function BillingPage() {
     setDownloading(apptId);
     try {
       const res = await fetch(`/api/receipts/${apptId}`);
-      if (!res.ok) throw new Error('Makbuz alınamadı');
+      if (!res.ok) throw new Error('Receipt unavailable');
       const blob = await res.blob();
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href = url;
-      a.download = `makbuz-${apptId}.html`;
+      a.download = `receipt-${apptId}.html`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -57,9 +57,9 @@ export default function BillingPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Ödemelerim</h1>
+        <h1 className="text-2xl font-bold text-white">Billing</h1>
         <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-right">
-          <p className="text-xs text-white/40">Toplam Harcama</p>
+          <p className="text-xs text-white/40">Total Spent</p>
           <p className="text-lg font-bold text-emerald-400">${(total / 100).toLocaleString()}</p>
         </div>
       </div>
@@ -70,18 +70,18 @@ export default function BillingPage() {
         </div>
       ) : appointments.length === 0 ? (
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] py-16 text-center">
-          <p className="text-white/40">Henüz ödeme kaydı yok.</p>
+          <p className="text-white/40">No payment records yet.</p>
         </div>
       ) : (
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/[0.06]">
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Tarih</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Paket</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Danışman</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Tutar</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Durum</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Package</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Consultant</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Amount</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Status</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -89,7 +89,7 @@ export default function BillingPage() {
               {appointments.map((appt) => (
                 <tr key={appt.id} className="hover:bg-white/[0.02]">
                   <td className="px-4 py-3 text-white/60">
-                    {new Date(appt.created_at).toLocaleDateString('tr-TR')}
+                    {new Date(appt.created_at).toLocaleDateString('en-US')}
                   </td>
                   <td className="px-4 py-3 text-white">{appt.package_name}</td>
                   <td className="px-4 py-3 text-white/60">{appt.consultant_name ?? '—'}</td>
@@ -106,7 +106,7 @@ export default function BillingPage() {
                       disabled={downloading === appt.id}
                       className="text-xs text-[#00F0FF] hover:opacity-80 disabled:opacity-40"
                     >
-                      {downloading === appt.id ? 'İndiriliyor…' : 'Makbuz İndir'}
+                      {downloading === appt.id ? 'Downloading…' : 'Download Receipt'}
                     </button>
                   </td>
                 </tr>

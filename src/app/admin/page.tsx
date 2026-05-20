@@ -10,9 +10,9 @@ import { FlatAppointment } from '@/types/marketplace';
 
 const paymentModeLabels: Record<string, string> = {
   ki_escrow: 'Escrow',
-  own_keys: 'Kendi Key',
+  own_keys: 'Own Keys',
   ki_connect: 'Connect',
-  direct: 'Direkt',
+  direct: 'Direct',
 };
 
 interface DocumentItem {
@@ -24,15 +24,15 @@ interface DocumentItem {
 }
 
 const statusLabels: Record<string, { label: string; style: string }> = {
-  confirmed: { label: 'Onaylandı', style: 'bg-green-100 text-green-800' },
-  pending: { label: 'Beklemede', style: 'bg-yellow-100 text-yellow-800' },
-  cancelled: { label: 'İptal', style: 'bg-red-100 text-red-800' },
-  completed: { label: 'Tamamlandı', style: 'bg-blue-100 text-blue-800' },
+  confirmed: { label: 'Confirmed', style: 'bg-green-100 text-green-800' },
+  pending: { label: 'Pending', style: 'bg-yellow-100 text-yellow-800' },
+  cancelled: { label: 'Cancelled', style: 'bg-red-100 text-red-800' },
+  completed: { label: 'Completed', style: 'bg-blue-100 text-blue-800' },
 };
 
 const onboardingLabels: Record<string, { label: string; style: string }> = {
-  form_pending: { label: 'Form Bekleniyor', style: 'bg-orange-100 text-orange-700' },
-  complete: { label: 'Tamamlandı', style: 'bg-green-100 text-green-700' },
+  form_pending: { label: 'Form Pending', style: 'bg-orange-100 text-orange-700' },
+  complete: { label: 'Completed', style: 'bg-green-100 text-green-700' },
 };
 
 export default function AdminPage() {
@@ -109,21 +109,21 @@ export default function AdminPage() {
     try {
       const auth = getFirebaseAuth();
       const token = await auth?.currentUser?.getIdToken();
-      if (!token) throw new Error('Oturum bulunamadı.');
+      if (!token) throw new Error('No active session.');
       const res = await fetch('/api/admin/payout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ appointment_id: appointmentId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Ödeme başarısız.');
-      setPayoutFeedback({ id: appointmentId, message: `Ödeme yapıldı. Transfer: ${data.transfer_id}`, ok: true });
+      if (!res.ok) throw new Error(data.error || 'Payout failed.');
+      setPayoutFeedback({ id: appointmentId, message: `Payout completed. Transfer: ${data.transfer_id}`, ok: true });
       // Refresh payout_status in local state
       setAppointments((prev) =>
         prev.map((a) => a.id === appointmentId ? { ...a, payout_status: 'paid', stripe_transfer_id: data.transfer_id } : a)
       );
     } catch (err: any) {
-      setPayoutFeedback({ id: appointmentId, message: err.message || 'Hata oluştu.', ok: false });
+      setPayoutFeedback({ id: appointmentId, message: err.message || 'An error occurred.', ok: false });
     } finally {
       setPayoutLoading(null);
     }
@@ -133,7 +133,7 @@ export default function AdminPage() {
     event.preventDefault();
     setFeedback(null);
     const db = getFirestoreClient();
-    if (!db) { setFeedback('Veritabanına erişilemiyor.'); return; }
+    if (!db) { setFeedback('Cannot connect to database.'); return; }
     try {
       await addDoc(collection(db, 'userDocuments'), {
         title: docTitle,
@@ -142,10 +142,10 @@ export default function AdminPage() {
         userEmail: docEmail,
         createdAt: new Date().toISOString(),
       });
-      setFeedback('Belge başarıyla atandı.');
+      setFeedback('Document assigned successfully.');
       setDocTitle(''); setDocUrl(''); setDocEmail('');
     } catch {
-      setFeedback('Belge eklenemedi.');
+      setFeedback('Failed to add document.');
     }
   };
 
@@ -159,7 +159,7 @@ export default function AdminPage() {
     return (
       <section className="min-h-screen bg-slate-50 py-20">
         <div className="mx-auto max-w-4xl rounded-3xl bg-white p-10 shadow-sm text-center">
-          <p className="text-gray-700">Admin paneli yükleniyor…</p>
+          <p className="text-gray-700">Loading admin panel…</p>
         </div>
       </section>
     );
@@ -169,11 +169,11 @@ export default function AdminPage() {
     return (
       <section className="min-h-screen bg-slate-50 py-20">
         <div className="mx-auto max-w-3xl rounded-3xl bg-white p-10 shadow-sm text-center">
-          <h1 className="text-2xl font-semibold text-gray-900">Admin Paneli</h1>
-          <p className="mt-3 text-gray-600">Erişmek için giriş yapın.</p>
+          <h1 className="text-2xl font-semibold text-gray-900">Admin Panel</h1>
+          <p className="mt-3 text-gray-600">Please sign in to access this page.</p>
           <div className="mt-6">
             <Link href="/login" className="rounded-full bg-primary-600 px-6 py-3 text-white hover:bg-primary-700">
-              Giriş Yap
+              Sign In
             </Link>
           </div>
         </div>
@@ -185,11 +185,11 @@ export default function AdminPage() {
     return (
       <section className="min-h-screen bg-slate-50 py-20">
         <div className="mx-auto max-w-4xl rounded-3xl bg-white p-10 shadow-sm text-center">
-          <h1 className="text-2xl font-semibold text-gray-900">Erişim Reddedildi</h1>
-          <p className="mt-3 text-gray-600">Bu hesap admin olarak tanımlı değil.</p>
+          <h1 className="text-2xl font-semibold text-gray-900">Access Denied</h1>
+          <p className="mt-3 text-gray-600">This account is not authorized as an admin.</p>
           <div className="mt-6">
             <button type="button" onClick={handleLogout} className="rounded-full bg-primary-600 px-6 py-3 text-white hover:bg-primary-700">
-              Çıkış Yap
+              Sign Out
             </button>
           </div>
         </div>
@@ -210,18 +210,18 @@ export default function AdminPage() {
         {/* Header */}
         <div className="mb-8 flex flex-col gap-4 rounded-3xl bg-white p-8 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Admin Paneli</h1>
-            <p className="mt-1 text-sm text-gray-500">Giriş: {userEmail}</p>
+            <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
+            <p className="mt-1 text-sm text-gray-500">Signed in as: {userEmail}</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/admin/integrations" className="inline-flex items-center justify-center rounded-full border border-primary-300 bg-primary-50 px-5 py-2.5 text-sm font-medium text-primary-700 hover:bg-primary-100">
-              Entegrasyonlar
+              Integrations
             </Link>
             <Link href="/dashboard" className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              Müşteri Portalı
+              Client Portal
             </Link>
             <button type="button" onClick={handleLogout} className="inline-flex items-center justify-center rounded-full bg-primary-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-700">
-              Çıkış Yap
+              Sign Out
             </button>
           </div>
         </div>
@@ -229,10 +229,10 @@ export default function AdminPage() {
         {/* Stats */}
         <div className="mb-8 grid gap-4 sm:grid-cols-4">
           {[
-            { label: 'Toplam Randevu', value: statsMap.total, style: 'text-gray-900' },
-            { label: 'Onaylanan', value: statsMap.confirmed, style: 'text-green-700' },
-            { label: 'Form Bekleyen', value: statsMap.onboardingPending, style: 'text-orange-600' },
-            { label: 'Onboarding Tamam', value: statsMap.onboardingDone, style: 'text-blue-700' },
+            { label: 'Total Appointments', value: statsMap.total, style: 'text-gray-900' },
+            { label: 'Confirmed', value: statsMap.confirmed, style: 'text-green-700' },
+            { label: 'Form Pending', value: statsMap.onboardingPending, style: 'text-orange-600' },
+            { label: 'Onboarding Complete', value: statsMap.onboardingDone, style: 'text-blue-700' },
           ].map((stat) => (
             <div key={stat.label} className="rounded-3xl bg-white p-6 shadow-sm text-center">
               <p className={`text-3xl font-bold ${stat.style}`}>{stat.value}</p>
@@ -245,13 +245,13 @@ export default function AdminPage() {
           {/* Appointments */}
           <div className="rounded-3xl bg-white p-8 shadow-sm">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-2xl font-semibold text-gray-900">Randevular</h2>
+              <h2 className="text-2xl font-semibold text-gray-900">Appointments</h2>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { value: 'all', label: 'Tümü' },
-                  { value: 'confirmed', label: 'Onaylı' },
-                  { value: 'pending', label: 'Bekleyen' },
-                  { value: 'onboarding_pending', label: 'Form Bekleniyor' },
+                  { value: 'all', label: 'All' },
+                  { value: 'confirmed', label: 'Confirmed' },
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'onboarding_pending', label: 'Form Pending' },
                 ].map((f) => (
                   <button
                     type="button"
@@ -270,7 +270,7 @@ export default function AdminPage() {
             </div>
 
             {filteredAppointments.length === 0 ? (
-              <p className="mt-4 text-gray-600">Bu filtreye ait randevu bulunamadı.</p>
+              <p className="mt-4 text-gray-600">No appointments found for this filter.</p>
             ) : (
               <div className="mt-2 space-y-4">
                 {filteredAppointments.map((appt) => {
@@ -288,10 +288,10 @@ export default function AdminPage() {
                           )}
                           <h3 className="mt-1 font-semibold text-gray-900">{appt.package_name}</h3>
                           {appt.consultant_name && (
-                            <p className="text-xs text-gray-500">Danışman: {appt.consultant_name}</p>
+                            <p className="text-xs text-gray-500">Consultant: {appt.consultant_name}</p>
                           )}
                           <p className="mt-1 text-xs text-gray-500">
-                            {new Date(appt.created_at).toLocaleString('tr-TR')}
+                            {new Date(appt.created_at).toLocaleString('en-US')}
                           </p>
                         </div>
                         <div className="flex shrink-0 flex-col items-end gap-1">
@@ -310,18 +310,18 @@ export default function AdminPage() {
                           )}
                           {isEscrowPaid && (
                             <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-                              Ödendi
+                              Paid Out
                             </span>
                           )}
                         </div>
                       </div>
                       <p className="mt-2 text-xs text-gray-500">
                         ${(appt.payment_amount / 100).toLocaleString()} · {appt.appointment_time} ·{' '}
-                        {new Date(appt.appointment_date).toLocaleDateString('tr-TR', { timeZone: appt.appointment_timezone })}
+                        {new Date(appt.appointment_date).toLocaleDateString('en-US', { timeZone: appt.appointment_timezone })}
                       </p>
                       {appt.platform_fee_cents != null && (
                         <p className="mt-1 text-xs text-gray-400">
-                          Platform komisyonu: ${(appt.platform_fee_cents / 100).toFixed(2)} · Danışman payı: ${((appt.consultant_payout_cents ?? 0) / 100).toFixed(2)}
+                          Platform fee: ${(appt.platform_fee_cents / 100).toFixed(2)} · Consultant payout: ${((appt.consultant_payout_cents ?? 0) / 100).toFixed(2)}
                         </p>
                       )}
                       {isEscrowPending && (
@@ -332,7 +332,7 @@ export default function AdminPage() {
                             onClick={() => handlePayout(appt.id)}
                             className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
                           >
-                            {payoutLoading === appt.id ? 'İşleniyor…' : 'Danışmana Öde'}
+                            {payoutLoading === appt.id ? 'Processing…' : 'Pay Consultant'}
                           </button>
                         </div>
                       )}
@@ -350,11 +350,11 @@ export default function AdminPage() {
 
           {/* Assign Document */}
           <div className="rounded-3xl bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-semibold text-gray-900">PDF Belgesi Ata</h2>
+            <h2 className="text-2xl font-semibold text-gray-900">Assign PDF Document</h2>
             <form onSubmit={handleAddDocument} className="mt-6 space-y-4">
               <div>
                 <label htmlFor="doc-email" className="block text-sm font-medium text-gray-700">
-                  Müşteri Email
+                  Client Email
                 </label>
                 <input
                   id="doc-email"
@@ -362,13 +362,13 @@ export default function AdminPage() {
                   onChange={(e) => setDocEmail(e.target.value)}
                   type="email"
                   required
-                  placeholder="musteri@email.com"
+                  placeholder="client@email.com"
                   className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
                 />
               </div>
               <div>
                 <label htmlFor="doc-title" className="block text-sm font-medium text-gray-700">
-                  Belge Başlığı
+                  Document Title
                 </label>
                 <input
                   id="doc-title"
@@ -376,13 +376,13 @@ export default function AdminPage() {
                   onChange={(e) => setDocTitle(e.target.value)}
                   type="text"
                   required
-                  placeholder="Rapor Başlığı"
+                  placeholder="Report Title"
                   className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
                 />
               </div>
               <div>
                 <label htmlFor="doc-url" className="block text-sm font-medium text-gray-700">
-                  Belge URL
+                  Document URL
                 </label>
                 <input
                   id="doc-url"
@@ -396,13 +396,13 @@ export default function AdminPage() {
               </div>
               <div>
                 <label htmlFor="doc-package" className="block text-sm font-medium text-gray-700">
-                  Paket
+                  Package
                 </label>
                 <select
                   id="doc-package"
                   value={docPackage}
                   onChange={(e) => setDocPackage(e.target.value)}
-                  title="Paket seçimi"
+                  title="Select package"
                   className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
                 >
                   <option value="starter">Starter</option>
@@ -412,11 +412,11 @@ export default function AdminPage() {
                 </select>
               </div>
               <Button type="submit" variant="primary" className="w-full">
-                Belge Ata
+                Assign Document
               </Button>
             </form>
             {feedback && (
-              <p className={`mt-4 text-sm ${feedback.includes('başarıyla') ? 'text-green-700' : 'text-red-600'}`}>
+              <p className={`mt-4 text-sm ${feedback.includes('successfully') ? 'text-green-700' : 'text-red-600'}`}>
                 {feedback}
               </p>
             )}
@@ -425,9 +425,9 @@ export default function AdminPage() {
 
         {/* Shared Documents */}
         <div className="mt-8 rounded-3xl bg-white p-8 shadow-sm">
-          <h2 className="text-2xl font-semibold text-gray-900">Atanmış Belgeler</h2>
+          <h2 className="text-2xl font-semibold text-gray-900">Assigned Documents</h2>
           {documents.length === 0 ? (
-            <p className="mt-4 text-gray-600">Henüz belge atanmamış.</p>
+            <p className="mt-4 text-gray-600">No documents have been assigned yet.</p>
           ) : (
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {documents.map((doc) => (
@@ -436,7 +436,7 @@ export default function AdminPage() {
                     <div className="min-w-0">
                       <h3 className="truncate font-semibold text-gray-900">{doc.title}</h3>
                       <p className="mt-1 truncate text-xs text-gray-500">
-                        {doc.userEmail || 'Genel'} · {doc.packageId}
+                        {doc.userEmail || 'All'} · {doc.packageId}
                       </p>
                     </div>
                     <a
@@ -445,7 +445,7 @@ export default function AdminPage() {
                       rel="noreferrer"
                       className="shrink-0 rounded-full bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700"
                     >
-                      Görüntüle
+                      View
                     </a>
                   </div>
                 </div>

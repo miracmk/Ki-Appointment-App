@@ -1,27 +1,14 @@
 import Link from 'next/link';
 import { CATEGORIES } from '@/lib/categories';
 
-type FooterProps = {
-  locale?: string;
-};
-
-function localeHref(locale: string | undefined, path: string) {
-  if (!locale) {
-    return path;
-  }
-
-  if (path === '/') return `/${locale}`;
-  return `/${locale}${path}`;
-}
-
-export function Footer({ locale }: FooterProps) {
+export function Footer() {
   return (
     <footer className="border-t border-white/[0.06] bg-[#0A0B0F]">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div className="lg:col-span-1">
-            <Link href={localeHref(locale, '/')}>
+            <Link href="/en">
               <img
                 src="/logo.png"
                 alt="Ki Business Solutions"
@@ -29,8 +16,8 @@ export function Footer({ locale }: FooterProps) {
               />
             </Link>
             <p className="mt-4 text-sm leading-relaxed text-white/40">
-              KYC doğrulamalı uzman danışmanlarla bağlanın. Güvenli escrow ödeme, takvim
-              entegrasyonu ve Google Meet ile profesyonel danışmanlık hizmetleri.
+              Connect with KYC-verified expert consultants. Secure escrow payments,
+              calendar integration, and encrypted video calls for professional advisory services.
             </p>
             <div className="mt-6 flex gap-3">
               <a
@@ -61,13 +48,13 @@ export function Footer({ locale }: FooterProps) {
           {/* Categories */}
           <div>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-white/50">
-              Kategoriler
+              Categories
             </h3>
             <ul className="space-y-2.5">
               {CATEGORIES.map((cat) => (
                 <li key={cat.id}>
                   <Link
-                    href={localeHref(locale, `/marketplace/${cat.id}`)}
+                    href={`/en/marketplace/${cat.id}`}
                     className="flex items-center gap-2 text-sm text-white/40 transition hover:text-white"
                   >
                     <span className="text-base">{cat.icon}</span>
@@ -84,18 +71,19 @@ export function Footer({ locale }: FooterProps) {
               Platform
             </h3>
             <ul className="space-y-2.5 text-sm text-white/40">
-              <li><Link href={localeHref(locale, '/marketplace')} className="transition hover:text-white">Danışmanlar</Link></li>
-              <li><Link href={localeHref(locale, '/#how-it-works')} className="transition hover:text-white">Nasıl Çalışır</Link></li>
-              <li><Link href={localeHref(locale, '/dashboard')} className="transition hover:text-white">Müşteri Paneli</Link></li>
-              <li><Link href={localeHref(locale, '/consultant')} className="transition hover:text-white">Danışman Paneli</Link></li>
-              <li><Link href={localeHref(locale, '/login')} className="transition hover:text-white">Giriş Yap</Link></li>
+              <li><Link href="/en/marketplace" className="transition hover:text-white">Consultants</Link></li>
+              <li><Link href="/en/#how-it-works" className="transition hover:text-white">How It Works</Link></li>
+              <li><Link href="/en/dashboard" className="transition hover:text-white">Client Dashboard</Link></li>
+              <li><Link href="/en/consultant" className="transition hover:text-white">Consultant Dashboard</Link></li>
+              <li><Link href="/en/register" className="transition hover:text-white">Register</Link></li>
+              <li><Link href="/en/login" className="transition hover:text-white">Login</Link></li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-white/50">
-              İletişim
+              Contact
             </h3>
             <ul className="space-y-2.5 text-sm text-white/40">
               <li className="flex items-center gap-2">
@@ -118,12 +106,12 @@ export function Footer({ locale }: FooterProps) {
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/[0.06] pt-8 sm:flex-row">
           <p className="text-sm text-white/30">
-            © 2026 Ki Business Solutions. Tüm hakları saklıdır.
+            © 2026 Ki Business Solutions. All rights reserved.
           </p>
           <div className="flex gap-6 text-sm text-white/30">
-            <Link href={localeHref(locale, '/terms')} className="transition hover:text-white">Kullanım Koşulları</Link>
-            <Link href={localeHref(locale, '/privacy')} className="transition hover:text-white">Gizlilik Politikası</Link>
-            <Link href={localeHref(locale, '/refund')} className="transition hover:text-white">İade Politikası</Link>
+            <a href="https://kibusiness.co/terms-of-service" target="_blank" rel="noopener noreferrer" className="transition hover:text-white">Terms of Service</a>
+            <a href="https://kibusiness.co/privacy-policy" target="_blank" rel="noopener noreferrer" className="transition hover:text-white">Privacy Policy</a>
+            <a href="https://kibusiness.co/refund-policy" target="_blank" rel="noopener noreferrer" className="transition hover:text-white">Refund Policy</a>
           </div>
         </div>
       </div>

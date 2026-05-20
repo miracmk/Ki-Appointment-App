@@ -51,11 +51,11 @@ export default function SettingsPage() {
     setMsg(null);
     try {
       const db = getFirestoreClient();
-      if (!db) throw new Error('Firestore bağlantısı yok.');
+      if (!db) throw new Error('No database connection.');
       await setDoc(doc(db, 'users', uid), { name, phone, address, timezone, updated_at: Date.now() }, { merge: true });
-      setMsg({ type: 'ok', text: 'Bilgiler kaydedildi.' });
+      setMsg({ type: 'ok', text: 'Changes saved successfully.' });
     } catch {
-      setMsg({ type: 'err', text: 'Kayıt sırasında hata oluştu.' });
+      setMsg({ type: 'err', text: 'An error occurred while saving.' });
     } finally {
       setSaving(false);
     }
@@ -64,20 +64,20 @@ export default function SettingsPage() {
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     setPwMsg(null);
-    if (newPw !== confirmPw) { setPwMsg({ type: 'err', text: 'Şifreler eşleşmiyor.' }); return; }
-    if (newPw.length < 6)   { setPwMsg({ type: 'err', text: 'Şifre en az 6 karakter olmalı.' }); return; }
+    if (newPw !== confirmPw) { setPwMsg({ type: 'err', text: 'Passwords do not match.' }); return; }
+    if (newPw.length < 6)   { setPwMsg({ type: 'err', text: 'Password must be at least 6 characters.' }); return; }
     setPwSaving(true);
     try {
       const auth = getFirebaseAuth();
-      if (!auth?.currentUser) throw new Error('Oturum yok.');
+      if (!auth?.currentUser) throw new Error('No active session.');
       const credential = EmailAuthProvider.credential(auth.currentUser.email!, currentPw);
       await reauthenticateWithCredential(auth.currentUser, credential);
       await updatePassword(auth.currentUser, newPw);
       setCurrentPw(''); setNewPw(''); setConfirmPw('');
-      setPwMsg({ type: 'ok', text: 'Şifre güncellendi.' });
+      setPwMsg({ type: 'ok', text: 'Password updated successfully.' });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Şifre güncellenemedi.';
-      setPwMsg({ type: 'err', text: msg.includes('wrong-password') ? 'Mevcut şifre hatalı.' : msg });
+      const msg = err instanceof Error ? err.message : 'Password could not be updated.';
+      setPwMsg({ type: 'err', text: msg.includes('wrong-password') ? 'Current password is incorrect.' : msg });
     } finally {
       setPwSaving(false);
     }
@@ -93,30 +93,30 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold text-white">Ayarlar</h1>
+      <h1 className="text-2xl font-bold text-white">Settings</h1>
 
       {/* Profile */}
       <form onSubmit={handleSave} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 space-y-4">
-        <h2 className="font-semibold text-white">Profil Bilgileri</h2>
+        <h2 className="font-semibold text-white">Profile Information</h2>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="settings-name" className="mb-1.5 block text-sm text-white/60">Ad Soyad</label>
+            <label htmlFor="settings-name" className="mb-1.5 block text-sm text-white/60">Full Name</label>
             <input id="settings-name" type="text" value={name} onChange={(e) => setName(e.target.value)} className="input-dark w-full" />
           </div>
           <div>
-            <label htmlFor="settings-phone" className="mb-1.5 block text-sm text-white/60">Telefon</label>
-            <input id="settings-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="input-dark w-full" placeholder="+90 555 000 00 00" />
+            <label htmlFor="settings-phone" className="mb-1.5 block text-sm text-white/60">Phone Number</label>
+            <input id="settings-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="input-dark w-full" placeholder="+1 555 000 0000" />
           </div>
         </div>
 
         <div>
-          <label htmlFor="settings-address" className="mb-1.5 block text-sm text-white/60">Adres</label>
+          <label htmlFor="settings-address" className="mb-1.5 block text-sm text-white/60">Address</label>
           <input id="settings-address" type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="input-dark w-full" />
         </div>
 
         <div>
-          <label htmlFor="settings-timezone" className="mb-1.5 block text-sm text-white/60">Saat Dilimi</label>
+          <label htmlFor="settings-timezone" className="mb-1.5 block text-sm text-white/60">Timezone</label>
           <select id="settings-timezone" value={timezone} onChange={(e) => setTimezone(e.target.value)} className="input-dark w-full">
             {POPULAR_TIMEZONES.map((tz) => (
               <option key={tz.value} value={tz.value}>{tz.label}</option>
@@ -129,25 +129,25 @@ export default function SettingsPage() {
         )}
 
         <button type="submit" disabled={saving} className="rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] px-6 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
-          {saving ? 'Kaydediliyor…' : 'Kaydet'}
+          {saving ? 'Saving…' : 'Save Changes'}
         </button>
       </form>
 
       {/* Password */}
       <form onSubmit={handlePasswordChange} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 space-y-4">
-        <h2 className="font-semibold text-white">Şifre Değiştir</h2>
+        <h2 className="font-semibold text-white">Change Password</h2>
 
         <div>
-          <label htmlFor="current-pw" className="mb-1.5 block text-sm text-white/60">Mevcut Şifre</label>
+          <label htmlFor="current-pw" className="mb-1.5 block text-sm text-white/60">Current Password</label>
           <input id="current-pw" type="password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} className="input-dark w-full" autoComplete="current-password" />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="new-pw" className="mb-1.5 block text-sm text-white/60">Yeni Şifre</label>
+            <label htmlFor="new-pw" className="mb-1.5 block text-sm text-white/60">New Password</label>
             <input id="new-pw" type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} className="input-dark w-full" autoComplete="new-password" />
           </div>
           <div>
-            <label htmlFor="confirm-pw" className="mb-1.5 block text-sm text-white/60">Şifreyi Onayla</label>
+            <label htmlFor="confirm-pw" className="mb-1.5 block text-sm text-white/60">Confirm Password</label>
             <input id="confirm-pw" type="password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} className="input-dark w-full" autoComplete="new-password" />
           </div>
         </div>
@@ -157,7 +157,7 @@ export default function SettingsPage() {
         )}
 
         <button type="submit" disabled={pwSaving} className="rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] px-6 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
-          {pwSaving ? 'Güncelleniyor…' : 'Şifreyi Güncelle'}
+          {pwSaving ? 'Updating…' : 'Update Password'}
         </button>
       </form>
     </div>

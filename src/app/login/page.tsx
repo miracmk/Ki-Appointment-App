@@ -26,7 +26,7 @@ export default function LoginPage() {
       if (user) router.push(`/${locale}/dashboard`);
     });
     return () => unsub();
-  }, [configured, router]);
+  }, [configured, router, locale]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -34,17 +34,17 @@ export default function LoginPage() {
     setError(null);
     try {
       const auth = getFirebaseAuth();
-      if (!auth) { setError('Firebase yapılandırılmamış.'); return; }
+      if (!auth) { setError('Authentication not configured.'); return; }
       await signInWithEmailAndPassword(auth, email, password);
       router.push(`/${locale}/dashboard`);
     } catch (err: any) {
       const code = err.code || '';
       if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-        setError('E-posta veya şifre hatalı.');
+        setError('Invalid email or password.');
       } else if (code === 'auth/too-many-requests') {
-        setError('Çok fazla başarısız deneme. Lütfen bekleyin.');
+        setError('Too many failed attempts. Please try again later.');
       } else {
-        setError(err.message || 'Giriş yapılamadı.');
+        setError(err.message || 'Sign-in failed. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -68,16 +68,16 @@ export default function LoginPage() {
               className="mx-auto h-10 w-auto"
             />
           </Link>
-          <h1 className="mt-6 text-2xl font-bold text-white">Portale Giriş Yap</h1>
+          <h1 className="mt-6 text-2xl font-bold text-white">Sign In to Your Account</h1>
           <p className="mt-2 text-sm text-white/50">
-            Danışmanlık satın aldıktan sonra gönderilen e-posta ve şifreyi kullanın.
+            Use the email and password sent after your first consultation purchase.
           </p>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-md">
           {!configured ? (
             <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-300">
-              Firebase yapılandırılmamış. Lütfen Netlify ortam değişkenlerini kontrol edin:
+              Authentication is not configured. Please check environment variables:
               <code className="mt-2 block text-xs text-yellow-200/70">
                 NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, NEXT_PUBLIC_FIREBASE_PROJECT_ID
               </code>
@@ -90,19 +90,19 @@ export default function LoginPage() {
                 </div>
               )}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-white/70">E-posta adresi</label>
+                <label htmlFor="email" className="block text-sm font-medium text-white/70">Email address</label>
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="ornek@email.com"
+                  placeholder="you@example.com"
                   className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 outline-none transition focus:border-[#00F0FF]/50 focus:ring-2 focus:ring-[#00F0FF]/20"
                 />
               </div>
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-white/70">Şifre</label>
+                <label htmlFor="password" className="block text-sm font-medium text-white/70">Password</label>
                 <input
                   id="password"
                   type="password"
@@ -118,15 +118,15 @@ export default function LoginPage() {
                 disabled={loading || !authReady}
                 className="w-full rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] px-6 py-3 font-semibold text-white shadow-lg shadow-[#0047FF]/30 transition hover:opacity-90 disabled:opacity-50"
               >
-                {loading ? 'Giriş yapılıyor…' : 'Giriş Yap'}
+                {loading ? 'Signing in…' : 'Sign In'}
               </button>
             </form>
           )}
         </div>
 
         <p className="mt-6 text-center text-sm text-white/40">
-          Hesabınız yok mu?{' '}
-          <Link href={`/${locale}/marketplace`} className="text-[#00F0FF] hover:underline">Danışman Bul</Link>
+          Don&apos;t have an account?{' '}
+          <Link href={`/${locale}/register`} className="text-[#00F0FF] hover:underline">Create Account</Link>
         </p>
       </div>
     </div>

@@ -51,14 +51,14 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">Raporlar</h1>
+      <h1 className="text-2xl font-bold text-white">Reports</h1>
 
       {/* Totals */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[
-          { label: 'Toplam Ciro',        value: `$${(totalGross / 100).toLocaleString()}`,     color: 'text-white' },
-          { label: 'Toplam Kazanç',      value: `$${(totalPayout / 100).toLocaleString()}`,    color: 'text-emerald-400' },
-          { label: 'Platform Ücreti',    value: `$${(totalPlatformFee / 100).toLocaleString()}`, color: 'text-[#B000FF]' },
+          { label: 'Total Revenue',      value: `$${(totalGross / 100).toLocaleString()}`,     color: 'text-white' },
+          { label: 'Total Earnings',     value: `$${(totalPayout / 100).toLocaleString()}`,    color: 'text-emerald-400' },
+          { label: 'Platform Fee',       value: `$${(totalPlatformFee / 100).toLocaleString()}`, color: 'text-[#B000FF]' },
         ].map((s) => (
           <div key={s.label} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
             <p className="text-sm text-white/40">{s.label}</p>
@@ -70,18 +70,18 @@ export default function ReportsPage() {
       {/* Monthly breakdown */}
       <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
         <div className="border-b border-white/[0.06] px-5 py-4">
-          <h2 className="font-semibold text-white">Aylık Özet</h2>
+          <h2 className="font-semibold text-white">Monthly Summary</h2>
         </div>
         {months.length === 0 ? (
-          <p className="py-10 text-center text-sm text-white/30">Henüz veri yok.</p>
+          <p className="py-10 text-center text-sm text-white/30">No data available yet.</p>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/[0.06]">
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Ay</th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Randevu</th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Ciro</th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Kazanç</th>
+                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Month</th>
+                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Appointments</th>
+                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Revenue</th>
+                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">Earnings</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.04]">

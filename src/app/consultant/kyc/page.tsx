@@ -41,15 +41,15 @@ export default function ConsultantKycPage() {
     try {
       const res  = await fetch('/api/consultant/kyc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ consultant_id: uid }) });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Ödeme başlatılamadı.');
+      if (!res.ok) throw new Error(data.error ?? 'Could not initiate payment.');
 
       const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-      if (!key) throw new Error('Stripe yapılandırılmamış.');
+      if (!key) throw new Error('Stripe is not configured.');
       const stripe = await loadStripe(key);
-      if (!stripe) throw new Error('Stripe yüklenemedi.');
+      if (!stripe) throw new Error('Could not load Stripe.');
       await stripe.redirectToCheckout({ sessionId: data.sessionId });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Hata oluştu.');
+      setError(err instanceof Error ? err.message : 'An error occurred.');
       setPaying(false);
     }
   };
@@ -67,7 +67,7 @@ export default function ConsultantKycPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold text-white">KYC Doğrulama</h1>
+      <h1 className="text-2xl font-bold text-white">KYC Verification</h1>
 
       {/* Status */}
       <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6">
@@ -89,16 +89,16 @@ export default function ConsultantKycPage() {
           </div>
           <div>
             <h2 className="font-semibold text-white">
-              {status === 'verified' ? 'Doğrulandı ✓' :
-               status === 'rejected' ? 'Reddedildi' :
-               status === 'pending'  ? 'İnceleniyor…' :
-               'Doğrulama Gerekiyor'}
+              {status === 'verified' ? 'Verified ✓' :
+               status === 'rejected' ? 'Rejected' :
+               status === 'pending'  ? 'Under Review…' :
+               'Verification Required'}
             </h2>
             <p className="text-sm text-white/40">
-              {status === 'verified' ? 'Kimliğiniz başarıyla doğrulanmıştır.' :
-               status === 'rejected' ? `Red sebebi: ${kyc?.rejection_reason ?? 'Belirtilmedi'}` :
-               status === 'pending'  ? 'Belgeleriniz inceleniyor, 1-3 iş günü sürebilir.' :
-               'Marketplace\'te görünmek için KYC doğrulamanızı tamamlayın.'}
+              {status === 'verified' ? 'Your identity has been successfully verified.' :
+               status === 'rejected' ? `Rejection reason: ${kyc?.rejection_reason ?? 'Not specified'}` :
+               status === 'pending'  ? 'Your documents are under review, this may take 1-3 business days.' :
+               'Complete KYC verification to appear on the marketplace.'}
             </p>
           </div>
         </div>
@@ -107,7 +107,7 @@ export default function ConsultantKycPage() {
       {/* Steps */}
       {status !== 'verified' && (
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 space-y-5">
-          <h3 className="font-semibold text-white">Doğrulama Adımları</h3>
+          <h3 className="font-semibold text-white">Verification Steps</h3>
 
           {/* Step 1: $5 fee */}
           <div className={`flex items-start gap-4 rounded-xl border p-4 ${feePaid ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-white/10 bg-white/[0.02]'}`}>
@@ -115,8 +115,8 @@ export default function ConsultantKycPage() {
               {feePaid ? '✓' : '1'}
             </div>
             <div className="flex-1">
-              <p className="font-medium text-white">KYC Ücreti — $5</p>
-              <p className="mt-0.5 text-sm text-white/40">Tek seferlik kimlik doğrulama işlem ücreti.</p>
+              <p className="font-medium text-white">KYC Fee — $5</p>
+              <p className="mt-0.5 text-sm text-white/40">One-time identity verification processing fee.</p>
               {!feePaid && (
                 <button
                   type="button"
@@ -124,7 +124,7 @@ export default function ConsultantKycPage() {
                   disabled={paying}
                   className="mt-3 rounded-xl bg-gradient-to-r from-[#B000FF] to-[#0047FF] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
                 >
-                  {paying ? 'Yönlendirilıyor…' : '$5 Öde'}
+                  {paying ? 'Redirecting…' : 'Pay $5'}
                 </button>
               )}
             </div>
@@ -136,8 +136,8 @@ export default function ConsultantKycPage() {
               2
             </div>
             <div>
-              <p className="font-medium text-white">İnceleme</p>
-              <p className="mt-0.5 text-sm text-white/40">Ödeme sonrası başvurunuz otomatik olarak incelemeye alınır.</p>
+              <p className="font-medium text-white">Review</p>
+              <p className="mt-0.5 text-sm text-white/40">After payment, your application is automatically submitted for review.</p>
             </div>
           </div>
 

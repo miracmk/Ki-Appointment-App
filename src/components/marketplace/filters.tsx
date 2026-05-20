@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { CATEGORIES } from '@/lib/categories';
 
-const LANGUAGES = ['Türkçe', 'İngilizce', 'Almanca', 'Fransızca', 'Arapça', 'İspanyolca', 'Rusça'];
+const LANGUAGES = ['Turkish', 'English', 'German', 'French', 'Arabic', 'Spanish', 'Russian'];
 
 export function MarketplaceFilters() {
   const router = useRouter();
@@ -45,20 +45,20 @@ export function MarketplaceFilters() {
   return (
     <aside className="w-full rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 backdrop-blur-sm lg:w-64 lg:shrink-0">
       <div className="mb-5 flex items-center justify-between">
-        <h2 className="font-semibold text-white">Filtrele</h2>
+        <h2 className="font-semibold text-white">Filter</h2>
         <button
           type="button"
           onClick={reset}
           className="text-xs text-white/40 transition hover:text-white"
         >
-          Sıfırla
+          Reset
         </button>
       </div>
 
       {/* Price range */}
       <div className="mb-6">
         <p className="mb-3 text-sm font-medium text-white/70">
-          Saatlik Ücret: ${minRate} – ${maxRate === 500 ? '500+' : maxRate}
+          Hourly Rate: ${minRate} – ${maxRate === 500 ? '500+' : maxRate}
         </p>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -86,7 +86,7 @@ export function MarketplaceFilters() {
 
       {/* Minimum rating */}
       <div className="mb-6">
-        <p className="mb-3 text-sm font-medium text-white/70">Minimum Puan</p>
+        <p className="mb-3 text-sm font-medium text-white/70">Minimum Rating</p>
         <div className="flex gap-2">
           {[0, 3, 4, 4.5].map((r) => (
             <button
@@ -99,7 +99,7 @@ export function MarketplaceFilters() {
                   : 'border-white/10 bg-white/5 text-white/50 hover:border-white/20 hover:text-white'
               }`}
             >
-              {r === 0 ? 'Tümü' : `${r}+`}
+              {r === 0 ? 'All' : `${r}+`}
             </button>
           ))}
         </div>
@@ -107,7 +107,7 @@ export function MarketplaceFilters() {
 
       {/* Languages */}
       <div className="mb-6">
-        <p className="mb-3 text-sm font-medium text-white/70">Dil</p>
+        <p className="mb-3 text-sm font-medium text-white/70">Language</p>
         <div className="space-y-2">
           {LANGUAGES.map((l) => (
             <label key={l} className="flex cursor-pointer items-center gap-2.5">
@@ -125,7 +125,7 @@ export function MarketplaceFilters() {
 
       {/* Categories */}
       <div className="mb-6">
-        <p className="mb-3 text-sm font-medium text-white/70">Kategori</p>
+        <p className="mb-3 text-sm font-medium text-white/70">Category</p>
         <div className="space-y-2">
           {CATEGORIES.map((cat) => (
             <label key={cat.id} className="flex cursor-pointer items-center gap-2.5">
@@ -148,7 +148,7 @@ export function MarketplaceFilters() {
         onClick={apply}
         className="w-full rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
       >
-        Uygula
+        Apply Filters
       </button>
     </aside>
   );

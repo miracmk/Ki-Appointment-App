@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Yetkilendirme gerekli.' }, { status: 401 });
+      return NextResponse.json({ error: 'Authorization required.' }, { status: 401 });
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -22,19 +22,19 @@ export async function GET(request: NextRequest) {
     if (!decoded.customClaims?.admin) {
       const userRecord = await getAdminAuth().getUser(decoded.uid);
       if (!userRecord.customClaims?.admin) {
-        return NextResponse.json({ error: 'Admin yetkisi gerekli.' }, { status: 403 });
+        return NextResponse.json({ error: 'Admin access required.' }, { status: 403 });
       }
     }
 
     const consultantId = request.nextUrl.searchParams.get('consultant_id');
     if (!consultantId) {
-      return NextResponse.json({ error: 'consultant_id parametresi gerekli.' }, { status: 400 });
+      return NextResponse.json({ error: 'consultant_id parameter is required.' }, { status: 400 });
     }
 
     const clientId = process.env.STRIPE_CONNECT_CLIENT_ID;
     if (!clientId) {
       return NextResponse.json(
-        { error: 'STRIPE_CONNECT_CLIENT_ID ortam değişkeni tanımlı değil.' },
+        { error: 'STRIPE_CONNECT_CLIENT_ID environment variable is not configured.' },
         { status: 500 }
       );
     }
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ oauth_url: oauthUrl.toString() });
   } catch (err: any) {
-    console.error('Stripe Connect OAuth URL oluşturma hatası:', err);
-    return NextResponse.json({ error: err.message || 'Sunucu hatası.' }, { status: 500 });
+    console.error('Stripe Connect OAuth URL error:', err);
+    return NextResponse.json({ error: err.message || 'Server error.' }, { status: 500 });
   }
 }

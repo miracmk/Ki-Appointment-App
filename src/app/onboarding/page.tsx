@@ -7,18 +7,18 @@ import { onAuthStateChanged, sendEmailVerification } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 
 const SECTORS = [
-  'Üretim',
-  'Teknoloji',
-  'Finans & Bankacılık',
-  'Sağlık',
-  'Perakende',
-  'Lojistik & Tedarik Zinciri',
-  'İnşaat & Gayrimenkul',
-  'Enerji',
-  'Eğitim',
-  'Turizm & Otelcilik',
-  'Tarım',
-  'Diğer',
+  'Manufacturing',
+  'Technology',
+  'Finance & Banking',
+  'Healthcare',
+  'Retail',
+  'Logistics & Supply Chain',
+  'Construction & Real Estate',
+  'Energy',
+  'Education',
+  'Tourism & Hospitality',
+  'Agriculture',
+  'Other',
 ];
 
 const EMPLOYEE_RANGES = ['1–10', '11–50', '51–200', '201–500', '501–1000', '1000+'];
@@ -87,7 +87,7 @@ export default function OnboardingPage() {
       await sendEmailVerification(user);
       setVerificationSent(true);
     } catch (err: any) {
-      setError(err.message || 'Doğrulama emaili gönderilemedi.');
+      setError(err.message || 'Could not send verification email.');
     }
   };
 
@@ -99,11 +99,11 @@ export default function OnboardingPage() {
     try {
       const auth = getFirebaseAuth();
       const user = auth?.currentUser;
-      if (!user) throw new Error('Oturum bulunamadı.');
+      if (!user) throw new Error('No active session.');
 
       await user.reload();
       if (!user.emailVerified) {
-        throw new Error('Email adresinizi henüz onaylamadınız.');
+        throw new Error('Please verify your email address first.');
       }
 
       const token = await user.getIdToken(true);
@@ -114,11 +114,11 @@ export default function OnboardingPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Form gönderilemedi.');
+      if (!res.ok) throw new Error(data.error || 'Could not submit form.');
 
       setSuccess(true);
     } catch (err: any) {
-      setError(err.message || 'Beklenmeyen bir hata oluştu.');
+      setError(err.message || 'An unexpected error occurred.');
     } finally {
       setSubmitting(false);
     }
@@ -131,7 +131,7 @@ export default function OnboardingPage() {
     return (
       <section className="min-h-screen bg-slate-50 py-20">
         <div className="mx-auto max-w-2xl rounded-3xl bg-white p-10 shadow-sm text-center">
-          <p className="text-gray-600">Yükleniyor…</p>
+          <p className="text-gray-600">Loading…</p>
         </div>
       </section>
     );
@@ -147,14 +147,14 @@ export default function OnboardingPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {alreadyDone && !success ? 'Form daha önce doldurulmuş' : 'Form başarıyla gönderildi!'}
+            {alreadyDone && !success ? 'Form already submitted' : 'Form submitted successfully!'}
           </h1>
           <p className="mt-3 text-gray-600">
-            Danışmanınız bilgilerinizi inceledikten sonra sizinle iletişime geçecektir.
+            Your consultant will review your details and get in touch with you.
           </p>
           <div className="mt-8">
             <Button type="button" variant="primary" onClick={() => router.push('/dashboard')}>
-              Portale Git
+              Go to Portal
             </Button>
           </div>
         </div>
@@ -171,34 +171,34 @@ export default function OnboardingPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Email Doğrulaması Gerekli</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Email Verification Required</h1>
           <p className="mt-3 text-gray-600">
-            Başlangıç formunu doldurmak için önce{' '}
-            <span className="font-medium text-primary-600">{userEmail}</span> adresini doğrulamanız gerekmektedir.
+            To complete the onboarding form, please verify{' '}
+            <span className="font-medium text-primary-600">{userEmail}</span> first.
           </p>
           <p className="mt-2 text-sm text-gray-500">
-            Ödeme onayı emailindeki "Hesabı Aktifleştir" bağlantısını kullanabilir ya da aşağıdan yeni bir doğrulama emaili isteyebilirsiniz.
+            Use the "Activate Account" link in your payment confirmation email, or request a new verification email below.
           </p>
           {verificationSent ? (
             <p className="mt-6 rounded-2xl bg-green-50 p-4 text-sm text-green-700">
-              Doğrulama emaili gönderildi. Lütfen gelen kutunuzu kontrol edin.
+              Verification email sent. Please check your inbox.
             </p>
           ) : (
             <div className="mt-6">
               <Button type="button" variant="primary" onClick={handleSendVerification}>
-                Doğrulama Emaili Gönder
+                Send Verification Email
               </Button>
             </div>
           )}
           {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
           <p className="mt-6 text-sm text-gray-500">
-            Email doğrulandıktan sonra bu sayfayı yenileyin.{' '}
+            After verifying your email, refresh this page.{' '}
             <button
               type="button"
               onClick={() => window.location.reload()}
               className="text-primary-600 underline hover:text-primary-800"
             >
-              Sayfayı Yenile
+              Refresh Page
             </button>
           </p>
         </div>
@@ -210,9 +210,9 @@ export default function OnboardingPage() {
     <section className="min-h-screen bg-slate-50 py-20">
       <div className="mx-auto max-w-2xl px-4">
         <div className="rounded-3xl bg-white p-8 shadow-sm">
-          <h1 className="text-3xl font-bold text-gray-900">Başlangıç Formu</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Onboarding Form</h1>
           <p className="mt-2 text-gray-600">
-            Danışmanınızın sizi daha iyi tanıyabilmesi için lütfen aşağıdaki bilgileri doldurun.
+            Please fill in the details below so your consultant can get to know you better.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
@@ -223,7 +223,7 @@ export default function OnboardingPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">
-                  Ad *
+                  First Name *
                 </label>
                 <input
                   id="first_name"
@@ -231,13 +231,13 @@ export default function OnboardingPage() {
                   value={form.first_name}
                   onChange={set('first_name')}
                   required
-                  placeholder="Adınız"
+                  placeholder="Your first name"
                   className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
                 />
               </div>
               <div>
                 <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">
-                  Soyad *
+                  Last Name *
                 </label>
                 <input
                   id="last_name"
@@ -245,7 +245,7 @@ export default function OnboardingPage() {
                   value={form.last_name}
                   onChange={set('last_name')}
                   required
-                  placeholder="Soyadınız"
+                  placeholder="Your last name"
                   className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
                 />
               </div>
@@ -253,7 +253,7 @@ export default function OnboardingPage() {
 
             <div>
               <label htmlFor="company" className="block text-sm font-medium text-gray-700">
-                Şirket / Kuruluş Adı *
+                Company / Organization Name *
               </label>
               <input
                 id="company"
@@ -261,7 +261,7 @@ export default function OnboardingPage() {
                 value={form.company}
                 onChange={set('company')}
                 required
-                placeholder="Şirket adı"
+                placeholder="Company name"
                 className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
               />
             </div>
@@ -269,17 +269,17 @@ export default function OnboardingPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="sector" className="block text-sm font-medium text-gray-700">
-                  Sektör *
+                  Sector *
                 </label>
                 <select
                   id="sector"
                   value={form.sector}
                   onChange={set('sector')}
                   required
-                  title="Sektör"
+                  title="Sector"
                   className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
                 >
-                  <option value="">Seçin…</option>
+                  <option value="">Select…</option>
                   {SECTORS.map((s) => (
                     <option key={s} value={s}>
                       {s}
@@ -289,17 +289,17 @@ export default function OnboardingPage() {
               </div>
               <div>
                 <label htmlFor="employee_count" className="block text-sm font-medium text-gray-700">
-                  Çalışan Sayısı *
+                  Number of Employees *
                 </label>
                 <select
                   id="employee_count"
                   value={form.employee_count}
                   onChange={set('employee_count')}
                   required
-                  title="Çalışan sayısı"
+                  title="Number of employees"
                   className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
                 >
-                  <option value="">Seçin…</option>
+                  <option value="">Select…</option>
                   {EMPLOYEE_RANGES.map((r) => (
                     <option key={r} value={r}>
                       {r}
@@ -311,20 +311,20 @@ export default function OnboardingPage() {
 
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                Bize Kendinizden Bahsedin
+                Tell Us About Yourself
               </label>
               <textarea
                 id="description"
                 value={form.description}
                 onChange={set('description')}
                 rows={4}
-                placeholder="Danışmanlık almak istediğiniz konu, mevcut durum veya hedefleriniz hakkında kısaca bilgi verebilirsiniz."
+                placeholder="Briefly describe the topic you need consulting on, your current situation, or your goals."
                 className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
               />
             </div>
 
             <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
-              {submitting ? 'Gönderiliyor…' : 'Formu Gönder'}
+              {submitting ? 'Submitting…' : 'Submit Form'}
             </Button>
           </form>
         </div>

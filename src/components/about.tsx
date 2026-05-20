@@ -9,7 +9,7 @@ export function About() {
             </h2>
             <p className="text-gray-600 mb-6">
               Ki Business Solutions is a globally operating management consulting firm with
-              offices in the United States, United Kingdom, and Türkiye. Since 2010, we have
+              offices in the United States, United Kingdom, and Turkey. Since 2010, we have
               partnered with SMEs, growth-stage companies, and large enterprises to deliver
               measurable results across all dimensions of business performance.
             </p>

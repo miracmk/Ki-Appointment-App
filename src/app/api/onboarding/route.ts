@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Yetkilendirme gerekli.' }, { status: 401 });
+      return NextResponse.json({ error: 'Authorization required.' }, { status: 401 });
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -16,12 +16,12 @@ export async function POST(request: NextRequest) {
     try {
       decoded = await auth.verifyIdToken(token);
     } catch {
-      return NextResponse.json({ error: 'Geçersiz token.' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid token.' }, { status: 401 });
     }
 
     if (!decoded.email_verified) {
       return NextResponse.json(
-        { error: 'Email adresinizi onaylamanız gerekiyor. Lütfen emailinizi kontrol edin.' },
+        { error: 'Please verify your email address first.' },
         { status: 403 }
       );
     }
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       body;
 
     if (!first_name || !last_name || !company || !sector || !employee_count) {
-      return NextResponse.json({ error: 'Zorunlu alanları doldurun.' }, { status: 400 });
+      return NextResponse.json({ error: 'Please fill in all required fields.' }, { status: 400 });
     }
 
     const db = getAdminFirestore();
@@ -65,8 +65,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error('Onboarding hatası:', err);
-    return NextResponse.json({ error: err.message || 'Sunucu hatası.' }, { status: 500 });
+    console.error('Onboarding error:', err);
+    return NextResponse.json({ error: err.message || 'Server error.' }, { status: 500 });
   }
 }
 
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Yetkilendirme gerekli.' }, { status: 401 });
+      return NextResponse.json({ error: 'Authorization required.' }, { status: 401 });
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -89,6 +89,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ profile: doc.data() });
   } catch {
-    return NextResponse.json({ error: 'Sunucu hatası.' }, { status: 500 });
+    return NextResponse.json({ error: 'Server error.' }, { status: 500 });
   }
 }

@@ -14,12 +14,12 @@ const STATUS_STYLES: Record<string, string> = {
   completed: 'bg-[#00F0FF]/10 text-[#00F0FF] border-[#00F0FF]/20',
 };
 const STATUS_LABELS: Record<string, string> = {
-  confirmed: 'Onaylandı', pending: 'Beklemede', cancelled: 'İptal', completed: 'Tamamlandı',
+  confirmed: 'Confirmed', pending: 'Pending', cancelled: 'Cancelled', completed: 'Completed',
 };
 
 function formatDate(iso: string, time: string, tz: string) {
   try {
-    return new Date(iso).toLocaleDateString('tr-TR', { timeZone: tz || 'UTC', day: '2-digit', month: 'long', year: 'numeric' }) + ' ' + time;
+    return new Date(iso).toLocaleDateString('en-US', { timeZone: tz || 'UTC', day: '2-digit', month: 'long', year: 'numeric' }) + ' ' + time;
   } catch { return `${iso} ${time}`; }
 }
 
@@ -52,14 +52,14 @@ export default function DashboardOverview() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-white">Genel Bakış</h1>
+      <h1 className="mb-6 text-2xl font-bold text-white">Overview</h1>
 
       {/* Stats */}
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[
-          { label: 'Yaklaşan Randevu', value: upcoming.length, color: 'text-[#00F0FF]' },
-          { label: 'Toplam Randevu', value: appointments.length, color: 'text-white' },
-          { label: 'Toplam Ödeme', value: `$${(totalPaid / 100).toLocaleString()}`, color: 'text-emerald-400' },
+          { label: 'Upcoming Sessions', value: upcoming.length, color: 'text-[#00F0FF]' },
+          { label: 'Total Appointments', value: appointments.length, color: 'text-white' },
+          { label: 'Total Spent', value: `$${(totalPaid / 100).toLocaleString()}`, color: 'text-emerald-400' },
         ].map((s) => (
           <div key={s.label} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
             <p className="text-sm text-white/40">{s.label}</p>
@@ -71,14 +71,14 @@ export default function DashboardOverview() {
       {/* Upcoming */}
       <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-semibold text-white">Yaklaşan Randevular</h2>
-          <Link href="/dashboard/appointments" className="text-sm text-[#00F0FF] hover:opacity-80">Tümünü Gör →</Link>
+          <h2 className="font-semibold text-white">Upcoming Appointments</h2>
+          <Link href="/dashboard/appointments" className="text-sm text-[#00F0FF] hover:opacity-80">View All →</Link>
         </div>
         {upcoming.length === 0 ? (
           <div className="py-10 text-center">
-            <p className="text-white/40">Yaklaşan randevunuz yok.</p>
+            <p className="text-white/40">No upcoming appointments.</p>
             <Link href="/marketplace" className="mt-3 inline-block text-sm text-[#00F0FF] hover:opacity-80">
-              Danışman Bul →
+              Find a Consultant →
             </Link>
           </div>
         ) : (
@@ -91,7 +91,7 @@ export default function DashboardOverview() {
                   {appt.meet_link && (
                     <a href={appt.meet_link} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 text-xs text-[#00F0FF] hover:opacity-80">
                       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.869V15.13a1 1 0 01-1.447.894L15 14M3 8h12a2 2 0 012 2v4a2 2 0 01-2 2H3a2 2 0 01-2-2V10a2 2 0 012-2z" /></svg>
-                      Google Meet Linki
+                      Join Video Call
                     </a>
                   )}
                 </div>

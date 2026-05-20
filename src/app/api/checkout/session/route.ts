@@ -10,10 +10,10 @@ import { getActiveKiStripePosConfig } from '@/lib/stripe-pos';
 import { AppointmentMetadata, PaymentMode } from '@/types/marketplace';
 
 const pricingMap: Record<string, { amount: number; name: string }> = {
-  starter: { amount: 20000, name: 'Starter Danışmanlık Paketi' },
-  growth: { amount: 100000, name: 'Growth Danışmanlık Paketi' },
-  scale: { amount: 500000, name: 'Scale Danışmanlık Paketi' },
-  executive: { amount: 1000000, name: 'Executive Danışmanlık Paketi' },
+  starter: { amount: 20000, name: 'Starter Consulting Package' },
+  growth: { amount: 100000, name: 'Growth Consulting Package' },
+  scale: { amount: 500000, name: 'Scale Consulting Package' },
+  executive: { amount: 1000000, name: 'Executive Consulting Package' },
 };
 
 function buildIsoUtcDate(date: string, time: string, timezone: string): string {
@@ -67,13 +67,13 @@ export async function POST(request: NextRequest) {
 
     const selectedPackage = pricingMap[packageId];
     if (!selectedPackage) {
-      return NextResponse.json({ error: 'Geçersiz paket seçimi.' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid package selection.' }, { status: 400 });
     }
 
     const consultant = await getConsultantProfile(consultantId);
     if (!consultant || !consultant.is_active) {
       return NextResponse.json(
-        { error: 'Danışman bulunamadı veya aktif değil.' },
+        { error: 'Consultant not found or not active.' },
         { status: 404 }
       );
     }
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
             currency: 'usd',
             product_data: {
               name: selectedPackage.name,
-              description: `${consultant.name} ile danışmanlık`,
+              description: `Consulting session with ${consultant.name}`,
             },
             unit_amount: amount,
           },
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
       if ((consultant.ki_wallet_cents ?? 0) < fees.platform_fee_cents) {
         return NextResponse.json(
           {
-            error: `Yetersiz Ki Wallet bakiyesi. Gereken: $${(fees.platform_fee_cents / 100).toFixed(2)}, Mevcut: $${((consultant.ki_wallet_cents ?? 0) / 100).toFixed(2)}. Lütfen cüzdanınızı doldurun.`,
+            error: `Insufficient Ki Wallet balance. Required: $${(fees.platform_fee_cents / 100).toFixed(2)}, Available: $${((consultant.ki_wallet_cents ?? 0) / 100).toFixed(2)}. Please top up your wallet.`,
             required_cents: fees.platform_fee_cents,
             available_cents: consultant.ki_wallet_cents ?? 0,
           },
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
       const stripeApiKey = await getConsultantStripeApiKey(consultantId);
       if (!stripeApiKey) {
         return NextResponse.json(
-          { error: 'Bu danışman için Stripe yapılandırılmamış. Lütfen danışmanınızla iletişime geçin.' },
+          { error: 'Stripe is not configured for this consultant. Please contact your consultant.' },
           { status: 503 }
         );
       }
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
       const connectAccountId = consultant.stripe_connect_account_id;
       if (!connectAccountId) {
         return NextResponse.json(
-          { error: 'Bu danışman için Stripe Connect hesabı bağlı değil.' },
+          { error: 'No Stripe Connect account linked for this consultant.' },
           { status: 503 }
         );
       }
@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
       session = await stripe.checkout.sessions.create(baseSessionParams);
 
     } else {
-      return NextResponse.json({ error: 'Bilinmeyen ödeme modu.' }, { status: 400 });
+      return NextResponse.json({ error: 'Unknown payment mode.' }, { status: 400 });
     }
 
     return NextResponse.json({
@@ -203,17 +203,17 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Stripe checkout session hatası:', error);
+    console.error('Stripe checkout session error:', error);
 
     if (error.message?.includes('authentication')) {
       return NextResponse.json(
-        { error: 'Stripe kimlik doğrulaması başarısız. Danışman Stripe yapılandırmasını kontrol edin.' },
+        { error: 'Stripe authentication failed. Check the consultant Stripe configuration.' },
         { status: 401 }
       );
     }
 
     return NextResponse.json(
-      { error: error.message || 'Stripe checkout oturumu oluşturulamadı.' },
+      { error: error.message || 'Could not create Stripe checkout session.' },
       { status: 500 }
     );
   }

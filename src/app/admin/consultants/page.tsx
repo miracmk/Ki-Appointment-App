@@ -48,10 +48,13 @@ export default function AdminConsultantsPage() {
     verified: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
     rejected: 'bg-red-500/10 text-red-400 border-red-500/20',
   };
+  const KYC_LABELS: Record<string, string> = {
+    none: 'None', pending: 'Pending', verified: 'Verified', rejected: 'Rejected',
+  };
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-white">Danışmanlar</h1>
+      <h1 className="mb-6 text-2xl font-bold text-white">Consultants</h1>
 
       {loading ? (
         <div className="flex justify-center py-20">
@@ -62,7 +65,7 @@ export default function AdminConsultantsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/[0.06]">
-                {['Ad Soyad', 'E-posta', 'KYC', 'Mod', 'Aksiyon'].map((h) => (
+                {['Name', 'Email', 'KYC', 'Payment Mode', 'Actions'].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/40">{h}</th>
                 ))}
               </tr>
@@ -74,7 +77,7 @@ export default function AdminConsultantsPage() {
                   <td className="px-4 py-3 text-white/60">{c.email}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-lg border px-2.5 py-0.5 text-xs font-medium ${KYC_STYLES[c.kyc_status] ?? KYC_STYLES.none}`}>
-                      {c.kyc_status === 'verified' ? 'Doğrulandı' : c.kyc_status === 'pending' ? 'Beklemede' : c.kyc_status === 'rejected' ? 'Reddedildi' : 'Yok'}
+                      {KYC_LABELS[c.kyc_status] ?? c.kyc_status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-white/50">{c.payment_mode ?? '—'}</td>
@@ -87,14 +90,14 @@ export default function AdminConsultantsPage() {
                           disabled={acting === c.id}
                           className="rounded-lg bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50"
                         >
-                          Onayla
+                          Approve
                         </button>
                         <button
                           type="button"
                           onClick={() => setRejectTarget(c.id)}
                           className="rounded-lg bg-red-500/10 px-3 py-1 text-xs font-medium text-red-400 hover:bg-red-500/20"
                         >
-                          Reddet
+                          Reject
                         </button>
                       </div>
                     )}
@@ -104,7 +107,7 @@ export default function AdminConsultantsPage() {
                           type="text"
                           value={rejectReason}
                           onChange={(e) => setRejectReason(e.target.value)}
-                          placeholder="Red sebebi…"
+                          placeholder="Reason for rejection…"
                           className="input-dark flex-1 text-xs"
                         />
                         <button
@@ -113,9 +116,9 @@ export default function AdminConsultantsPage() {
                           disabled={acting === c.id || !rejectReason}
                           className="rounded-lg bg-red-500/20 px-2 py-1 text-xs text-red-400 disabled:opacity-50"
                         >
-                          Gönder
+                          Submit
                         </button>
-                        <button type="button" onClick={() => setRejectTarget(null)} className="text-xs text-white/30">İptal</button>
+                        <button type="button" onClick={() => setRejectTarget(null)} className="text-xs text-white/30">Cancel</button>
                       </div>
                     )}
                   </td>
