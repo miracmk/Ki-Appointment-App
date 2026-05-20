@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useLocale } from 'next-intl';
 import { useRouter, usePathname } from 'next/navigation';
 import { getFirebaseAuth } from '@/lib/firebase-client';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
+import { useUserRole } from '@/lib/use-user-role';
 
 const NAV = [
   {
@@ -74,24 +75,23 @@ const NAV = [
 ];
 
 export default function ConsultantLayout({ children }: { children: React.ReactNode }) {
-  const router   = useRouter();
-  const pathname = usePathname();
-  const locale = useLocale();
-  const [email, setEmail]       = useState<string | null>(null);
-  const [loading, setLoading]   = useState(true);
+  const router     = useRouter();
+  const pathname   = usePathname();
+  const locale     = useLocale();
+  const { user, loading } = useUserRole();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const localeHome = `/${locale}`;
 
   useEffect(() => {
-    const auth = getFirebaseAuth();
-    if (!auth) { router.push('/login'); return; }
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) { router.push('/login'); return; }
-      setEmail(user.email);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, [router, locale]);
+    if (loading) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    // Superadmins can access consultant panel for testing/support
+    if (user.role !== 'consultant' && user.role !== 'superadmin') {
+      router.push('/unauthorized');
+    }
+  }, [user, loading, router]);
 
   const handleLogout = async () => {
     const auth = getFirebaseAuth();
@@ -100,7 +100,7 @@ export default function ConsultantLayout({ children }: { children: React.ReactNo
     router.push('/login');
   };
 
-  if (loading) {
+  if (loading || !user || (user.role !== 'consultant' && user.role !== 'superadmin')) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0A0B0F]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#B000FF] border-t-transparent" />
@@ -116,7 +116,7 @@ export default function ConsultantLayout({ children }: { children: React.ReactNo
 
       <aside className={`fixed left-0 top-0 z-30 flex h-full w-64 flex-col border-r border-white/[0.06] bg-[#0D0E14] transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex h-16 items-center border-b border-white/[0.06] px-6">
-          <Link href={localeHome}>
+          <Link href={`/${locale}`}>
             <img src="/logo.png" alt="Ki Business" className="h-7 w-auto" />
           </Link>
         </div>
@@ -129,7 +129,6 @@ export default function ConsultantLayout({ children }: { children: React.ReactNo
 
         <nav className="flex-1 space-y-1 px-3 py-4">
           {NAV.map((item) => {
-            const localePath = `/${locale}${item.href}`;
             const active = item.href === '/consultant'
               ? pathname === '/consultant'
               : pathname.startsWith(item.href);
@@ -154,7 +153,7 @@ export default function ConsultantLayout({ children }: { children: React.ReactNo
         <div className="border-t border-white/[0.06] p-4">
           <div className="mb-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
             <p className="text-xs text-white/40">Consultant account</p>
-            <p className="mt-0.5 truncate text-sm text-white/70">{email}</p>
+            <p className="mt-0.5 truncate text-sm text-white/70">{user.email}</p>
           </div>
           <button type="button" onClick={handleLogout} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-white/40 transition hover:bg-white/5 hover:text-white">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

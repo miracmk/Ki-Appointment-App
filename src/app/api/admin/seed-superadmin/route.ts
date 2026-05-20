@@ -35,12 +35,23 @@ export async function POST() {
     }
 
     await auth.setCustomUserClaims(user.uid, { role: 'superadmin' });
+    const now = Date.now();
     await db.collection('users').doc(user.uid).set(
       {
+        uid: user.uid,
         email: SUPERADMIN_EMAIL,
         role: 'superadmin',
         displayName: SUPERADMIN_DISPLAY_NAME,
-        created_at: Date.now(),
+        kycStatus: 'verified',
+        walletBalance: 0,
+        isActive: true,
+        createdAt: now,
+        // legacy fields
+        name: SUPERADMIN_DISPLAY_NAME,
+        kyc_status: 'verified',
+        ki_wallet_cents: 0,
+        is_active: true,
+        created_at: now,
       },
       { merge: true }
     );

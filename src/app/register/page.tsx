@@ -62,8 +62,14 @@ export default function RegisterPage() {
         await setDoc(doc(db, 'users', user.uid), {
           uid: user.uid,
           email: user.email,
+          displayName: name,
+          role: accountType === 'consultant' ? 'client' : 'client', // start as client; promoted after KYC
+          kycStatus: 'unverified',
+          walletBalance: 0,
+          createdAt: serverTimestamp(),
+          isActive: true,
+          // legacy fields kept for backward compatibility
           name,
-          role: accountType,
           kyc_status: 'none',
           ki_wallet_cents: 0,
           created_at: serverTimestamp(),
@@ -71,8 +77,9 @@ export default function RegisterPage() {
         });
       }
 
+      // All new users start as 'client'; consultant role is granted after KYC approval
       if (accountType === 'consultant') {
-        router.push('/consultant/kyc');
+        router.push('/dashboard/kyc?apply=consultant');
       } else {
         router.push('/dashboard');
       }

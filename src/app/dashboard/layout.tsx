@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useLocale } from 'next-intl';
 import { useRouter, usePathname } from 'next/navigation';
 import { getFirebaseAuth } from '@/lib/firebase-client';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
+import { useUserRole } from '@/lib/use-user-role';
 
 const NAV = [
   {
@@ -59,21 +60,14 @@ const NAV = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const locale = useLocale();
-  const [email, setEmail]   = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const locale   = useLocale();
+  const { user, loading } = useUserRole();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const auth = getFirebaseAuth();
-    if (!auth) { router.push('/login'); return; }
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) { router.push('/login'); return; }
-      setEmail(user.email);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, [router, locale]);
+    if (loading) return;
+    if (!user) router.push('/login');
+  }, [user, loading, router]);
 
   const handleLogout = async () => {
     const auth = getFirebaseAuth();
@@ -82,7 +76,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.push('/login');
   };
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0A0B0F]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#00F0FF] border-t-transparent" />
@@ -103,11 +97,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
         </div>
 
+        {/* Role badge */}
+        <div className="border-b border-white/[0.06] px-4 py-3">
+          <span className={`rounded-lg border px-2.5 py-1 text-xs font-semibold ${
+            user.role === 'superadmin' ? 'border-[#B000FF]/30 bg-[#B000FF]/10 text-[#B000FF]' :
+            user.role === 'admin'      ? 'border-red-500/30 bg-red-500/10 text-red-400' :
+            user.role === 'consultant' ? 'border-[#00F0FF]/30 bg-[#00F0FF]/10 text-[#00F0FF]' :
+            'border-white/10 bg-white/5 text-white/50'
+          }`}>
+            {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+          </span>
+        </div>
+
         <nav className="flex-1 space-y-1 px-3 py-4">
           {NAV.map((item) => {
             const active = item.href === '/dashboard'
-              ? pathname === '/dashboard' || pathname === `/${locale}/dashboard`
-              : pathname.startsWith(item.href) || pathname.startsWith(`/${locale}${item.href}`);
+              ? pathname === '/dashboard'
+              : pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
@@ -124,12 +130,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </Link>
             );
           })}
+
+          {/* Quick links based on role */}
+          {(user.role === 'superadmin' || user.role === 'admin') && (
+            <Link href="/admin" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-400/60 transition hover:bg-white/5 hover:text-red-400">
+              <span>📊</span> Admin Panel
+            </Link>
+          )}
+          {user.role === 'consultant' && (
+            <Link href="/consultant" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#B000FF]/60 transition hover:bg-white/5 hover:text-[#B000FF]">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Consultant Panel
+            </Link>
+          )}
         </nav>
 
         <div className="border-t border-white/[0.06] p-4">
           <div className="mb-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
             <p className="text-xs text-white/40">Signed in as</p>
-            <p className="mt-0.5 truncate text-sm text-white/70">{email}</p>
+            <p className="mt-0.5 truncate text-sm text-white/70">{user.email}</p>
           </div>
           <button
             type="button"

@@ -1,6 +1,37 @@
 // ─── Roles & Modes ──────────────────────────────────────────────────────────
 
-export type UserRole = 'admin' | 'supervisor' | 'consultant' | 'consulter';
+// Strict RBAC roles. 'superadmin' > 'admin' > 'consultant' > 'client'
+export type UserRole = 'superadmin' | 'admin' | 'consultant' | 'client';
+
+// ─── Firestore User Document ────────────────────────────────────────────────
+
+export interface UserDocument {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  kycStatus: 'unverified' | 'pending' | 'verified' | 'rejected';
+  walletBalance: number;   // stored in cents
+  createdAt: number;
+  isActive: boolean;
+}
+
+// ─── KYC Application ─────────────────────────────────────────────────────────
+
+export interface KycApplication {
+  userId: string;
+  appliedRole: 'consultant';
+  status: 'pending' | 'approved' | 'rejected';
+  firstName: string;
+  lastName: string;
+  nationalId: string;
+  dateOfBirth: string;     // "YYYY-MM-DD"
+  documentUrls: string[];  // uploaded file URLs
+  submittedAt: number;
+  reviewedAt?: number;
+  reviewedByAdminId?: string;
+  rejectionReason?: string;
+}
 
 export type PaymentMode =
   | 'ki_escrow'   // Ki Business holds funds, transfers minus fees
