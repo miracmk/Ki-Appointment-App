@@ -477,6 +477,7 @@ export interface ConsultantListing {
   references: ReferenceCase[];
   pricing: ListingPricing;
   requires_kyc: boolean;
+  requires_contract: boolean;
   is_active: boolean;
   created_at: number;
   updated_at: number;

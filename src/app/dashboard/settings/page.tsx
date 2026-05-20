@@ -11,6 +11,7 @@ import type { AppRole } from '@/lib/use-user-role';
 // ─── Shared styles ────────────────────────────────────────────────────────────
 
 const INP  = 'w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-white/20 focus:border-[#00F0FF]/60 focus:outline-none transition';
+const SEL  = 'w-full rounded-xl border border-white/10 bg-[#161820] px-4 py-2.5 text-sm text-white focus:border-[#00F0FF]/60 focus:outline-none transition';
 const LBL  = 'mb-1.5 block text-xs font-medium text-white/50';
 const CARD = 'rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-4';
 const SECTION_TITLE = 'text-sm font-semibold uppercase tracking-wide text-white/70';
@@ -98,7 +99,7 @@ function TabProfile({ uid, role }: { uid: string; role: AppRole }) {
         <div>
           <label htmlFor="profile-lang" className={LBL}>Language</label>
           <select id="profile-lang" value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}
-            className={INP}>
+            className={SEL}>
             <option value="en">English</option>
             <option value="tr">Türkçe</option>
             <option value="es">Español</option>
@@ -193,7 +194,7 @@ function TabIntegrations({ uid }: { uid: string }) {
         <h2 className={SECTION_TITLE}>Payment Mode</h2>
         <div>
           <label htmlFor="payment-mode" className={LBL}>Select how you receive payments</label>
-          <select id="payment-mode" value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)} className={INP}>
+          <select id="payment-mode" value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)} className={SEL}>
             <option value="ki_escrow">Ki Escrow — Ki Business holds and transfers funds (default)</option>
             <option value="own_key">Own Stripe Keys — Clients pay directly to your Stripe</option>
             <option value="ki_connect">Ki Connect — Automatic split via Stripe Connect</option>

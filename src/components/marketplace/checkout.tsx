@@ -165,7 +165,7 @@ export function MarketplaceCheckout({ consultantId, packageId, specialtyId, cate
         <select
           value={timezone}
           onChange={(e) => setTimezone(e.target.value)}
-          className="input-dark w-full"
+          className="input-dark w-full !bg-[#161820]"
         >
           {POPULAR_TIMEZONES.map((tz) => (
             <option key={tz.value} value={tz.value}>{tz.label}</option>

@@ -12,9 +12,7 @@ import { syncToCalendar, syncToOutlookCalendar, generateICS } from '@/lib/calend
 import { createVideoCallLink } from '@/lib/video-call';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase-admin';
 import { getActiveKiStripePosConfig } from '@/lib/stripe-pos';
-import { specialtyRequiresKyc } from '@/lib/categories';
 import { AppointmentMetadata, Appointment, FlatAppointment, PaymentMode } from '@/types/marketplace';
-import type { MarketplaceCategory } from '@/types/marketplace';
 import nodemailer from 'nodemailer';
 
 const pricingMap: Record<string, { amount: number; name: string }> = {
@@ -313,11 +311,10 @@ export async function POST(request: NextRequest) {
         try {
           const db = getAdminFirestore();
           const fees = calculateFees(appointment.payment_amount);
-          const specialtyId = (eventMetadata as any).specialty_id ?? '';
-          const categoryId  = (eventMetadata as any).category_id  ?? '';
-          const kycRequired = (specialtyId && categoryId)
-            ? specialtyRequiresKyc(categoryId as MarketplaceCategory, specialtyId)
-            : false;
+          // KYC required if booking > $1,000 and consultant is not admin-verified
+          const consultantIsVerified = consultant.kyc_status === 'verified';
+          const KYC_THRESHOLD = 100_000;
+          const kycRequired = appointment.payment_amount > KYC_THRESHOLD && !consultantIsVerified;
           const now      = Date.now();
           const escrowRef = db.collection('escrow_records').doc();
           const escrowId  = escrowRef.id;

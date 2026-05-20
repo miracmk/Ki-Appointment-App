@@ -5,13 +5,17 @@ import { getActiveKiStripePosConfig } from '@/lib/stripe-pos';
 
 export async function POST(req: NextRequest) {
   try {
-    const { amount_cents, consultant_id } = await req.json() as {
+    const body = await req.json() as {
       amount_cents: number;
-      consultant_id: string;
+      consultant_id?: string;
+      user_id?: string;
     };
+    const { amount_cents } = body;
+    // Accept both user_id (new) and consultant_id (legacy) field names
+    const consultant_id = body.user_id ?? body.consultant_id;
 
     if (!consultant_id) {
-      return NextResponse.json({ error: 'consultant_id is required.' }, { status: 400 });
+      return NextResponse.json({ error: 'user_id is required.' }, { status: 400 });
     }
     if (!amount_cents || amount_cents < 1000) {
       return NextResponse.json({ error: 'Minimum top-up amount is $10 (1000 cents).' }, { status: 400 });

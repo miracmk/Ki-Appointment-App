@@ -175,7 +175,7 @@ function ConsultantWallet({ uid }: { uid: string }) {
       const res  = await fetch('/api/wallet/topup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount_cents: cents, consultant_id: uid }),
+        body: JSON.stringify({ amount_cents: cents, user_id: uid }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Top-up failed.');

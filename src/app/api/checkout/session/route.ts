@@ -58,18 +58,35 @@ export async function POST(request: NextRequest) {
       appointmentTimezone,
       specialtyId,
       categoryId,
+      listingId,
+      amountCents,
+      listingTitle,
     } = body;
 
-    if (!consultantId || !packageId || !customerEmail || !appointmentDate || !appointmentTime) {
+    if (!consultantId || !customerEmail || !appointmentDate || !appointmentTime) {
       return NextResponse.json(
-        { error: 'Zorunlu alanlar eksik: consultantId, packageId, customerEmail, appointmentDate, appointmentTime' },
+        { error: 'Zorunlu alanlar eksik: consultantId, customerEmail, appointmentDate, appointmentTime' },
         { status: 400 }
       );
     }
 
-    const selectedPackage = pricingMap[packageId];
-    if (!selectedPackage) {
-      return NextResponse.json({ error: 'Invalid package selection.' }, { status: 400 });
+    // Support both listing-based (amountCents) and legacy package-based pricing
+    let selectedPackage: { amount: number; name: string };
+    if (amountCents) {
+      const cents = parseInt(String(amountCents), 10);
+      if (isNaN(cents) || cents < 50) {
+        return NextResponse.json({ error: 'amountCents must be at least 50 (¢50).' }, { status: 400 });
+      }
+      selectedPackage = { amount: cents, name: listingTitle || 'Consulting Service' };
+    } else {
+      if (!packageId) {
+        return NextResponse.json({ error: 'Either packageId or amountCents is required.' }, { status: 400 });
+      }
+      const pkg = pricingMap[packageId];
+      if (!pkg) {
+        return NextResponse.json({ error: 'Invalid package selection.' }, { status: 400 });
+      }
+      selectedPackage = pkg;
     }
 
     const consultant = await getConsultantProfile(consultantId);
@@ -139,6 +156,7 @@ export async function POST(request: NextRequest) {
       total_charged_cents: String(totalChargedCents),
       specialty_id: specialtyId ?? '',
       category_id: categoryId ?? '',
+      listing_id: listingId ?? '',
     };
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || 'http://localhost:3000';
