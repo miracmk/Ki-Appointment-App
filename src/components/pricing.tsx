@@ -102,7 +102,7 @@ export function Pricing() {
                 ))}
               </ul>
 
-              <CheckoutButton packageId={option.packageId} packageName={option.packageName} />
+              <CheckoutButton packageId={option.packageId} packageName={option.packageName} packagePriceCents={option.amount * 100} />
             </div>
           ))}
         </div>
