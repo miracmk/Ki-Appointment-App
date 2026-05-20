@@ -31,7 +31,7 @@ export function CallToAction() {
     const preferredDate = formData.get('date') as string;
 
     try {
-      const response = await fetch('/api/google-calendar', {
+      const response = await fetch('/api/calendar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

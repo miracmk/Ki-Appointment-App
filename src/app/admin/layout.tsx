@@ -12,7 +12,7 @@ const NAV = [
   { href: '/admin', label: 'Dashboard', icon: '📊' },
   { href: '/admin/consultants', label: 'Consultants', icon: '👥' },
   { href: '/admin/tickets', label: 'Support Tickets', icon: '🎫' },
-  { href: '/admin/integrations', label: 'Settings', icon: '⚙️' },
+  { href: '/admin/settings', label: 'Settings', icon: '⚙️' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -32,7 +32,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }, [user, loading, router]);
 
-  if (loading || !user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+  const isAdmin = user && (user.role === 'admin' || user.role === 'superadmin');
+  if (loading || !isAdmin) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0A0B0F]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#00F0FF] border-t-transparent" />
@@ -42,7 +43,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex min-h-screen bg-[#0A0B0F]">
-      <aside className="hidden w-56 flex-col border-r border-white/[0.06] bg-[#0D0E14] lg:flex">
+      <aside className="hidden w-56 flex-col border-r border-white/[0.06] bg-[#0D0E14]/80 backdrop-blur-xl lg:flex">
         <div className="flex h-16 items-center border-b border-white/[0.06] px-5">
           <Link href={`/${locale}`}>
             <img src="/logo.png" alt="Ki Business" className="h-7 w-auto" />
@@ -52,7 +53,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-400">
             ADMIN
           </span>
-          {user.role === 'superadmin' && (
+          {user?.role === 'superadmin' && (
             <span className="rounded-lg border border-[#B000FF]/30 bg-[#B000FF]/10 px-2.5 py-1 text-xs font-bold text-[#B000FF]">
               SUPER
             </span>
@@ -74,8 +75,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
         <div className="border-t border-white/[0.06] p-4">
-          <p className="mb-0.5 text-xs font-medium text-white/50">{user.displayName ?? user.email}</p>
-          <p className="mb-2 truncate text-xs text-white/30">{user.email}</p>
+          <p className="mb-0.5 text-xs font-medium text-white/50">{user?.displayName ?? user?.email}</p>
+          <p className="mb-2 truncate text-xs text-white/30">{user?.email}</p>
           <button
             type="button"
             onClick={async () => {
@@ -93,7 +94,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <header className="flex h-16 items-center border-b border-white/[0.06] bg-[#0A0B0F]/80 px-6 backdrop-blur-xl">
           <span className="text-sm font-semibold text-white/50">Ki Business Admin Panel</span>
         </header>
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 overflow-auto bg-gradient-to-br from-[#0A0B0F] via-[#0D0E14] to-[#0A0B0F] p-6">{children}</main>
       </div>
     </div>
   );

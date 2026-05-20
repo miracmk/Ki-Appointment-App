@@ -25,14 +25,14 @@ import { PaymentMode } from '@/types/marketplace';
  * }
  *
  * {
- *   action: 'update_google',
+ *   action: 'update_calendar',
  *   consultant_id: 'uid...',
  *   refresh_token: 'token...',
- *   calendar_id: 'primary@gmail.com'
+ *   calendar_id: 'primary'
  * }
  *
  * {
- *   action: 'disconnect_google',
+ *   action: 'disconnect_calendar',
  *   consultant_id: 'uid...'
  * }
  */

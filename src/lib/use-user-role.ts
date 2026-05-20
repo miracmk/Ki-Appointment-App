@@ -5,6 +5,7 @@ import { getFirebaseAuth, getFirestoreClient } from './firebase-client';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
+// Lowercase to match Firestore stored values
 export type AppRole = 'superadmin' | 'admin' | 'consultant' | 'client';
 
 export interface AppUser {
@@ -20,7 +21,10 @@ interface UseUserRoleReturn {
   loading: boolean;
 }
 
-const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '')
+  .split(',')
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
 
 export function useUserRole(): UseUserRoleReturn {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -51,7 +55,6 @@ export function useUserRole(): UseUserRoleReturn {
               email: firebaseUser.email ?? '',
               displayName: firebaseUser.displayName,
               role: (data.role as AppRole) ?? 'client',
-              // Support both camelCase (new) and snake_case (legacy) field names
               kycStatus: data.kycStatus ?? data.kyc_status ?? 'unverified',
             });
             setLoading(false);

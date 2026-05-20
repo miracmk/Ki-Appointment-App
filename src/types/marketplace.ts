@@ -1,6 +1,6 @@
 // ─── Roles & Modes ──────────────────────────────────────────────────────────
 
-// Strict RBAC roles. 'superadmin' > 'admin' > 'consultant' > 'client'
+// Strict RBAC roles (lowercase, matches Firestore values)
 export type UserRole = 'superadmin' | 'admin' | 'consultant' | 'client';
 
 // ─── Firestore User Document ────────────────────────────────────────────────

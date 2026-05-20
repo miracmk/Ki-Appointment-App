@@ -79,8 +79,29 @@ export async function POST(request: NextRequest) {
     }
 
     const paymentMode: PaymentMode = consultant.payment_mode ?? 'own_keys';
-    const amount = selectedPackage.amount;
-    const fees = calculateFees(amount);
+    const consultingFeeCents = selectedPackage.amount;
+    
+    // ─── CHECKOUT MATH: Two Conditions ───────────────────────────────────
+    // Condition A: If Ki Business is the consultant (direct mode)
+    // Total = Consulting Fee only
+    // Condition B: Standard Consultant
+    // Total = Consulting Fee + Service Fee (10% platform fee + Stripe fee)
+    
+    const stripeProcessingFeeBps = 290; // 2.9% + $0.30 per transaction
+    let totalChargedCents = consultingFeeCents;
+    let platformFeeCents = 0;
+    let stripeFeeCents = 0;
+
+    // If NOT Ki Business direct service, add platform fee (10%)
+    if (paymentMode !== 'direct') {
+      platformFeeCents = Math.ceil(consultingFeeCents * 0.10); // 10% platform fee
+      stripeFeeCents = Math.ceil((consultingFeeCents + platformFeeCents) * (stripeProcessingFeeBps / 10000)) + 30; // 2.9% + $0.30
+      totalChargedCents = consultingFeeCents + platformFeeCents + stripeFeeCents;
+    } else {
+      // Direct Ki Business: only add Stripe fee on consulting amount
+      stripeFeeCents = Math.ceil(consultingFeeCents * (stripeProcessingFeeBps / 10000)) + 30;
+      totalChargedCents = consultingFeeCents + stripeFeeCents;
+    }
 
     const appointmentDateUtc = buildIsoUtcDate(
       appointmentDate,
@@ -97,7 +118,7 @@ export async function POST(request: NextRequest) {
       appointment_timezone: appointmentTimezone || 'UTC',
       package_id: packageId,
       status: 'pending',
-      payment_amount: amount,
+      payment_amount: consultingFeeCents,
     });
 
     const metadata: Stripe.MetadataParam = {
@@ -110,28 +131,66 @@ export async function POST(request: NextRequest) {
       customer_name: customerName || '',
       session_id: appointmentId,
       payment_mode: paymentMode,
+      consulting_fee_cents: String(consultingFeeCents),
+      platform_fee_cents: String(platformFeeCents),
+      stripe_fee_cents: String(stripeFeeCents),
+      total_charged_cents: String(totalChargedCents),
     };
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || 'http://localhost:3000';
     const successUrl = `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}&appointment_id=${appointmentId}`;
     const cancelUrl = `${baseUrl}/#pricing`;
 
+    // Calculate total amount charged to customer
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+    
+    // Add consulting fee
+    lineItems.push({
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: selectedPackage.name,
+          description: `Consulting session with ${consultant.name}`,
+        },
+        unit_amount: consultingFeeCents,
+      },
+      quantity: 1,
+    });
+
+    // Add platform fee if applicable
+    if (platformFeeCents > 0) {
+      lineItems.push({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: 'Platform Fee (10%)',
+            description: 'Ki Business service fee',
+          },
+          unit_amount: platformFeeCents,
+        },
+        quantity: 1,
+      });
+    }
+
+    // Add Stripe processing fee if applicable
+    if (stripeFeeCents > 0) {
+      lineItems.push({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: 'Payment Processing Fee',
+            description: 'Stripe payment processing',
+          },
+          unit_amount: stripeFeeCents,
+        },
+        quantity: 1,
+      });
+    }
+
     const baseSessionParams: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
       mode: 'payment',
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: selectedPackage.name,
-              description: `Consulting session with ${consultant.name}`,
-            },
-            unit_amount: amount,
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       metadata,
       success_url: successUrl,
       cancel_url: cancelUrl,
@@ -141,19 +200,7 @@ export async function POST(request: NextRequest) {
     let session: Stripe.Checkout.Session;
 
     if (paymentMode === 'own_keys') {
-      // ── Mode B: wallet must cover the 10% platform fee ───────────────
-      if ((consultant.ki_wallet_cents ?? 0) < fees.platform_fee_cents) {
-        return NextResponse.json(
-          {
-            error: `Insufficient Ki Wallet balance. Required: $${(fees.platform_fee_cents / 100).toFixed(2)}, Available: $${((consultant.ki_wallet_cents ?? 0) / 100).toFixed(2)}. Please top up your wallet.`,
-            required_cents: fees.platform_fee_cents,
-            available_cents: consultant.ki_wallet_cents ?? 0,
-          },
-          { status: 402 }
-        );
-      }
-
-      // ── Consultant's own Stripe account ──────────────────────────────
+      // Consultant's own Stripe account
       const stripeApiKey = await getConsultantStripeApiKey(consultantId);
       if (!stripeApiKey) {
         return NextResponse.json(
@@ -165,7 +212,7 @@ export async function POST(request: NextRequest) {
       session = await stripe.checkout.sessions.create(baseSessionParams);
 
     } else if (paymentMode === 'ki_connect') {
-      // ── Stripe Connect: platform collects, auto-splits ────────────────
+      // Stripe Connect: platform collects, auto-splits
       const connectAccountId = consultant.stripe_connect_account_id;
       if (!connectAccountId) {
         return NextResponse.json(
@@ -178,13 +225,13 @@ export async function POST(request: NextRequest) {
       session = await stripe.checkout.sessions.create({
         ...baseSessionParams,
         payment_intent_data: {
-          application_fee_amount: fees.platform_fee_cents,
+          application_fee_amount: platformFeeCents,
           transfer_data: { destination: connectAccountId },
         },
       });
 
     } else if (paymentMode === 'ki_escrow' || paymentMode === 'direct') {
-      // ── Ki Business collects all (escrow or direct) ───────────────────
+      // Ki Business collects all (escrow or direct)
       const activeConfig = await getActiveKiStripePosConfig();
       const stripe = new Stripe(activeConfig.secretKey, { apiVersion: '2023-10-16' });
       session = await stripe.checkout.sessions.create(baseSessionParams);
@@ -198,8 +245,14 @@ export async function POST(request: NextRequest) {
       appointmentId,
       paymentMode,
       feeBreakdown: {
-        platformFeeCents: fees.platform_fee_cents,
-        consultantPayoutCents: fees.consultant_payout_cents,
+        consultingFeeCents,
+        platformFeeCents,
+        stripeFeeCents,
+        totalChargedCents,
+        consultingFeeFormatted: `$${(consultingFeeCents / 100).toFixed(2)}`,
+        platformFeeFormatted: platformFeeCents > 0 ? `$${(platformFeeCents / 100).toFixed(2)}` : '$0.00',
+        stripeFeeFormatted: stripeFeeCents > 0 ? `$${(stripeFeeCents / 100).toFixed(2)}` : '$0.00',
+        totalChargedFormatted: `$${(totalChargedCents / 100).toFixed(2)}`,
       },
     });
   } catch (error: any) {

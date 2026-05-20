@@ -105,7 +105,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             user.role === 'consultant' ? 'border-[#00F0FF]/30 bg-[#00F0FF]/10 text-[#00F0FF]' :
             'border-white/10 bg-white/5 text-white/50'
           }`}>
-            {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+            {user.role}
           </span>
         </div>
 
@@ -132,7 +132,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
 
           {/* Quick links based on role */}
-          {(user.role === 'superadmin' || user.role === 'admin') && (
+          {(user.role === 'admin' || user.role === 'superadmin') && (
             <Link href="/admin" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-400/60 transition hover:bg-white/5 hover:text-red-400">
               <span>📊</span> Admin Panel
             </Link>
