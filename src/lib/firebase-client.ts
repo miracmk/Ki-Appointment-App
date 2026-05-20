@@ -4,29 +4,17 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-const requiredKeys = [
-  'NEXT_PUBLIC_FIREBASE_API_KEY',
-  'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
-  'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
-];
-
-function isFirebaseConfigured(): boolean {
-  return requiredKeys.every((k) => Boolean(process.env[k]));
-}
-
 const clientConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY            || 'AIzaSyBOIvtpXtMyiNHAoW0ed4afoh-wkLoqOFk',
+  authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN        || 'ki-business-consulting.firebaseapp.com',
+  projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID         || 'ki-business-consulting',
+  storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET     || 'ki-business-consulting.firebasestorage.app',
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '338155470886',
+  appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID             || '1:338155470886:web:9e8ae8fa4d5053ad1526e7',
 };
 
 export function getFirebaseClientApp() {
   if (typeof window === 'undefined') return null;
-  if (!isFirebaseConfigured()) return null;
-
   try {
     if (!getApps().length) {
       initializeApp(clientConfig);
@@ -48,4 +36,6 @@ export function getFirestoreClient() {
   return app ? getFirestore(app) : null;
 }
 
-export { isFirebaseConfigured };
+export function isFirebaseConfigured(): boolean {
+  return true;
+}

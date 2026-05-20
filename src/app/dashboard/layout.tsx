@@ -66,9 +66,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     const auth = getFirebaseAuth();
-    if (!auth) { router.push(`/${locale}/login`); return; }
+    if (!auth) { router.push('/login'); return; }
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) { router.push(`/${locale}/login`); return; }
+      if (!user) { router.push('/login'); return; }
       setEmail(user.email);
       setLoading(false);
     });
@@ -79,7 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const auth = getFirebaseAuth();
     if (!auth) return;
     await signOut(auth);
-    router.push(`/${locale}/login`);
+    router.push('/login');
   };
 
   if (loading) {
@@ -111,7 +111,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             return (
               <Link
                 key={item.href}
-                href={`/${locale}${item.href}`}
+                href={item.href}
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                   active
@@ -157,7 +157,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
           <div className="flex items-center gap-3 ml-auto">
             <Link
-              href={`/${locale}/marketplace`}
+              href="/marketplace"
               className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white/70 transition hover:text-white"
             >
               Find a Consultant

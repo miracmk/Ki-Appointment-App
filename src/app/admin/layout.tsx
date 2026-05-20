@@ -26,11 +26,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     const auth = getFirebaseAuth();
-    if (!auth) { router.push(`/${locale}/login`); return; }
+    if (!auth) { router.push('/login'); return; }
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) { router.push(`/${locale}/login`); return; }
+      if (!user) { router.push('/login'); return; }
       if (ADMIN_EMAILS.length > 0 && !ADMIN_EMAILS.includes(user.email ?? '')) {
-        router.push(`/${locale}/dashboard`);
+        router.push('/dashboard');
         return;
       }
       setEmail(user.email);

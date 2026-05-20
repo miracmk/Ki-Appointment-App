@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebase-admin';
 import { PublicConsultantInfo } from '@/types/marketplace';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const db = getAdminFirestore();

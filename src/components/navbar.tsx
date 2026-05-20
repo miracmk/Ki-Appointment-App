@@ -12,9 +12,14 @@ export function Navbar() {
   const locale = useLocale();
   const pathname = usePathname();
 
+  // Only the home page and auth routes live under [locale]/
+  const LOCALE_PATHS = ['/login', '/register', '/terms', '/privacy', '/refund'];
   const localeHref = (path: string) => {
     if (path === '/') return `/${locale}`;
-    return `/${locale}${path}`;
+    if (LOCALE_PATHS.some((lp) => path === lp || path.startsWith(lp + '/'))) {
+      return `/${locale}${path}`;
+    }
+    return path;
   };
 
   return (
@@ -49,7 +54,7 @@ export function Navbar() {
             )}
           </div>
           <Link href={localeHref('/marketplace')} className="text-sm font-medium text-white/70 transition hover:text-white">Marketplace</Link>
-          <Link href={localeHref('/#how-it-works')} className="text-sm font-medium text-white/70 transition hover:text-white">How It Works</Link>
+          <Link href={`/${locale}#how-it-works`} className="text-sm font-medium text-white/70 transition hover:text-white">How It Works</Link>
         </div>
 
         <div className="hidden items-center gap-3 lg:flex">

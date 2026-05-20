@@ -84,9 +84,9 @@ export default function ConsultantLayout({ children }: { children: React.ReactNo
 
   useEffect(() => {
     const auth = getFirebaseAuth();
-    if (!auth) { router.push(`/${locale}/login`); return; }
+    if (!auth) { router.push('/login'); return; }
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) { router.push(`/${locale}/login`); return; }
+      if (!user) { router.push('/login'); return; }
       setEmail(user.email);
       setLoading(false);
     });
@@ -97,7 +97,7 @@ export default function ConsultantLayout({ children }: { children: React.ReactNo
     const auth = getFirebaseAuth();
     if (!auth) return;
     await signOut(auth);
-    router.push(`/${locale}/login`);
+    router.push('/login');
   };
 
   if (loading) {
@@ -136,7 +136,7 @@ export default function ConsultantLayout({ children }: { children: React.ReactNo
             return (
               <Link
                 key={item.href}
-                href={localePath}
+                href={item.href}
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                   active

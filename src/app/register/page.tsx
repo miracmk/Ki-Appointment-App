@@ -31,7 +31,7 @@ export default function RegisterPage() {
     const auth = getFirebaseAuth();
     if (!auth) return;
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) router.push(`/${locale}/dashboard`);
+      if (user) router.push('/dashboard');
     });
     return () => unsub();
   }, [configured, router, locale]);
@@ -72,9 +72,9 @@ export default function RegisterPage() {
       }
 
       if (accountType === 'consultant') {
-        router.push(`/${locale}/consultant/kyc`);
+        router.push('/consultant/kyc');
       } else {
-        router.push(`/${locale}/dashboard`);
+        router.push('/dashboard');
       }
     } catch (err: any) {
       const code = err.code || '';

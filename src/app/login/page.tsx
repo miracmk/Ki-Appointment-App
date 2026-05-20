@@ -23,7 +23,7 @@ export default function LoginPage() {
     if (!auth) return;
     const unsub = onAuthStateChanged(auth, (user) => {
       setAuthReady(true);
-      if (user) router.push(`/${locale}/dashboard`);
+      if (user) router.push('/dashboard');
     });
     return () => unsub();
   }, [configured, router, locale]);
@@ -36,7 +36,7 @@ export default function LoginPage() {
       const auth = getFirebaseAuth();
       if (!auth) { setError('Authentication not configured.'); return; }
       await signInWithEmailAndPassword(auth, email, password);
-      router.push(`/${locale}/dashboard`);
+      router.push('/dashboard');
     } catch (err: any) {
       const code = err.code || '';
       if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
