@@ -1,4 +1,4 @@
-import { NextIntlProvider } from 'next-intl';
+import { NextIntlClientProvider } from 'next-intl';
 import { notFound } from 'next/navigation';
 import { SUPPORTED_LOCALES, type Locale } from '@/lib/i18n';
 
@@ -31,8 +31,8 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   }
 
   return (
-    <NextIntlProvider locale={locale} messages={messages}>
+    <NextIntlClientProvider locale={locale} messages={messages}>
       {children}
-    </NextIntlProvider>
+    </NextIntlClientProvider>
   );
 }

@@ -10,10 +10,6 @@ const nextConfig = {
   experimental: {
     esmExternals: 'loose',
   },
-  i18n: {
-    locales: ['en', 'tr', 'es', 'fr', 'it', 'ru', 'zh', 'pt'],
-    defaultLocale: 'en',
-  },
   webpack(config) {
     config.resolve.alias = {
       ...(config.resolve.alias || {}),

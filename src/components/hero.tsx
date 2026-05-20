@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 type HeroProps = {
   locale?: string;
 };

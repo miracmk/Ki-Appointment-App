@@ -2,10 +2,14 @@ import Link from 'next/link';
 import { CATEGORIES } from '@/lib/categories';
 
 type FooterProps = {
-  locale: string;
+  locale?: string;
 };
 
-function localeHref(locale: string, path: string) {
+function localeHref(locale: string | undefined, path: string) {
+  if (!locale) {
+    return path;
+  }
+
   if (path === '/') return `/${locale}`;
   return `/${locale}${path}`;
 }

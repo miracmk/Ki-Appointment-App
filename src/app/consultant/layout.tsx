@@ -76,9 +76,11 @@ const NAV = [
 export default function ConsultantLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
+  const locale = useLocale();
   const [email, setEmail]       = useState<string | null>(null);
   const [loading, setLoading]   = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const localeHome = `/${locale}`;
 
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -90,9 +92,6 @@ export default function ConsultantLayout({ children }: { children: React.ReactNo
     });
     return () => unsub();
   }, [router, locale]);
-
-  const locale = useLocale();
-  const localeHome = `/${locale}`;
 
   const handleLogout = async () => {
     const auth = getFirebaseAuth();
