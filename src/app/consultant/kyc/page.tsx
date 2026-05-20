@@ -43,7 +43,12 @@ export default function ConsultantKycPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Could not initiate payment.');
 
-      const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+      let key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+      if (!key) {
+        const cfgRes = await fetch('/api/stripe/config');
+        const cfg = await cfgRes.json();
+        key = cfg.publishableKey;
+      }
       if (!key) throw new Error('Stripe is not configured.');
       const stripe = await loadStripe(key);
       if (!stripe) throw new Error('Could not load Stripe.');

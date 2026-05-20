@@ -470,8 +470,15 @@ export default function ConsultantIntegrationsPage() {
           {activeTab === 'stripe' && (
             <form onSubmit={handleStripe} className="space-y-4">
               <p className="text-sm text-gray-500">
-                The consultant's <code className="rounded bg-gray-100 px-1.5 py-0.5 text-xs">users/&lt;uid&gt;</code> document must exist in Firestore.
+                For consultants using <strong>Own API Keys</strong> mode — enter their personal Stripe credentials here.
               </p>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 space-y-1">
+                <p className="font-semibold">Consultant's Stripe Webhook URL:</p>
+                <p className="font-mono text-xs break-all select-all bg-white border border-amber-200 rounded-lg px-3 py-2">
+                  https://ki-appointment.netlify.app/api/stripe/webhook
+                </p>
+                <p className="text-xs mt-1">The consultant must add this URL in their Stripe dashboard under Webhooks and select the <strong>checkout.session.completed</strong> event.</p>
+              </div>
               {(['consultant_id', 'api_key', 'webhook_secret'] as const).map((field) => (
                 <div key={field}>
                   <label htmlFor={`stripe-${field}`} className="block text-sm font-medium text-gray-700 capitalize">
@@ -593,6 +600,22 @@ export default function ConsultantIntegrationsPage() {
               <p className="text-sm text-gray-500">
                 Manage platform payment keys via Firestore, add new POS slots, and switch the active slot.
               </p>
+
+              {/* Stripe Setup Instructions */}
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 space-y-3">
+                <h3 className="text-sm font-semibold text-blue-900">How to Set Up Stripe</h3>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-blue-800">
+                  <li>Go to <strong>dashboard.stripe.com</strong> → Developers → API Keys</li>
+                  <li>Copy your <strong>Publishable key</strong> (pk_live_…) and <strong>Secret key</strong> (sk_live_…)</li>
+                  <li>Go to <strong>Developers → Webhooks → Add endpoint</strong></li>
+                  <li>Set the endpoint URL to:</li>
+                </ol>
+                <div className="rounded-xl bg-white border border-blue-200 px-4 py-3 font-mono text-xs text-gray-800 break-all select-all">
+                  https://ki-appointment.netlify.app/api/stripe/webhook
+                </div>
+                <p className="text-sm text-blue-800">5. Select event: <strong>checkout.session.completed</strong></p>
+                <p className="text-sm text-blue-800">6. Copy the <strong>Signing secret</strong> (whsec_…) and paste below.</p>
+              </div>
 
               <div className="space-y-4 rounded-3xl border border-dashed border-gray-200 bg-gray-50 p-5">
                 {posLoading ? (

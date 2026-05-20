@@ -5,3 +5,20 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  NEXT_PUBLIC_FIREBASE_API_KEY            = "AIzaSyBOIvtpXtMyiNHAoW0ed4afoh-wkLoqOFk"
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN        = "ki-business-consulting.firebaseapp.com"
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID         = "ki-business-consulting"
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET     = "ki-business-consulting.firebasestorage.app"
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID = "338155470886"
+  NEXT_PUBLIC_FIREBASE_APP_ID             = "1:338155470886:web:9e8ae8fa4d5053ad1526e7"
+  FIREBASE_PROJECT_ID                     = "ki-business-consulting"
+  NEXT_PUBLIC_APP_URL                     = "https://ki-appointment.netlify.app"
+  NEXT_PUBLIC_ADMIN_EMAILS                = "kibusiness.global@gmail.com"
+  SMTP_HOST                               = "mail.kibusiness.co"
+  SMTP_PORT                               = "587"
+  SMTP_USER                               = "consultation@kibusiness.co"
+  SMTP_PASSWORD                           = "5562Consultation.."
+  EMAIL_FROM                              = "Ki Business Solutions <consultation@kibusiness.co>"
+  ENCRYPTION_KEY                          = "KiBusiness2024!SecureEncryptKey32"

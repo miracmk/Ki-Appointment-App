@@ -49,7 +49,12 @@ export default function ConsultantPaymentsPage() {
       const res  = await fetch('/api/wallet/topup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ consultant_id: uid, amount_cents: topupAmt }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Top-up could not be initiated.');
-      const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+      let key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+      if (!key) {
+        const cfgRes = await fetch('/api/stripe/config');
+        const cfg = await cfgRes.json();
+        key = cfg.publishableKey;
+      }
       if (!key) throw new Error('Payment not configured.');
       const stripe = await loadStripe(key);
       if (!stripe) throw new Error('Payment could not be loaded.');

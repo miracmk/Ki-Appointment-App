@@ -27,9 +27,16 @@ export function CheckoutButton({ packageId, packageName }: CheckoutButtonProps) 
   const [formOpen, setFormOpen] = useState(false);
 
   useEffect(() => {
-    const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-    if (publishableKey) {
-      setStripePromise(loadStripe(publishableKey));
+    const envKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    if (envKey) {
+      setStripePromise(loadStripe(envKey));
+    } else {
+      fetch('/api/stripe/config')
+        .then((r) => r.json())
+        .then((cfg) => {
+          if (cfg.publishableKey) setStripePromise(loadStripe(cfg.publishableKey));
+        })
+        .catch(() => {});
     }
   }, []);
 
