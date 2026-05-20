@@ -388,3 +388,48 @@ export interface WebhookPayloadMetadata {
   appointment_id?: string;
   package_id?: string;
 }
+
+// ─── Consultant Listings ──────────────────────────────────────────────────────
+
+export type PricingType =
+  | 'hourly'
+  | 'per_session'
+  | 'monthly_retainer'
+  | 'yearly_retainer'
+  | 'project_based'
+  | 'package';
+
+export type ListingCurrency = 'usd' | 'eur' | 'gbp' | 'try';
+export type ListingPaymentMethod = 'card' | 'bank_transfer';
+
+export interface ReferenceCase {
+  title: string;
+  description: string;
+  outcome?: string;
+}
+
+export interface ListingPricing {
+  type: PricingType;
+  amount_cents: number;
+  currency: ListingCurrency;
+  hours_included?: number;
+  sessions_included?: number;
+  custom_note?: string;
+  payment_methods: ListingPaymentMethod[];
+}
+
+export interface ConsultantListing {
+  id: string;
+  consultant_id: string;
+  consultant_name?: string;
+  category: MarketplaceCategory;
+  specialty_id: string;
+  specialty_label: string;
+  title: string;
+  description: string;
+  references: ReferenceCase[];
+  pricing: ListingPricing;
+  is_active: boolean;
+  created_at: number;
+  updated_at: number;
+}
