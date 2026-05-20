@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useLocale } from 'next-intl';
 import { useRouter, usePathname } from 'next/navigation';
 import { getFirebaseAuth } from '@/lib/firebase-client';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -58,26 +59,27 @@ const NAV = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
+  const locale = useLocale();
   const [email, setEmail]   = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
-    if (!auth) { router.push('/login'); return; }
+    if (!auth) { router.push(`/${locale}/login`); return; }
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) { router.push('/login'); return; }
+      if (!user) { router.push(`/${locale}/login`); return; }
       setEmail(user.email);
       setLoading(false);
     });
     return () => unsub();
-  }, [router]);
+  }, [router, locale]);
 
   const handleLogout = async () => {
     const auth = getFirebaseAuth();
     if (!auth) return;
     await signOut(auth);
-    router.push('/login');
+    router.push(`/${locale}/login`);
   };
 
   if (loading) {
@@ -105,9 +107,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }`}
       >
         <div className="flex h-16 items-center border-b border-white/[0.06] px-6">
-          <Link href="/">
+          <Link href={`/${locale}`}>
             <img
-              src="/logo.svg"
+              src="/logo.png"
               alt="Ki Business"
               className="h-7 w-auto"
             />
@@ -122,7 +124,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={`/${locale}${item.href}`}
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                   active
@@ -170,7 +172,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
           <div className="flex items-center gap-3 ml-auto">
             <Link
-              href="/marketplace"
+              href={`/${locale}/marketplace`}
               className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white/70 transition hover:text-white"
             >
               Danışman Bul

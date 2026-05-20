@@ -1,6 +1,10 @@
-import Link from 'next/link';
+type HeroProps = {
+  locale?: string;
+};
 
-export function Hero() {
+export function Hero({ locale = 'en' }: HeroProps) {
+  const localeHref = (path: string) => (path === '/' ? `/${locale}` : `/${locale}${path}`);
+
   return (
     <section className="relative overflow-hidden bg-[#0A0B0F] pt-32 pb-24">
       {/* Aurora blobs */}
@@ -38,7 +42,7 @@ export function Hero() {
           {/* CTAs */}
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
-              href="/marketplace"
+              href={localeHref('/marketplace')}
               className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] px-8 py-4 text-base font-semibold text-white shadow-[0_0_40px_rgba(0,71,255,0.4)] transition hover:opacity-90 hover:shadow-[0_0_60px_rgba(0,71,255,0.6)]"
             >
               Danışman Bul
@@ -47,7 +51,7 @@ export function Hero() {
               </svg>
             </Link>
             <Link
-              href="/#how-it-works"
+              href={localeHref('/#how-it-works')}
               className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-base font-semibold text-white/80 backdrop-blur-sm transition hover:border-white/20 hover:bg-white/10 hover:text-white"
             >
               Nasıl Çalışır?

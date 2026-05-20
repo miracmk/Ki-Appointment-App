@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
@@ -37,7 +38,7 @@ export default async function ConsultantProfilePage({ params }: PageProps) {
       <div className="mx-auto max-w-7xl px-4 pb-20 pt-28 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
         <div className="mb-8 flex items-center gap-2 text-sm text-white/40">
-          <a href="/marketplace" className="transition hover:text-white">Danışmanlar</a>
+          <Link href="/marketplace" className="transition hover:text-white">Danışmanlar</Link>
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>

@@ -1,16 +1,25 @@
 import Link from 'next/link';
 import { CATEGORIES } from '@/lib/categories';
 
-export function Footer() {
+type FooterProps = {
+  locale: string;
+};
+
+function localeHref(locale: string, path: string) {
+  if (path === '/') return `/${locale}`;
+  return `/${locale}${path}`;
+}
+
+export function Footer({ locale }: FooterProps) {
   return (
     <footer className="border-t border-white/[0.06] bg-[#0A0B0F]">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div className="lg:col-span-1">
-            <Link href="/">
+            <Link href={localeHref(locale, '/')}>
               <img
-                src="/logo.svg"
+                src="/logo.png"
                 alt="Ki Business Solutions"
                 className="h-8 w-auto"
               />
@@ -54,7 +63,7 @@ export function Footer() {
               {CATEGORIES.map((cat) => (
                 <li key={cat.id}>
                   <Link
-                    href={`/marketplace/${cat.id}`}
+                    href={localeHref(locale, `/marketplace/${cat.id}`)}
                     className="flex items-center gap-2 text-sm text-white/40 transition hover:text-white"
                   >
                     <span className="text-base">{cat.icon}</span>
@@ -71,11 +80,11 @@ export function Footer() {
               Platform
             </h3>
             <ul className="space-y-2.5 text-sm text-white/40">
-              <li><Link href="/marketplace" className="transition hover:text-white">Danışmanlar</Link></li>
-              <li><Link href="/#how-it-works" className="transition hover:text-white">Nasıl Çalışır</Link></li>
-              <li><Link href="/dashboard" className="transition hover:text-white">Müşteri Paneli</Link></li>
-              <li><Link href="/consultant" className="transition hover:text-white">Danışman Paneli</Link></li>
-              <li><Link href="/login" className="transition hover:text-white">Giriş Yap</Link></li>
+              <li><Link href={localeHref(locale, '/marketplace')} className="transition hover:text-white">Danışmanlar</Link></li>
+              <li><Link href={localeHref(locale, '/#how-it-works')} className="transition hover:text-white">Nasıl Çalışır</Link></li>
+              <li><Link href={localeHref(locale, '/dashboard')} className="transition hover:text-white">Müşteri Paneli</Link></li>
+              <li><Link href={localeHref(locale, '/consultant')} className="transition hover:text-white">Danışman Paneli</Link></li>
+              <li><Link href={localeHref(locale, '/login')} className="transition hover:text-white">Giriş Yap</Link></li>
             </ul>
           </div>
 
@@ -108,9 +117,9 @@ export function Footer() {
             © 2026 Ki Business Solutions. Tüm hakları saklıdır.
           </p>
           <div className="flex gap-6 text-sm text-white/30">
-            <Link href="/terms" className="transition hover:text-white">Kullanım Koşulları</Link>
-            <Link href="/privacy" className="transition hover:text-white">Gizlilik Politikası</Link>
-            <Link href="/refund" className="transition hover:text-white">İade Politikası</Link>
+            <Link href={localeHref(locale, '/terms')} className="transition hover:text-white">Kullanım Koşulları</Link>
+            <Link href={localeHref(locale, '/privacy')} className="transition hover:text-white">Gizlilik Politikası</Link>
+            <Link href={localeHref(locale, '/refund')} className="transition hover:text-white">İade Politikası</Link>
           </div>
         </div>
       </div>

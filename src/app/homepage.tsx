@@ -1,8 +1,14 @@
-import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { Navbar } from '@/components/navbar';
+import { Hero } from '@/components/hero';
+import { Footer } from '@/components/footer';
+import { CATEGORIES } from '@/lib/categories';
 
-export default function Page() {
-  redirect('/en');
-}
+type HomepageProps = {
+  locale: string;
+};
+
+const HOW_IT_WORKS = [
   {
     step: '01',
     title: 'Danışman Seçin',
@@ -110,11 +116,16 @@ const TRUST_ITEMS = [
   },
 ];
 
-export default function Home() {
+function localeHref(locale: string, path: string) {
+  if (path === '/') return `/${locale}`;
+  return `/${locale}${path}`;
+}
+
+export default function Homepage({ locale }: HomepageProps) {
   return (
     <div className="bg-[#0A0B0F]">
       <Navbar />
-      <Hero />
+      <Hero locale={locale} />
 
       {/* ── Categories ── */}
       <section className="py-20">
@@ -131,11 +142,11 @@ export default function Home() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {CATEGORIES.map((cat) => {
               const colorMap: Record<string, string> = {
-                cyan:   'border-[#00F0FF]/20 hover:border-[#00F0FF]/40 hover:shadow-[0_0_30px_rgba(0,240,255,0.1)]',
-                blue:   'border-[#0047FF]/20 hover:border-[#0047FF]/40 hover:shadow-[0_0_30px_rgba(0,71,255,0.1)]',
+                cyan: 'border-[#00F0FF]/20 hover:border-[#00F0FF]/40 hover:shadow-[0_0_30px_rgba(0,240,255,0.1)]',
+                blue: 'border-[#0047FF]/20 hover:border-[#0047FF]/40 hover:shadow-[0_0_30px_rgba(0,71,255,0.1)]',
                 purple: 'border-[#B000FF]/20 hover:border-[#B000FF]/40 hover:shadow-[0_0_30px_rgba(176,0,255,0.1)]',
-                pink:   'border-[#FF006E]/20 hover:border-[#FF006E]/40 hover:shadow-[0_0_30px_rgba(255,0,110,0.1)]',
-                green:  'border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-[0_0_30px_rgba(16,185,129,0.1)]',
+                pink: 'border-[#FF006E]/20 hover:border-[#FF006E]/40 hover:shadow-[0_0_30px_rgba(255,0,110,0.1)]',
+                green: 'border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-[0_0_30px_rgba(16,185,129,0.1)]',
                 orange: 'border-orange-500/20 hover:border-orange-500/40 hover:shadow-[0_0_30px_rgba(249,115,22,0.1)]',
               };
               const textColorMap: Record<string, string> = {
@@ -145,7 +156,7 @@ export default function Home() {
               return (
                 <Link
                   key={cat.id}
-                  href={`/marketplace/${cat.id}`}
+                  href={localeHref(locale, `/marketplace/${cat.id}`)}
                   className={`group flex items-start gap-4 rounded-2xl border bg-white/[0.03] p-6 backdrop-blur-sm transition duration-300 ${colorMap[cat.color]}`}
                 >
                   <span className="text-3xl">{cat.icon}</span>
@@ -212,90 +223,55 @@ export default function Home() {
               <p className="text-white/50">KYC doğrulamalı, yüksek puanlı uzmanlar.</p>
             </div>
             <Link
-              href="/marketplace"
+              href={localeHref(locale, '/marketplace')}
               className="hidden text-sm font-medium text-[#00F0FF] transition hover:opacity-80 sm:block"
             >
               Tümünü Gör →
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {MOCK_CONSULTANTS.map((c) => (
-              <div
-                key={c.name}
-                className="group rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 backdrop-blur-sm transition duration-300 hover:border-white/20 hover:bg-white/[0.06]"
-              >
-                <div className="mb-4 flex items-center gap-4">
-                  <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${c.gradient} text-lg font-bold text-white`}>
-                    {c.initials}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-white">{c.name}</h3>
-                    <p className="text-sm text-white/50">{c.title}</p>
-                  </div>
+          <div className="grid gap-6 lg:grid-cols-3">
+            {MOCK_CONSULTANTS.map((consultant) => (
+              <div key={consultant.name} className="rounded-3xl border border-white/[0.08] bg-white/[0.03] p-6">
+                <div className={`mb-6 inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-br ${consultant.gradient} text-lg font-bold text-white`}>
+                  {consultant.initials}
                 </div>
-
-                <div className="mb-4 flex flex-wrap gap-2">
-                  <span className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-white/60">
-                    {c.category}
-                  </span>
-                  {c.languages.map((l) => (
-                    <span key={l} className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-white/60">
-                      {l}
+                <p className="text-sm uppercase tracking-[0.35em] text-white/40">{consultant.category}</p>
+                <h3 className="mt-3 text-xl font-semibold text-white">{consultant.name}</h3>
+                <p className="mt-2 text-sm text-white/50">{consultant.title}</p>
+                <div className="mt-5 flex flex-wrap items-center gap-2 text-sm text-white/40">
+                  {consultant.languages.map((language) => (
+                    <span key={language} className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                      {language}
                     </span>
                   ))}
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-yellow-400">★</span>
-                    <span className="text-sm font-semibold text-white">{c.rating}</span>
-                    <span className="text-sm text-white/40">({c.reviews})</span>
-                  </div>
-                  <span className="text-sm font-semibold text-white">${c.rate}<span className="font-normal text-white/40">/saat</span></span>
+                <div className="mt-6 flex items-center justify-between text-sm text-white/60">
+                  <span>{consultant.rating} ★</span>
+                  <span>{consultant.reviews} yorum</span>
+                  <span>{consultant.rate} USD</span>
                 </div>
-
-                <Link
-                  href="/marketplace"
-                  className="mt-4 block w-full rounded-xl border border-white/10 bg-white/5 py-2.5 text-center text-sm font-medium text-white/70 transition hover:border-[#00F0FF]/30 hover:bg-[#00F0FF]/10 hover:text-[#00F0FF]"
-                >
-                  Profili Görüntüle
-                </Link>
               </div>
             ))}
-          </div>
-
-          <div className="mt-8 text-center sm:hidden">
-            <Link
-              href="/marketplace"
-              className="inline-block text-sm font-medium text-[#00F0FF] transition hover:opacity-80"
-            >
-              Tüm Danışmanları Gör →
-            </Link>
           </div>
         </div>
       </section>
 
-      {/* ── Trust Signals ── */}
-      <section className="py-20">
+      {/* ── Trust ── */}
+      <section className="pb-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 text-center">
-            <h2 className="mb-3 text-3xl font-bold text-white sm:text-4xl">
-              Neden Ki Business?
-            </h2>
-            <p className="text-white/50">Güvenli, şeffaf ve profesyonel danışmanlık platformu.</p>
+            <h2 className="mb-3 text-3xl font-bold text-white sm:text-4xl">Neden Ki Business?</h2>
+            <p className="text-white/50">Tüm danışmanları aynı çatı altında kolayca bulun.</p>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             {TRUST_ITEMS.map((item) => (
-              <div
-                key={item.title}
-                className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 backdrop-blur-sm"
-              >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-[#00F0FF]/20 bg-[#00F0FF]/10 text-[#00F0FF]">
+              <div key={item.title} className="rounded-3xl border border-white/[0.08] bg-white/[0.03] p-8">
+                <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-white/5 text-[#00F0FF]">
                   {item.icon}
                 </div>
-                <h3 className="mb-2 font-semibold text-white">{item.title}</h3>
+                <h3 className="mb-3 text-xl font-semibold text-white">{item.title}</h3>
                 <p className="text-sm leading-relaxed text-white/50">{item.description}</p>
               </div>
             ))}
@@ -303,45 +279,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── CTA ── */}
-      <section className="py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#0047FF]/20 via-[#0A0B0F] to-[#B000FF]/20 p-12 text-center">
-            {/* Glow blobs */}
-            <div className="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[#0047FF]/20 blur-[80px]" />
-            <div className="pointer-events-none absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-[#B000FF]/20 blur-[80px]" />
-
-            <div className="relative">
-              <h2 className="mb-4 text-3xl font-bold text-white sm:text-4xl">
-                Danışman mısınız?
-              </h2>
-              <p className="mx-auto mb-8 max-w-xl text-white/60">
-                KYC doğrulamanızı tamamlayın, profilinizi oluşturun ve binlerce potansiyel müşteriye ulaşın.
-                Kendi takvim entegrasyonunuzu ve ödeme yönteminizi belirleyin.
-              </p>
-              <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <Link
-                  href="/login"
-                  className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] px-8 py-4 text-base font-semibold text-white shadow-[0_0_40px_rgba(0,71,255,0.3)] transition hover:opacity-90"
-                >
-                  Danışman Olarak Başla
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </Link>
-                <Link
-                  href="/marketplace"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-8 py-4 text-base font-semibold text-white transition hover:bg-white/10"
-                >
-                  Danışman Bul
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <Footer />
+      <Footer locale={locale} />
     </div>
   );
 }

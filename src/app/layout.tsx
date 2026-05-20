@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: 'Ki Business Solutions - Management Consulting',
   description: 'Professional business management consulting services helping companies achieve operational excellence, financial health, and sustainable growth.',
   icons: {
-    icon: '/favicon.svg',
+    icon: '/favicon.png',
   },
 };
 

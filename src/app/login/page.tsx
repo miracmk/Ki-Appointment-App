@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebase-client';
 import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 
 export default function LoginPage() {
+  const locale = useLocale();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,7 +23,7 @@ export default function LoginPage() {
     if (!auth) return;
     const unsub = onAuthStateChanged(auth, (user) => {
       setAuthReady(true);
-      if (user) router.push('/dashboard');
+      if (user) router.push(`/${locale}/dashboard`);
     });
     return () => unsub();
   }, [configured, router]);
@@ -33,7 +36,7 @@ export default function LoginPage() {
       const auth = getFirebaseAuth();
       if (!auth) { setError('Firebase yapılandırılmamış.'); return; }
       await signInWithEmailAndPassword(auth, email, password);
-      router.push('/dashboard');
+      router.push(`/${locale}/dashboard`);
     } catch (err: any) {
       const code = err.code || '';
       if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
@@ -58,13 +61,13 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 text-center">
-          <a href="/">
+          <Link href={`/${locale}`}>
             <img
-              src="/logo.svg"
+              src="/logo.png"
               alt="Ki Business Solutions"
               className="mx-auto h-10 w-auto"
             />
-          </a>
+          </Link>
           <h1 className="mt-6 text-2xl font-bold text-white">Portale Giriş Yap</h1>
           <p className="mt-2 text-sm text-white/50">
             Danışmanlık satın aldıktan sonra gönderilen e-posta ve şifreyi kullanın.
@@ -123,7 +126,7 @@ export default function LoginPage() {
 
         <p className="mt-6 text-center text-sm text-white/40">
           Hesabınız yok mu?{' '}
-          <a href="/marketplace" className="text-[#00F0FF] hover:underline">Danışman Bul</a>
+          <Link href={`/${locale}/marketplace`} className="text-[#00F0FF] hover:underline">Danışman Bul</Link>
         </p>
       </div>
     </div>
