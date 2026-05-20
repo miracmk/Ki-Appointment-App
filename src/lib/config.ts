@@ -2,11 +2,10 @@ export interface AdminSettings {
   stripePublishableKey?: string;
   stripeSecretKey?: string;
   stripeWebhookSecret?: string;
-  googleApiKey?: string;
-  googleClientId?: string;
-  googleClientSecret?: string;
-  googleCalendarId?: string;
-  googleServiceAccountKey?: string;
+  calendarClientId?: string;
+  calendarClientSecret?: string;
+  calendarId?: string;
+  calendarServiceAccountKey?: string;
 }
 
 export const LOCAL_SETTINGS_KEY = 'kbs-admin-settings';
@@ -43,9 +42,9 @@ export function getServerStripeWebhookSecret(body?: any): string | undefined {
   return process.env.STRIPE_WEBHOOK_SECRET || body?.stripeWebhookSecret;
 }
 
-export function getServerGoogleConfig(body?: any) {
+export function getServerCalendarConfig(body?: any) {
   return {
-    serviceAccountKey: process.env.GOOGLE_SERVICE_ACCOUNT_KEY || body?.googleServiceAccountKey,
-    calendarId: process.env.GOOGLE_CALENDAR_ID || body?.googleCalendarId,
+    serviceAccountKey: process.env.CALENDAR_SERVICE_ACCOUNT_KEY || body?.calendarServiceAccountKey,
+    calendarId: process.env.CALENDAR_ID || body?.calendarId,
   };
 }

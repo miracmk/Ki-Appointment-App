@@ -58,7 +58,7 @@ export default function IntegrationsPage() {
     );
   }
 
-  const calendarConnected = profile?.google_calendar?.connected ?? false;
+  const calendarConnected = profile?.calendar_integration?.connected ?? false;
   const outlookConnected  = profile?.outlook_calendar?.connected ?? false;
 
   return (

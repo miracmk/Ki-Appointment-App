@@ -8,7 +8,7 @@ import {
   getConsultantProfile,
   calculateFees,
 } from '@/lib/marketplace';
-import { syncToGoogleCalendar, syncToOutlookCalendar, generateICS } from '@/lib/calendar-sync';
+import { syncToCalendar, syncToOutlookCalendar, generateICS } from '@/lib/calendar-sync';
 import { createVideoCallLink } from '@/lib/video-call';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase-admin';
 import { getActiveKiStripePosConfig } from '@/lib/stripe-pos';
@@ -346,7 +346,7 @@ export async function POST(request: NextRequest) {
         }
 
         await Promise.allSettled([
-          syncToGoogleCalendar(consultantId, { ...appointment, id: appointmentId }),
+          syncToCalendar(consultantId, { ...appointment, id: appointmentId }),
           syncToOutlookCalendar(consultantId, { ...appointment, id: appointmentId }),
         ]);
 

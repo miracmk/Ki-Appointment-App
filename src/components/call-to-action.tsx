@@ -8,15 +8,15 @@ export function CallToAction() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localSettings, setLocalSettings] = useState({
-    googleServiceAccountKey: '',
-    googleCalendarId: '',
+    calendarServiceAccountKey: '',
+    calendarId: '',
   });
 
   useEffect(() => {
     const settings = loadAdminSettings();
     setLocalSettings({
-      googleServiceAccountKey: settings.googleServiceAccountKey ?? '',
-      googleCalendarId: settings.googleCalendarId ?? '',
+      calendarServiceAccountKey: settings.calendarServiceAccountKey ?? '',
+      calendarId: settings.calendarId ?? '',
     });
   }, []);
 
@@ -40,8 +40,8 @@ export function CallToAction() {
           email,
           serviceType,
           preferredDate,
-          googleServiceAccountKey: localSettings.googleServiceAccountKey,
-          googleCalendarId: localSettings.googleCalendarId,
+          calendarServiceAccountKey: localSettings.calendarServiceAccountKey,
+          calendarId: localSettings.calendarId,
         }),
       });
 

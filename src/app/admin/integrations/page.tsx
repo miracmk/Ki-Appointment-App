@@ -8,7 +8,7 @@ import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import type { PaymentMode } from '@/types/marketplace';
 
-type ActiveTab = 'payment' | 'stripe' | 'profile' | 'google' | 'outlook' | 'pos';
+type ActiveTab = 'payment' | 'stripe' | 'profile' | 'calendar' | 'outlook' | 'pos';
 
 const paymentModeLabels: Record<PaymentMode, string> = {
   ki_escrow: 'Ki Business Escrow (platform collects, transfers to consultant)',
@@ -28,7 +28,7 @@ export default function ConsultantIntegrationsPage() {
 
   const [stripeForm, setStripeForm] = useState({ consultant_id: '', api_key: '', webhook_secret: '' });
   const [profileForm, setProfileForm] = useState({ consultant_id: '', name: '', title: '', expertise: '', photo_url: '' });
-  const [googleForm, setGoogleForm] = useState({ consultant_id: '', refresh_token: '', calendar_id: 'primary' });
+  const [calendarForm, setCalendarForm] = useState({ consultant_id: '', refresh_token: '', calendar_id: 'primary' });
   const [outlookForm, setOutlookForm] = useState({ consultant_id: '', refresh_token: '' });
   const [posSlots, setPosSlots] = useState<any[]>([]);
   const [posForm, setPosForm] = useState({ slot_id: '', label: '', publishable_key: '', secret_key: '', webhook_secret: '' });
@@ -143,9 +143,9 @@ export default function ConsultantIntegrationsPage() {
     callApi({ action: 'update_profile', ...profileForm });
   };
 
-  const handleGoogle = (e: React.FormEvent) => {
+  const handleCalendar = (e: React.FormEvent) => {
     e.preventDefault();
-    callApi({ action: 'update_google', ...googleForm });
+    callApi({ action: 'update_calendar', ...calendarForm });
   };
 
   const handleOutlook = (e: React.FormEvent) => {
@@ -308,7 +308,7 @@ export default function ConsultantIntegrationsPage() {
     { id: 'payment', label: 'Payment Mode' },
     { id: 'stripe', label: 'Stripe' },
     { id: 'profile', label: 'Profile' },
-    { id: 'google', label: 'Calendar' },
+    { id: 'calendar', label: 'Calendar' },
     { id: 'outlook', label: 'Outlook' },
     { id: 'pos', label: 'POS Rotation' },
   ];
@@ -536,8 +536,8 @@ export default function ConsultantIntegrationsPage() {
           )}
 
           {/* Calendar Tab */}
-          {activeTab === 'google' && (
-            <form onSubmit={handleGoogle} className="space-y-4">
+          {activeTab === 'calendar' && (
+            <form onSubmit={handleCalendar} className="space-y-4">
               <p className="text-sm text-gray-500">
                 Calendar OAuth refresh token and calendar ID. The calendar ID is usually the consultant's email address.
               </p>
@@ -547,12 +547,12 @@ export default function ConsultantIntegrationsPage() {
                 { field: 'calendar_id', label: 'Calendar ID *', type: 'text', placeholder: 'primary or email@example.com' },
               ].map(({ field, label, type, placeholder }) => (
                 <div key={field}>
-                  <label htmlFor={`google-${field}`} className="block text-sm font-medium text-gray-700">{label}</label>
+                  <label htmlFor={`calendar-${field}`} className="block text-sm font-medium text-gray-700">{label}</label>
                   <input
-                    id={`google-${field}`}
+                    id={`calendar-${field}`}
                     type={type}
-                    value={googleForm[field as keyof typeof googleForm]}
-                    onChange={set(setGoogleForm, field as keyof typeof googleForm)}
+                    value={calendarForm[field as keyof typeof calendarForm]}
+                    onChange={set(setCalendarForm, field as keyof typeof calendarForm)}
                     required
                     placeholder={placeholder}
                     className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"

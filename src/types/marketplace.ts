@@ -94,7 +94,7 @@ export interface PlatformSettings {
 
 // ─── Calendar Integrations ──────────────────────────────────────────────────
 
-export interface GoogleCalendarIntegration {
+export interface CalendarIntegration {
   refresh_token_encrypted?: string;
   refresh_token_iv?: string;
   refresh_token_authTag?: string;
@@ -159,7 +159,7 @@ export interface ConsultantProfile {
 
   // Integrations
   stripe_settings: StripeSettings;
-  google_calendar: GoogleCalendarIntegration;
+  calendar_integration: CalendarIntegration;
   outlook_calendar: OutlookCalendarIntegration;
   availability?: WeeklyAvailability;
   meet_link?: string;
@@ -233,7 +233,7 @@ export interface Appointment {
   stripe_session_id?: string;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   meet_link?: string;
-  calendar_event_ids?: { google?: string; outlook?: string };
+  calendar_event_ids?: { primary?: string; outlook?: string };
   created_at: number;
   updated_at: number;
   payment_amount: number;

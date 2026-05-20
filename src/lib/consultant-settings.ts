@@ -5,7 +5,7 @@
 
 import { getAdminFirestore } from './firebase-admin';
 import { encryptSensitiveData } from './encryption';
-import { ConsultantProfile, StripeSettings, GoogleCalendarIntegration, OutlookCalendarIntegration } from '@/types/marketplace';
+import { ConsultantProfile, StripeSettings, CalendarIntegration, OutlookCalendarIntegration } from '@/types/marketplace';
 
 /**
  * Update Stripe settings for a consultant
@@ -41,9 +41,9 @@ export async function updateConsultantStripeSettings(
 }
 
 /**
- * Update Google Calendar settings for a consultant
+ * Update calendar integration settings for a consultant
  */
-export async function updateConsultantGoogleCalendar(
+export async function updateConsultantCalendar(
   consultantId: string,
   refreshToken: string,
   calendarId: string
@@ -53,18 +53,18 @@ export async function updateConsultantGoogleCalendar(
     const refreshTokenEncrypted = encryptSensitiveData(refreshToken);
 
     await db.collection('users').doc(consultantId).update({
-      'google_calendar.refresh_token_encrypted': refreshTokenEncrypted.encryptedData,
-      'google_calendar.refresh_token_iv': refreshTokenEncrypted.iv,
-      'google_calendar.refresh_token_authTag': refreshTokenEncrypted.authTag,
-      'google_calendar.calendar_id': calendarId,
-      'google_calendar.connected': true,
-      'google_calendar.updated_at': Date.now(),
+      'calendar_integration.refresh_token_encrypted': refreshTokenEncrypted.encryptedData,
+      'calendar_integration.refresh_token_iv': refreshTokenEncrypted.iv,
+      'calendar_integration.refresh_token_authTag': refreshTokenEncrypted.authTag,
+      'calendar_integration.calendar_id': calendarId,
+      'calendar_integration.connected': true,
+      'calendar_integration.updated_at': Date.now(),
       'updated_at': Date.now(),
     });
 
-    console.log(`Updated Google Calendar for consultant ${consultantId}`);
+    console.log(`Updated calendar integration for consultant ${consultantId}`);
   } catch (error) {
-    console.error(`Error updating Google Calendar for consultant ${consultantId}:`, error);
+    console.error(`Error updating calendar integration for consultant ${consultantId}:`, error);
     throw error;
   }
 }
@@ -116,20 +116,20 @@ export async function disableConsultantStripe(consultantId: string): Promise<voi
 }
 
 /**
- * Disconnect Google Calendar for a consultant
+ * Disconnect calendar integration for a consultant
  */
-export async function disconnectGoogleCalendar(consultantId: string): Promise<void> {
+export async function disconnectCalendar(consultantId: string): Promise<void> {
   try {
     const db = getAdminFirestore();
 
     await db.collection('users').doc(consultantId).update({
-      'google_calendar.connected': false,
+      'calendar_integration.connected': false,
       'updated_at': Date.now(),
     });
 
-    console.log(`Disconnected Google Calendar for consultant ${consultantId}`);
+    console.log(`Disconnected calendar integration for consultant ${consultantId}`);
   } catch (error) {
-    console.error(`Error disconnecting Google Calendar for consultant ${consultantId}:`, error);
+    console.error(`Error disconnecting calendar integration for consultant ${consultantId}:`, error);
     throw error;
   }
 }

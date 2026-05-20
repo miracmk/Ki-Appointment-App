@@ -5,15 +5,15 @@ import { getAdminFirestore } from './firebase-admin';
 import { Appointment, ConsultantProfile } from '@/types/marketplace';
 
 /**
- * Refresh Google access token using refresh token
+ * Refresh calendar access token using refresh token
  */
-async function refreshGoogleAccessToken(
+async function refreshCalendarAccessToken(
   consultantId: string,
   profile: ConsultantProfile
 ): Promise<string | null> {
   try {
     const { refresh_token_encrypted, refresh_token_iv, refresh_token_authTag, access_token_expiry } =
-      profile.google_calendar;
+      profile.calendar_integration;
 
     if (!refresh_token_encrypted) {
       return null;
@@ -21,7 +21,7 @@ async function refreshGoogleAccessToken(
 
     // Check if current token is still valid (within 5 minutes)
     if (access_token_expiry && access_token_expiry > Date.now() + 300000) {
-      const { access_token_encrypted, access_token_iv, access_token_authTag } = profile.google_calendar;
+      const { access_token_encrypted, access_token_iv, access_token_authTag } = profile.calendar_integration;
       if (access_token_encrypted) {
         return decryptSensitiveData(access_token_encrypted, access_token_iv!, access_token_authTag!);
       }
@@ -30,8 +30,8 @@ async function refreshGoogleAccessToken(
     const refreshToken = decryptSensitiveData(refresh_token_encrypted, refresh_token_iv!, refresh_token_authTag!);
 
     const response = await axios.post('https://oauth2.googleapis.com/token', {
-      client_id: process.env.GOOGLE_CLIENT_ID,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      client_id: process.env.CALENDAR_CLIENT_ID,
+      client_secret: process.env.CALENDAR_CLIENT_SECRET,
       refresh_token: refreshToken,
       grant_type: 'refresh_token',
     });
@@ -43,41 +43,41 @@ async function refreshGoogleAccessToken(
     const { encryptedData, iv, authTag } = encryptSensitiveData(newAccessToken);
     const db = getAdminFirestore();
     await db.collection('users').doc(consultantId).update({
-      'google_calendar.access_token_encrypted': encryptedData,
-      'google_calendar.access_token_iv': iv,
-      'google_calendar.access_token_authTag': authTag,
-      'google_calendar.access_token_expiry': Date.now() + expiresIn * 1000,
-      'google_calendar.updated_at': Date.now(),
+      'calendar_integration.access_token_encrypted': encryptedData,
+      'calendar_integration.access_token_iv': iv,
+      'calendar_integration.access_token_authTag': authTag,
+      'calendar_integration.access_token_expiry': Date.now() + expiresIn * 1000,
+      'calendar_integration.updated_at': Date.now(),
     });
 
     return newAccessToken;
   } catch (error) {
-    console.error(`Error refreshing Google access token for consultant ${consultantId}:`, error);
+    console.error(`Error refreshing calendar access token for consultant ${consultantId}:`, error);
     return null;
   }
 }
 
 /**
- * Add appointment to Google Calendar
+ * Add appointment to external calendar
  */
-export async function syncToGoogleCalendar(
+export async function syncToCalendar(
   consultantId: string,
   appointment: Appointment
 ): Promise<string | null> {
   try {
     const profile = await getConsultantProfile(consultantId);
-    if (!profile?.google_calendar?.connected) {
-      console.warn(`Google Calendar not connected for consultant ${consultantId}`);
+    if (!profile?.calendar_integration?.connected) {
+      console.warn(`Calendar not connected for consultant ${consultantId}`);
       return null;
     }
 
-    let accessToken = await refreshGoogleAccessToken(consultantId, profile);
+    let accessToken = await refreshCalendarAccessToken(consultantId, profile);
     if (!accessToken) {
-      console.error(`Failed to get Google access token for consultant ${consultantId}`);
+      console.error(`Failed to get calendar access token for consultant ${consultantId}`);
       return null;
     }
 
-    const calendarId = profile.google_calendar.calendar_id || 'primary';
+    const calendarId = profile.calendar_integration.calendar_id || 'primary';
 
     // Parse appointment date and time
     const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}:00Z`);
@@ -115,7 +115,7 @@ export async function syncToGoogleCalendar(
 
     return response.data.id;
   } catch (error) {
-    console.error(`Error syncing to Google Calendar for consultant ${consultantId}:`, error);
+    console.error(`Error syncing to calendar for consultant ${consultantId}:`, error);
     return null;
   }
 }

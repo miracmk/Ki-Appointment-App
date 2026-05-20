@@ -34,7 +34,7 @@ export async function initializeConsultantProfile(
     stripe_settings: {
       is_active: false,
     },
-    google_calendar: {
+    calendar_integration: {
       connected: false,
     },
     outlook_calendar: {

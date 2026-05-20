@@ -2,10 +2,10 @@ import { NextResponse, NextRequest } from 'next/server';
 import { getAdminAuth } from '@/lib/firebase-admin';
 import {
   updateConsultantStripeSettings,
-  updateConsultantGoogleCalendar,
+  updateConsultantCalendar,
   updateConsultantOutlookCalendar,
   disableConsultantStripe,
-  disconnectGoogleCalendar,
+  disconnectCalendar,
   disconnectOutlookCalendar,
 } from '@/lib/consultant-settings';
 import { PaymentMode } from '@/types/marketplace';
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Stripe settings updated' });
     }
 
-    if (action === 'update_google') {
+    if (action === 'update_calendar') {
       const { refresh_token, calendar_id } = body;
       if (!refresh_token || !calendar_id) {
         return NextResponse.json(
@@ -101,8 +101,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      await updateConsultantGoogleCalendar(consultant_id, refresh_token, calendar_id);
-      return NextResponse.json({ success: true, message: 'Google Calendar settings updated' });
+      await updateConsultantCalendar(consultant_id, refresh_token, calendar_id);
+      return NextResponse.json({ success: true, message: 'Calendar settings updated' });
     }
 
     if (action === 'update_outlook') {
@@ -120,9 +120,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Stripe disabled for consultant' });
     }
 
-    if (action === 'disconnect_google') {
-      await disconnectGoogleCalendar(consultant_id);
-      return NextResponse.json({ success: true, message: 'Google Calendar disconnected' });
+    if (action === 'disconnect_calendar') {
+      await disconnectCalendar(consultant_id);
+      return NextResponse.json({ success: true, message: 'Calendar disconnected' });
     }
 
     if (action === 'disconnect_outlook') {
