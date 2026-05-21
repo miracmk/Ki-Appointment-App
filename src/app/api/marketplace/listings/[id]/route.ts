@@ -33,6 +33,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         languages:    d.languages ?? [],
         location:     d.location,
         is_ki_business: d.is_ki_business ?? false,
+        meet_link:    d.meet_link,
+        availability: d.availability ?? null,
+        timezone:     d.timezone ?? null,
       };
     }
 

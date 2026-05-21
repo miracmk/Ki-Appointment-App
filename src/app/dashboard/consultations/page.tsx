@@ -541,6 +541,39 @@ function ListingForm({
             ))}
           </div>
         </div>
+
+        {/* Intro / discovery session — hourly listings only */}
+        {form.pricing.type === 'hourly' && (
+          <div className="rounded-xl border border-[#00F0FF]/15 bg-[#00F0FF]/5 p-4 space-y-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#00F0FF]/70">
+                ⭐ Intro / Discovery Session
+              </p>
+              <p className="mt-0.5 text-xs text-white/30">
+                A short first-meeting option shown to new clients before they commit to a full hourly package.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className={LBL}>Intro Price ($)</label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-white/30">$</span>
+                  <input type="number" min="0" step="5"
+                    value={(form.intro_price_cents ?? 10000) / 100}
+                    onChange={(e) => setForm(f => ({ ...f, intro_price_cents: Math.round(parseFloat(e.target.value || '100') * 100) }))}
+                    className={INP + ' pl-8'} />
+                </div>
+              </div>
+              <div>
+                <label className={LBL}>Duration (minutes)</label>
+                <input type="number" min="5" step="5"
+                  value={form.intro_duration_minutes ?? 15}
+                  onChange={(e) => setForm(f => ({ ...f, intro_duration_minutes: parseInt(e.target.value || '15') }))}
+                  className={INP} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Actions ─────────────────────────────────────── */}

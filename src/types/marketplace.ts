@@ -504,6 +504,8 @@ export interface ConsultantListing {
   requires_kyc: boolean;
   requires_contract: boolean;
   is_active: boolean;
+  intro_price_cents?: number;
+  intro_duration_minutes?: number;
   created_at: number;
   updated_at: number;
 }

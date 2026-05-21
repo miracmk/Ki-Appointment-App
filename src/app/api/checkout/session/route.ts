@@ -8,6 +8,7 @@ import {
 } from '@/lib/marketplace';
 import { getActiveKiStripePosConfig } from '@/lib/stripe-pos';
 import { AppointmentMetadata, PaymentMode } from '@/types/marketplace';
+import { sendConsultantBookingNotification, sendClientBookingPending } from '@/lib/email';
 
 const pricingMap: Record<string, { amount: number; name: string }> = {
   starter: { amount: 20000, name: 'Starter Consulting Package' },
@@ -137,6 +138,34 @@ export async function POST(request: NextRequest) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const appointmentId = await createAppointment(consultantId, appointmentData as any);
+
+    // Fire-and-forget email notifications (do not block checkout)
+    if (appointmentDate && appointmentTime && durationMinutes) {
+      const notifTitle = listingTitle ?? 'Consultation';
+      sendConsultantBookingNotification({
+        consultantEmail:     consultant.email ?? '',
+        consultantName:      consultant.name  ?? 'Consultant',
+        clientName:          customerName     ?? '',
+        clientEmail:         customerEmail,
+        listingTitle:        notifTitle,
+        appointmentDate:     appointmentDate,
+        appointmentTime:     appointmentTime,
+        appointmentTimezone: appointmentTimezone ?? 'UTC',
+        durationMinutes:     durationMinutes,
+        appointmentId,
+      }).catch((e) => console.error('[email] consultant notify failed:', e));
+
+      sendClientBookingPending({
+        clientEmail:         customerEmail,
+        clientName:          customerName     ?? '',
+        consultantName:      consultant.name  ?? 'Consultant',
+        listingTitle:        notifTitle,
+        appointmentDate:     appointmentDate,
+        appointmentTime:     appointmentTime,
+        appointmentTimezone: appointmentTimezone ?? 'UTC',
+        durationMinutes,
+      }).catch((e) => console.error('[email] client pending notify failed:', e));
+    }
 
     const metadata: Stripe.MetadataParam = {
       consultant_id: consultantId,

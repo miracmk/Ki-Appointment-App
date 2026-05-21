@@ -7,10 +7,19 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import type { ConsultantProfile, FlatAppointment } from '@/types/marketplace';
 
+async function getIdToken(): Promise<string | null> {
+  const auth = getFirebaseAuth();
+  if (!auth?.currentUser) return null;
+  try { return await auth.currentUser.getIdToken(); }
+  catch { return null; }
+}
+
 export default function ConsultantOverview() {
-  const [profile, setProfile]         = useState<ConsultantProfile | null>(null);
-  const [appointments, setAppointments] = useState<FlatAppointment[]>([]);
-  const [loading, setLoading]         = useState(true);
+  const [profile,       setProfile]       = useState<ConsultantProfile | null>(null);
+  const [appointments,  setAppointments]  = useState<FlatAppointment[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [confirming,    setConfirming]    = useState<string | null>(null);
+  const [confirmError,  setConfirmError]  = useState<string | null>(null);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -30,14 +39,44 @@ export default function ConsultantOverview() {
     return () => unsub();
   }, []);
 
+  const handleConfirm = async (apptId: string) => {
+    setConfirming(apptId);
+    setConfirmError(null);
+    try {
+      const token = await getIdToken();
+      const res   = await fetch(`/api/appointments/${apptId}/confirm`, {
+        method:  'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Failed');
+      setAppointments(prev =>
+        prev.map(a => a.id === apptId ? { ...a, status: 'confirmed' } : a)
+      );
+    } catch (e: unknown) {
+      setConfirmError(e instanceof Error ? e.message : 'Error confirming appointment');
+    } finally {
+      setConfirming(null);
+    }
+  };
+
   if (loading) return null;
 
   const now      = Date.now();
-  const upcoming = appointments.filter((a) => a.status === 'confirmed' && new Date(a.appointment_date).getTime() > now);
-  const totalRevenue = appointments.filter((a) => a.status !== 'cancelled')
+  const upcoming = appointments.filter(a => a.status === 'confirmed' && new Date(a.appointment_date).getTime() > now);
+  const pending  = appointments.filter(a => a.status === 'pending');
+  const totalRevenue = appointments
+    .filter(a => a.status !== 'cancelled')
     .reduce((s, a) => s + (a.consultant_payout_cents ?? a.payment_amount), 0);
 
   const kycPending = profile?.kyc_status !== 'verified';
+
+  function fmtDate(date: string, time: string) {
+    try {
+      return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+      }) + (time ? ' · ' + time : '');
+    } catch { return date; }
+  }
 
   return (
     <div>
@@ -56,12 +95,13 @@ export default function ConsultantOverview() {
               <p className="font-medium text-yellow-300">KYC Verification Required</p>
               <p className="mt-0.5 text-sm text-yellow-400/70">
                 {profile?.kyc_status === 'pending'
-                  ? 'Your application is under review. This typically takes 1–3 business days.'
-                  : 'Complete your KYC verification to appear on the marketplace.'}
+                  ? 'Your application is under review.'
+                  : 'Complete KYC to appear on the marketplace.'}
               </p>
             </div>
           </div>
-          <Link href="/consultant/kyc" className="shrink-0 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-1.5 text-sm font-medium text-yellow-400 transition hover:bg-yellow-500/20">
+          <Link href="/consultant/kyc"
+            className="shrink-0 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-1.5 text-sm font-medium text-yellow-400 transition hover:bg-yellow-500/20">
             Start KYC
           </Link>
         </div>
@@ -70,10 +110,10 @@ export default function ConsultantOverview() {
       {/* Stats */}
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-4">
         {[
-          { label: 'Upcoming Sessions',  value: upcoming.length,    color: 'text-[#B000FF]' },
-          { label: 'Total Appointments', value: appointments.length, color: 'text-white' },
-          { label: 'Estimated Revenue',  value: `$${(totalRevenue / 100).toLocaleString()}`, color: 'text-emerald-400' },
-          { label: 'Ki Wallet',          value: `$${((profile?.ki_wallet_cents ?? 0) / 100).toFixed(2)}`, color: 'text-[#00F0FF]' },
+          { label: 'Pending Approvals', value: pending.length,      color: pending.length > 0 ? 'text-orange-400' : 'text-white' },
+          { label: 'Upcoming Sessions', value: upcoming.length,     color: 'text-[#B000FF]' },
+          { label: 'Total Appointments',value: appointments.length, color: 'text-white' },
+          { label: 'Est. Revenue',       value: `$${(totalRevenue / 100).toLocaleString()}`, color: 'text-emerald-400' },
         ].map((s) => (
           <div key={s.label} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
             <p className="text-sm text-white/40">{s.label}</p>
@@ -82,19 +122,64 @@ export default function ConsultantOverview() {
         ))}
       </div>
 
+      {/* Pending approvals */}
+      {pending.length > 0 && (
+        <div className="mb-8">
+          <h2 className="mb-4 text-lg font-semibold text-white">
+            Awaiting Your Approval
+            <span className="ml-2 rounded-full bg-orange-500/20 px-2 py-0.5 text-xs font-normal text-orange-400">
+              {pending.length}
+            </span>
+          </h2>
+
+          {confirmError && (
+            <div className="mb-3 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm text-red-400">
+              {confirmError}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {pending.map(appt => (
+              <div key={appt.id}
+                className="flex items-center justify-between gap-4 rounded-2xl border border-orange-500/15 bg-orange-500/5 p-4">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-white">
+                    {appt.customer_name || appt.customer_email}
+                  </p>
+                  <p className="mt-0.5 text-sm text-white/50">
+                    {(appt as unknown as Record<string,string>).listing_title ?? appt.package_name}
+                  </p>
+                  <div className="mt-1 flex flex-wrap gap-3 text-xs text-white/35">
+                    <span>📅 {fmtDate(appt.appointment_date, appt.appointment_time)}</span>
+                    {(appt as unknown as {duration_minutes?: number}).duration_minutes ? (
+                      <span>⏱ {(appt as unknown as {duration_minutes: number}).duration_minutes} min</span>
+                    ) : null}
+                    <span>💳 ${((appt.payment_amount ?? 0) / 100).toLocaleString()}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleConfirm(appt.id)}
+                  disabled={confirming === appt.id}
+                  className="shrink-0 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-400 transition hover:bg-emerald-500/20 disabled:opacity-50"
+                >
+                  {confirming === appt.id ? 'Confirming…' : 'Confirm'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Quick links */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {[
-          { href: '/consultant/profile',       label: 'Edit Profile',         icon: '👤' },
-          { href: '/consultant/availability',  label: 'Set Availability',     icon: '📅' },
-          { href: '/consultant/payments',      label: 'Payment Settings',     icon: '💳' },
-          { href: '/consultant/integrations',  label: 'Integrations',         icon: '🔗' },
-        ].map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="flex flex-col items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 text-center transition hover:border-white/20 hover:bg-white/[0.06]"
-          >
+          { href: '/consultant/profile',      label: 'Edit Profile',     icon: '👤' },
+          { href: '/consultant/availability', label: 'Set Availability', icon: '📅' },
+          { href: '/consultant/payments',     label: 'Payment Settings', icon: '💳' },
+          { href: '/consultant/integrations', label: 'Integrations',     icon: '🔗' },
+        ].map(item => (
+          <Link key={item.href} href={item.href}
+            className="flex flex-col items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 text-center transition hover:border-white/20 hover:bg-white/[0.06]">
             <span className="text-2xl">{item.icon}</span>
             <span className="text-sm font-medium text-white/70">{item.label}</span>
           </Link>

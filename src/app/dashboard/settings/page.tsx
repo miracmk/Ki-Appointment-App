@@ -1,12 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { getFirebaseAuth, getFirestoreClient } from '@/lib/firebase-client';
+import { getFirebaseAuth, getFirestoreClient, getFirebaseStorage } from '@/lib/firebase-client';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import {
+  collection, doc, getDoc, getDocs, query, setDoc, updateDoc, where,
+} from 'firebase/firestore';
+import { ref as sRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useSearchParams } from 'next/navigation';
 import { useUserRole } from '@/lib/use-user-role';
 import type { AppRole } from '@/lib/use-user-role';
+import type { WeeklyAvailability, DayAvailability, MarketplaceCategory } from '@/types/marketplace';
+import { CATEGORIES, SPECIALTIES } from '@/lib/categories';
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
 
@@ -15,6 +20,32 @@ const SEL  = 'w-full rounded-xl border border-white/10 bg-[#161820] px-4 py-2.5 
 const LBL  = 'mb-1.5 block text-xs font-medium text-white/50';
 const CARD = 'rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-4';
 const SECTION_TITLE = 'text-sm font-semibold uppercase tracking-wide text-white/70';
+
+// ─── Working Hours constants ──────────────────────────────────────────────────
+
+const DAYS: { key: keyof WeeklyAvailability; label: string }[] = [
+  { key: 'monday',    label: 'Monday' },
+  { key: 'tuesday',   label: 'Tuesday' },
+  { key: 'wednesday', label: 'Wednesday' },
+  { key: 'thursday',  label: 'Thursday' },
+  { key: 'friday',    label: 'Friday' },
+  { key: 'saturday',  label: 'Saturday' },
+  { key: 'sunday',    label: 'Sunday' },
+];
+
+const DEFAULT_DAY: DayAvailability = { enabled: false, start: '09:00', end: '18:00' };
+
+const DEFAULT_AVAIL: WeeklyAvailability = {
+  monday:    { ...DEFAULT_DAY, enabled: true },
+  tuesday:   { ...DEFAULT_DAY, enabled: true },
+  wednesday: { ...DEFAULT_DAY, enabled: true },
+  thursday:  { ...DEFAULT_DAY, enabled: true },
+  friday:    { ...DEFAULT_DAY, enabled: true },
+  saturday:  DEFAULT_DAY,
+  sunday:    DEFAULT_DAY,
+};
+
+// ─── SecretInput ──────────────────────────────────────────────────────────────
 
 function SecretInput({ label, value, onChange, placeholder }: {
   label: string; value: string;
@@ -41,10 +72,204 @@ function SecretInput({ label, value, onChange, placeholder }: {
   );
 }
 
+// ─── ProfilePhoto ─────────────────────────────────────────────────────────────
+
+function ProfilePhoto({ uid, url, onUpload }: {
+  uid: string;
+  url: string;
+  onUpload: (url: string) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { setErr('Image must be under 2 MB'); return; }
+    setErr(null);
+    setUploading(true);
+    try {
+      const storage = getFirebaseStorage();
+      if (!storage) throw new Error('Storage unavailable');
+      const photoRef = sRef(storage, `users/${uid}/profile.jpg`);
+      await uploadBytes(photoRef, file);
+      const downloadUrl = await getDownloadURL(photoRef);
+      onUpload(downloadUrl);
+    } catch (e) {
+      setErr(String(e));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-4">
+      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-white/[0.06]">
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt="Profile photo" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-white/20">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="h-8 w-8">
+              <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5.33 0-8 2.67-8 4v1h16v-1c0-1.33-2.67-4-8-4z" />
+            </svg>
+          </div>
+        )}
+      </div>
+      <div className="space-y-1">
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white/70 hover:text-white disabled:opacity-50 transition"
+        >
+          {uploading ? 'Uploading…' : 'Change Photo'}
+        </button>
+        <p className="text-xs text-white/25">JPG / PNG · max 2 MB</p>
+        {err && <p className="text-xs text-red-400">{err}</p>}
+        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      </div>
+    </div>
+  );
+}
+
+// ─── SpecialtiesSelector ──────────────────────────────────────────────────────
+
+function SpecialtiesSelector({ value, onChange }: {
+  value: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const [activeCat, setActiveCat] = useState<MarketplaceCategory>(CATEGORIES[0].id);
+
+  const toggle = (id: string) => {
+    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-1.5">
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat.id}
+            type="button"
+            onClick={() => setActiveCat(cat.id)}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+              activeCat === cat.id
+                ? 'border border-[#B000FF]/30 bg-[#B000FF]/20 text-[#B000FF]'
+                : 'border border-white/[0.08] text-white/40 hover:text-white'
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+      <div className="grid gap-0.5 sm:grid-cols-2">
+        {SPECIALTIES[activeCat]?.map((sp) => (
+          <label
+            key={sp.id}
+            className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-white/[0.03] transition"
+          >
+            <input
+              type="checkbox"
+              checked={value.includes(sp.id)}
+              onChange={() => toggle(sp.id)}
+              className="h-3.5 w-3.5 accent-[#B000FF]"
+            />
+            <span className="text-xs text-white/70">{sp.label}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── BlockedDatesCalendar ─────────────────────────────────────────────────────
+
+const MONTH_NAMES = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
+];
+const DAY_ABBR = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+function BlockedDatesCalendar({ value, onChange }: {
+  value: string[];
+  onChange: (dates: string[]) => void;
+}) {
+  const now = new Date();
+  const [year, setYear]   = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth());
+
+  const prevMonth = () => {
+    if (month === 0) { setYear((y) => y - 1); setMonth(11); }
+    else setMonth((m) => m - 1);
+  };
+  const nextMonth = () => {
+    if (month === 11) { setYear((y) => y + 1); setMonth(0); }
+    else setMonth((m) => m + 1);
+  };
+
+  const toDateStr = (day: number) =>
+    `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+  const toggle = (day: number) => {
+    const d = toDateStr(day);
+    onChange(value.includes(d) ? value.filter((x) => x !== d) : [...value, d]);
+  };
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDow    = new Date(year, month, 1).getDay();
+
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <button type="button" onClick={prevMonth}
+          className="rounded-lg p-1.5 text-white/40 hover:text-white transition">
+          ‹
+        </button>
+        <span className="text-sm font-medium text-white">{MONTH_NAMES[month]} {year}</span>
+        <button type="button" onClick={nextMonth}
+          className="rounded-lg p-1.5 text-white/40 hover:text-white transition">
+          ›
+        </button>
+      </div>
+      <div className="mb-1 grid grid-cols-7">
+        {DAY_ABBR.map((d) => (
+          <div key={d} className="py-1 text-center text-xs text-white/25">{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-0.5">
+        {Array.from({ length: firstDow }).map((_, i) => <div key={`e${i}`} />)}
+        {Array.from({ length: daysInMonth }).map((_, i) => {
+          const day     = i + 1;
+          const blocked = value.includes(toDateStr(day));
+          return (
+            <button
+              key={day}
+              type="button"
+              onClick={() => toggle(day)}
+              className={`rounded-lg py-1.5 text-xs font-medium transition ${
+                blocked
+                  ? 'border border-red-500/30 bg-red-500/20 text-red-400'
+                  : 'text-white/50 hover:bg-white/[0.06] hover:text-white'
+              }`}
+            >
+              {day}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Tab: Profile ─────────────────────────────────────────────────────────────
 
-function TabProfile({ uid, role }: { uid: string; role: AppRole }) {
-  const [form, setForm]   = useState({ displayName: '', language: 'en', bio: '', title: '', hourlyRate: '' });
+function TabProfile({ uid, isConsultant }: { uid: string; isConsultant: boolean }) {
+  const [form, setForm] = useState({
+    displayName: '', language: 'en', birthDate: '', city: '',
+    bio: '', title: '', hourlyRate: '', photoUrl: '', specialties: [] as string[],
+  });
   const [saving, setSave] = useState(false);
   const [msg, setMsg]     = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -56,11 +281,15 @@ function TabProfile({ uid, role }: { uid: string; role: AppRole }) {
       if (snap.exists()) {
         const d = snap.data();
         setForm({
-          displayName: d.displayName ?? '',
-          language:    d.language    ?? 'en',
-          bio:         d.bio         ?? '',
-          title:       d.title       ?? '',
+          displayName: d.displayName       ?? '',
+          language:    d.language          ?? 'en',
+          birthDate:   d.birthDate         ?? '',
+          city:        d.city              ?? '',
+          bio:         d.bio               ?? '',
+          title:       d.title             ?? '',
           hourlyRate:  d.hourly_rate_cents ? String(d.hourly_rate_cents / 100) : '',
+          photoUrl:    d.photo_url         ?? '',
+          specialties: Array.isArray(d.specialties) ? d.specialties : [],
         });
       }
     })();
@@ -74,11 +303,15 @@ function TabProfile({ uid, role }: { uid: string; role: AppRole }) {
       const update: Record<string, unknown> = {
         displayName: form.displayName,
         language:    form.language,
-        updatedAt:   Date.now(),
+        birthDate:   form.birthDate,
+        city:        form.city,
+        bio:         form.bio,
+        updated_at:  Date.now(),
       };
-      if (role === 'consultant') {
-        update.bio   = form.bio;
-        update.title = form.title;
+      if (form.photoUrl) update.photo_url = form.photoUrl;
+      if (isConsultant) {
+        update.title       = form.title;
+        update.specialties = form.specialties;
         if (form.hourlyRate) update.hourly_rate_cents = Math.round(parseFloat(form.hourlyRate) * 100);
       }
       await updateDoc(doc(db, 'users', uid), update);
@@ -90,43 +323,86 @@ function TabProfile({ uid, role }: { uid: string; role: AppRole }) {
 
   return (
     <form onSubmit={save} className="space-y-4">
+      {/* Photo */}
+      <div className={CARD}>
+        <h2 className={SECTION_TITLE}>Profile Photo</h2>
+        <ProfilePhoto
+          uid={uid}
+          url={form.photoUrl}
+          onUpload={(url) => setForm((f) => ({ ...f, photoUrl: url }))}
+        />
+      </div>
+
+      {/* Identity */}
       <div className={CARD}>
         <h2 className={SECTION_TITLE}>Identity</h2>
         <div>
-          <label htmlFor="profile-name" className={LBL}>Display Name</label>
-          <input id="profile-name" type="text" value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} className={INP} />
+          <label className={LBL}>Display Name</label>
+          <input type="text" value={form.displayName}
+            onChange={(e) => setForm({ ...form, displayName: e.target.value })} className={INP} />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className={LBL}>Language</label>
+            <select value={form.language}
+              onChange={(e) => setForm({ ...form, language: e.target.value })} className={SEL}>
+              <option value="en">English</option>
+              <option value="tr">Türkçe</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+            </select>
+          </div>
+          <div>
+            <label className={LBL}>Date of Birth</label>
+            <input type="date" value={form.birthDate}
+              onChange={(e) => setForm({ ...form, birthDate: e.target.value })} className={INP} />
+          </div>
         </div>
         <div>
-          <label htmlFor="profile-lang" className={LBL}>Language</label>
-          <select id="profile-lang" value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}
-            className={SEL}>
-            <option value="en">English</option>
-            <option value="tr">Türkçe</option>
-            <option value="es">Español</option>
-            <option value="fr">Français</option>
-            <option value="de">Deutsch</option>
-          </select>
+          <label className={LBL}>City</label>
+          <input type="text" value={form.city}
+            onChange={(e) => setForm({ ...form, city: e.target.value })}
+            placeholder="e.g. Istanbul" className={INP} />
+        </div>
+        <div>
+          <label className={LBL}>
+            Bio / Introduction
+            <span className="ml-2 text-white/25">{form.bio.length}/500</span>
+          </label>
+          <textarea
+            rows={4}
+            value={form.bio}
+            maxLength={500}
+            onChange={(e) => setForm({ ...form, bio: e.target.value })}
+            placeholder="Tell clients a bit about yourself…"
+            className={INP + ' resize-none'}
+          />
         </div>
       </div>
 
-      {role === 'consultant' && (
+      {/* Consultant-only */}
+      {isConsultant && (
         <div className={CARD}>
           <h2 className={SECTION_TITLE}>Consultant Profile</h2>
           <div>
             <label className={LBL}>Professional Title</label>
-            <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
+            <input type="text" value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
               placeholder="e.g. Tax Consultant · CPA" className={INP} />
-          </div>
-          <div>
-            <label className={LBL}>Bio</label>
-            <textarea rows={4} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })}
-              placeholder="Introduce yourself to potential clients…"
-              className={INP + ' resize-none'} />
           </div>
           <div>
             <label className={LBL}>Hourly Rate (USD)</label>
             <input type="number" min="0" step="5" value={form.hourlyRate}
-              onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })} placeholder="150" className={INP} />
+              onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })}
+              placeholder="150" className={INP} />
+          </div>
+          <div>
+            <label className={LBL}>Specialties</label>
+            <SpecialtiesSelector
+              value={form.specialties}
+              onChange={(ids) => setForm((f) => ({ ...f, specialties: ids }))}
+            />
           </div>
         </div>
       )}
@@ -137,14 +413,140 @@ function TabProfile({ uid, role }: { uid: string; role: AppRole }) {
         </div>
       )}
       <button type="submit" disabled={saving}
-        className="rounded-xl bg-[#00F0FF]/10 border border-[#00F0FF]/20 px-6 py-2.5 text-sm font-semibold text-[#00F0FF] transition hover:bg-[#00F0FF]/20 disabled:opacity-50">
+        className="rounded-xl border border-[#00F0FF]/20 bg-[#00F0FF]/10 px-6 py-2.5 text-sm font-semibold text-[#00F0FF] transition hover:bg-[#00F0FF]/20 disabled:opacity-50">
         {saving ? 'Saving…' : 'Save Profile'}
       </button>
     </form>
   );
 }
 
-// ─── Tab: Integrations (consultant+) ─────────────────────────────────────────
+// ─── Tab: Working Hours ───────────────────────────────────────────────────────
+
+function TabWorkingHours({ uid }: { uid: string }) {
+  const [avail, setAvail]         = useState<WeeklyAvailability>(DEFAULT_AVAIL);
+  const [blocked, setBlocked]     = useState<string[]>([]);
+  const [saving, setSaving]       = useState(false);
+  const [msg, setMsg]             = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const db = getFirestoreClient();
+      if (!db) return;
+      const snap = await getDoc(doc(db, 'users', uid));
+      if (snap.exists()) {
+        const d = snap.data();
+        if (d.availability)    setAvail({ ...DEFAULT_AVAIL, ...d.availability });
+        if (Array.isArray(d.blocked_dates)) setBlocked(d.blocked_dates);
+      }
+    })();
+  }, [uid]);
+
+  const updateDay = (day: keyof WeeklyAvailability, field: keyof DayAvailability, value: string | boolean) => {
+    setAvail((prev) => ({ ...prev, [day]: { ...prev[day], [field]: value } }));
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault(); setSaving(true); setMsg(null);
+    try {
+      const db = getFirestoreClient();
+      if (!db) throw new Error('Firestore unavailable');
+      await setDoc(doc(db, 'users', uid), {
+        availability:  avail,
+        blocked_dates: blocked,
+        updated_at:    Date.now(),
+      }, { merge: true });
+      setMsg({ ok: true, text: 'Working hours saved.' });
+    } catch (err) {
+      setMsg({ ok: false, text: String(err) });
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <form onSubmit={handleSave} className="space-y-6">
+      {/* Weekly schedule */}
+      <div>
+        <h2 className={SECTION_TITLE + ' mb-3'}>Weekly Schedule</h2>
+        <p className="mb-3 text-xs text-white/40">Set the hours when clients can book appointments.</p>
+        <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+          {DAYS.map((day, i) => {
+            const d = avail[day.key];
+            return (
+              <div
+                key={day.key}
+                className={`flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center ${i > 0 ? 'border-t border-white/[0.05]' : ''}`}
+              >
+                <div className="flex w-32 shrink-0 items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => updateDay(day.key, 'enabled', !d.enabled)}
+                    className={`relative h-5 w-9 rounded-full transition ${d.enabled ? 'bg-[#B000FF]' : 'bg-white/10'}`}
+                  >
+                    <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${d.enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                  </button>
+                  <span className={`text-sm font-medium ${d.enabled ? 'text-white' : 'text-white/30'}`}>{day.label}</span>
+                </div>
+                {d.enabled && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="time"
+                      value={d.start}
+                      onChange={(e) => updateDay(day.key, 'start', e.target.value)}
+                      aria-label={`${day.label} start time`}
+                      className="input-dark w-28 text-sm"
+                    />
+                    <span className="text-white/30">—</span>
+                    <input
+                      type="time"
+                      value={d.end}
+                      onChange={(e) => updateDay(day.key, 'end', e.target.value)}
+                      aria-label={`${day.label} end time`}
+                      className="input-dark w-28 text-sm"
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Blocked dates */}
+      <div>
+        <h2 className={SECTION_TITLE + ' mb-3'}>Blocked Dates</h2>
+        <p className="mb-3 text-xs text-white/40">Click a date to block it. Clients cannot book on blocked dates.</p>
+        <BlockedDatesCalendar value={blocked} onChange={setBlocked} />
+        {blocked.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {[...blocked].sort().map((d) => (
+              <span key={d} className="flex items-center gap-1 rounded-lg bg-red-500/10 px-2 py-0.5 text-xs text-red-400">
+                {d}
+                <button
+                  type="button"
+                  onClick={() => setBlocked((prev) => prev.filter((x) => x !== d))}
+                  className="hover:text-red-300"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {msg && (
+        <div className={`rounded-xl p-3.5 text-sm ${msg.ok ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+          {msg.text}
+        </div>
+      )}
+      <button type="submit" disabled={saving}
+        className="rounded-xl bg-gradient-to-r from-[#B000FF] to-[#0047FF] px-8 py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
+        {saving ? 'Saving…' : 'Save Working Hours'}
+      </button>
+    </form>
+  );
+}
+
+// ─── Tab: Integrations ────────────────────────────────────────────────────────
 
 function TabIntegrations({ uid }: { uid: string }) {
   const [paymentMode, setPaymentMode] = useState('ki_escrow');
@@ -189,7 +591,6 @@ function TabIntegrations({ uid }: { uid: string }) {
 
   return (
     <form onSubmit={save} className="space-y-4">
-      {/* Payment mode */}
       <div className={CARD}>
         <h2 className={SECTION_TITLE}>Payment Mode</h2>
         <div>
@@ -223,7 +624,6 @@ function TabIntegrations({ uid }: { uid: string }) {
         )}
       </div>
 
-      {/* Calendar & video */}
       <div className={CARD}>
         <h2 className={SECTION_TITLE}>Calendar & Video</h2>
         <div className="space-y-3">
@@ -255,7 +655,7 @@ function TabIntegrations({ uid }: { uid: string }) {
         </div>
       )}
       <button type="submit" disabled={saving}
-        className="rounded-xl bg-[#00F0FF]/10 border border-[#00F0FF]/20 px-6 py-2.5 text-sm font-semibold text-[#00F0FF] transition hover:bg-[#00F0FF]/20 disabled:opacity-50">
+        className="rounded-xl border border-[#00F0FF]/20 bg-[#00F0FF]/10 px-6 py-2.5 text-sm font-semibold text-[#00F0FF] transition hover:bg-[#00F0FF]/20 disabled:opacity-50">
         {saving ? 'Saving…' : 'Save Integrations'}
       </button>
     </form>
@@ -363,7 +763,7 @@ function TabConsultants() {
       ) : filtered.length === 0 ? (
         <p className="py-8 text-center text-sm text-white/40">No consultants found.</p>
       ) : (
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02]">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/[0.06]">
@@ -431,11 +831,11 @@ const PLATFORM_DEFAULTS: PlatformCfg = {
 type PlatformTab = 'identity' | 'stripe' | 'calendar' | 'firebase';
 
 function TabPlatform() {
-  const [cfg, setCfg]           = useState<PlatformCfg>(PLATFORM_DEFAULTS);
-  const [sub, setSub]           = useState<PlatformTab>('identity');
-  const [loading, setLoading]   = useState(true);
-  const [saving, setSaving]     = useState(false);
-  const [msg, setMsg]           = useState<{ ok: boolean; text: string } | null>(null);
+  const [cfg, setCfg]         = useState<PlatformCfg>(PLATFORM_DEFAULTS);
+  const [sub, setSub]         = useState<PlatformTab>('identity');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving]   = useState(false);
+  const [msg, setMsg]         = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -478,7 +878,7 @@ function TabPlatform() {
       <div className="flex gap-1 border-b border-white/[0.06]">
         {SUB_TABS.map((t) => (
           <button key={t.id} type="button" onClick={() => setSub(t.id)}
-            className={`px-3 py-2.5 text-sm font-medium border-b-2 transition ${
+            className={`border-b-2 px-3 py-2.5 text-sm font-medium transition ${
               sub === t.id ? 'border-red-400 text-red-400' : 'border-transparent text-white/40 hover:text-white'
             }`}>
             {t.label}
@@ -540,7 +940,7 @@ function TabPlatform() {
             </div>
             <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-3 text-xs text-yellow-400/70">
               <p className="font-semibold text-yellow-400">Webhook Endpoint</p>
-              <p className="mt-1 font-mono text-yellow-400/50 break-all">{cfg.appUrl || 'https://your-app.netlify.app'}/api/stripe/webhook</p>
+              <p className="mt-1 break-all font-mono text-yellow-400/50">{cfg.appUrl || 'https://your-app.netlify.app'}/api/stripe/webhook</p>
             </div>
           </div>
         )}
@@ -607,20 +1007,21 @@ function TabPlatform() {
 
 // ─── Root settings page ───────────────────────────────────────────────────────
 
-type Tab = 'profile' | 'integrations' | 'consultants' | 'platform';
+type Tab = 'profile' | 'integrations' | 'working_hours' | 'consultants' | 'platform';
 
 export default function SettingsPage() {
-  const { user } = useUserRole();
+  const { user }     = useUserRole();
   const searchParams = useSearchParams();
-  const [uid, setUid] = useState<string | null>(null);
+  const [uid, setUid]     = useState<string | null>(null);
+  const [modes, setModes] = useState<string[]>([]);
 
-  const isConsultant = user?.role === 'consultant';
-  const isManagement = user?.role === 'admin' || user?.role === 'supervisor';
-  const isAdmin      = user?.role === 'admin';
+  const isConsultantTab = modes.includes('consultant') || user?.role === 'consultant' || user?.role === 'admin';
+  const isManagement    = user?.role === 'admin' || user?.role === 'supervisor';
+  const isAdmin         = user?.role === 'admin';
 
   const defaultTab = (): Tab => {
     const param = searchParams.get('tab') as Tab | null;
-    if (param && ['profile','integrations','consultants','platform'].includes(param)) return param;
+    if (param && ['profile','integrations','working_hours','consultants','platform'].includes(param)) return param;
     return 'profile';
   };
   const [tab, setTab] = useState<Tab>(defaultTab);
@@ -628,18 +1029,29 @@ export default function SettingsPage() {
   useEffect(() => {
     const auth = getFirebaseAuth();
     if (!auth) return;
-    const unsub = onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (!u) return;
+      setUid(u.uid);
+      const db = getFirestoreClient();
+      if (!db) return;
+      const snap = await getDoc(doc(db, 'users', u.uid));
+      if (snap.exists()) {
+        const data = snap.data();
+        setModes(Array.isArray(data.modes) ? data.modes : []);
+      }
+    });
     return () => unsub();
   }, []);
 
-  const TABS: { id: Tab; label: string; roles: AppRole[] }[] = [
-    { id: 'profile',      label: 'Profile',          roles: ['admin','supervisor','consultant','client'] },
-    { id: 'integrations', label: 'Integrations',     roles: ['admin','supervisor','consultant'] },
-    { id: 'consultants',  label: 'Consultants',      roles: ['admin','supervisor'] },
-    { id: 'platform',     label: 'Platform Config',  roles: ['admin'] },
+  const TABS: { id: Tab; label: string; visible: boolean }[] = [
+    { id: 'profile',       label: 'Profile',         visible: true },
+    { id: 'integrations',  label: 'Integrations',    visible: isConsultantTab || isManagement },
+    { id: 'working_hours', label: 'Working Hours',   visible: isConsultantTab },
+    { id: 'consultants',   label: 'Consultants',     visible: isManagement },
+    { id: 'platform',      label: 'Platform Config', visible: isAdmin },
   ];
 
-  const visibleTabs = TABS.filter((t) => user?.role && t.roles.includes(user.role));
+  const visibleTabs = TABS.filter((t) => t.visible);
 
   if (!uid || !user) return (
     <div className="flex justify-center py-20">
@@ -654,11 +1066,10 @@ export default function SettingsPage() {
         <p className="mt-1 text-sm text-white/40">Manage your account, integrations, and platform configuration.</p>
       </div>
 
-      {/* Tab bar */}
       <div className="mb-6 flex flex-wrap gap-1 border-b border-white/[0.06]">
         {visibleTabs.map((t) => (
           <button key={t.id} type="button" onClick={() => setTab(t.id)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition ${
+            className={`border-b-2 px-4 py-2.5 text-sm font-medium transition ${
               tab === t.id
                 ? t.id === 'platform'
                   ? 'border-red-400 text-red-400'
@@ -670,10 +1081,11 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      {tab === 'profile'      && <TabProfile uid={uid} role={user.role} />}
-      {tab === 'integrations' && (isConsultant || isManagement) && <TabIntegrations uid={uid} />}
-      {tab === 'consultants'  && isManagement && <TabConsultants />}
-      {tab === 'platform'     && isAdmin      && <TabPlatform />}
+      {tab === 'profile'       && <TabProfile uid={uid} isConsultant={isConsultantTab} />}
+      {tab === 'integrations'  && (isConsultantTab || isManagement) && <TabIntegrations uid={uid} />}
+      {tab === 'working_hours' && isConsultantTab && <TabWorkingHours uid={uid} />}
+      {tab === 'consultants'   && isManagement && <TabConsultants />}
+      {tab === 'platform'      && isAdmin && <TabPlatform />}
     </div>
   );
 }

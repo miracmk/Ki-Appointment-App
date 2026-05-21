@@ -1,23 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { getFirestoreClient } from '@/lib/firebase-client';
-import { doc, getDoc } from 'firebase/firestore';
-import { loadStripe } from '@stripe/stripe-js';
-import { POPULAR_TIMEZONES } from '@/lib/timezone';
+import { useParams, useRouter } from 'next/navigation';
+import { getFirebaseAuth } from '@/lib/firebase-client';
+import { onAuthStateChanged } from 'firebase/auth';
 import { getCategoryLabel } from '@/lib/categories';
 import type { ConsultantListing, MarketplaceCategory, ListingCurrency } from '@/types/marketplace';
 import Link from 'next/link';
-
-const DURATION_OPTIONS = [
-  { minutes: 30,  label: '30 minutes' },
-  { minutes: 60,  label: '1 hour'     },
-  { minutes: 90,  label: '1.5 hours'  },
-  { minutes: 120, label: '2 hours'    },
-  { minutes: 180, label: '3 hours'    },
-  { minutes: 240, label: '4 hours'    },
-];
 
 const CURRENCY_SYMBOLS: Record<ListingCurrency, string> = {
   usd: '$', eur: '€', gbp: '£', try: '₺',
@@ -41,113 +30,82 @@ const CATEGORY_COLORS: Record<string, string> = {
   trademark_ip:         'border-[#FF006E]/25 bg-[#FF006E]/10 text-[#FF006E]',
 };
 
-function formatMinutes(m: number) {
+const DURATION_OPTIONS = [
+  { minutes: 30,  label: '30 min'  },
+  { minutes: 60,  label: '1 hour'  },
+  { minutes: 90,  label: '1.5 h'   },
+  { minutes: 120, label: '2 hours' },
+  { minutes: 180, label: '3 hours' },
+  { minutes: 240, label: '4 hours' },
+];
+
+function fmtDuration(m: number) {
   if (m < 60)   return `${m}m`;
   if (m === 60) return '1h';
-  const h = Math.floor(m / 60);
-  const r = m % 60;
+  const h = Math.floor(m / 60), r = m % 60;
   return r ? `${h}h ${r}m` : `${h}h`;
 }
 
 export default function ListingDetailPage() {
   const params    = useParams();
+  const router    = useRouter();
   const listingId = params.id as string;
 
   const [listing,    setListing]    = useState<ConsultantListing | null>(null);
   const [consultant, setConsultant] = useState<Record<string, unknown> | null>(null);
   const [loading,    setLoading]    = useState(true);
 
-  const [selectedDate,     setSelectedDate]     = useState('');
-  const [selectedSlot,     setSelectedSlot]     = useState('');
+  // Duration / intro selection
   const [selectedDuration, setSelectedDuration] = useState(60);
-  const [slots,            setSlots]            = useState<{ time: string; available: boolean }[]>([]);
-  const [slotsLoading,     setSlotsLoading]     = useState(false);
-  const [email,            setEmail]            = useState('');
-  const [name,             setName]             = useState('');
-  const [timezone,         setTimezone]         = useState('Europe/Istanbul');
-  const [submitting,       setSubmitting]       = useState(false);
-  const [error,            setError]            = useState<string | null>(null);
+  const [useIntro,         setUseIntro]         = useState(false);
+
+  // Ki Wallet balance
+  const [walletMinutes, setWalletMinutes] = useState<number | null>(null);
+
+  // "Request saved" toast
+  const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      const db = getFirestoreClient();
-      if (!db) { setLoading(false); return; }
-
-      const snap = await getDoc(doc(db, 'consultant_listings', listingId));
-      if (!snap.exists()) { setLoading(false); return; }
-
-      const listingData = { id: snap.id, ...snap.data() } as ConsultantListing;
-      setListing(listingData);
-
-      if (listingData.pricing.type === 'hourly') {
-        setSelectedDuration(60);
-      } else if (listingData.pricing.hours_included) {
-        setSelectedDuration(listingData.pricing.hours_included * 60);
-      }
-
-      const cSnap = await getDoc(doc(db, 'users', listingData.consultant_id));
-      if (cSnap.exists()) setConsultant({ uid: cSnap.id, ...cSnap.data() });
-
-      setLoading(false);
-    })();
+    fetch(`/api/marketplace/listings/${listingId}`)
+      .then(r => r.json())
+      .then(d => {
+        setListing(d.listing ?? null);
+        setConsultant(d.consultant ?? null);
+        if (d.listing?.pricing?.type === 'hourly') {
+          setSelectedDuration(60);
+          setUseIntro(true); // default to intro for first visit
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, [listingId]);
 
+  // Ki Wallet
   useEffect(() => {
-    if (!selectedDate || !listing) return;
-    setSlotsLoading(true);
-    setSelectedSlot('');
-    fetch(`/api/availability/${listing.consultant_id}?date=${selectedDate}&duration=${selectedDuration}`)
-      .then(r => r.json())
-      .then(d => { setSlots(d.slots ?? []); setSlotsLoading(false); })
-      .catch(() => setSlotsLoading(false));
-  }, [selectedDate, selectedDuration, listing]);
+    if (!listing) return;
+    const auth = getFirebaseAuth();
+    if (!auth) return;
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      try {
+        const res  = await fetch(`/api/time-credits?clientUid=${user.uid}&consultantId=${listing.consultant_id}`);
+        const data = await res.json();
+        const remaining = (data.credits as Array<{remaining_minutes: number; status: string}> ?? [])
+          .filter(c => c.status === 'available')
+          .reduce((s, c) => s + c.remaining_minutes, 0);
+        setWalletMinutes(remaining);
+      } catch { /* ignore */ }
+    });
+    return () => unsub();
+  }, [listing]);
 
-  const handleBook = async () => {
-    if (!listing || !email) return;
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      const isHourly         = listing.pricing.type === 'hourly';
-      const priceForDuration = isHourly
-        ? Math.round(listing.pricing.amount_cents * selectedDuration / 60)
-        : listing.pricing.amount_cents;
-
-      const res = await fetch('/api/checkout/session', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          consultantId:        listing.consultant_id,
-          listingId,
-          listingTitle:        listing.title,
-          listingAmountCents:  priceForDuration,
-          durationMinutes:     selectedDuration,
-          customerEmail:       email,
-          customerName:        name,
-          appointmentDate:     selectedDate,
-          appointmentTime:     selectedSlot,
-          appointmentTimezone: timezone,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Could not create checkout session.');
-
-      let key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-      if (!key) {
-        const cfgRes = await fetch('/api/stripe/config');
-        const cfg    = await cfgRes.json();
-        key = cfg.publishableKey;
-      }
-      if (!key) throw new Error('Stripe is not configured.');
-
-      const stripe = await loadStripe(key);
-      if (!stripe) throw new Error('Could not load Stripe.');
-      await stripe.redirectToCheckout({ sessionId: data.sessionId });
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred.');
-      setSubmitting(false);
-    }
+  const handleSchedule = () => {
+    setShowToast(true);
+    setTimeout(() => {
+      const intro    = useIntro && listing?.pricing.type === 'hourly';
+      const duration = intro ? (listing?.intro_duration_minutes ?? 15) : selectedDuration;
+      router.push(`/book/${listingId}?duration=${duration}${intro ? '&intro=1' : ''}`);
+    }, 900);
   };
 
   if (loading) return (
@@ -162,24 +120,44 @@ export default function ListingDetailPage() {
     </div>
   );
 
-  const sym              = CURRENCY_SYMBOLS[listing.pricing.currency] ?? '$';
-  const isHourly         = listing.pricing.type === 'hourly';
-  const priceForDuration = isHourly
-    ? Math.round(listing.pricing.amount_cents * selectedDuration / 60)
-    : listing.pricing.amount_cents;
-  const colorClass       = CATEGORY_COLORS[listing.category] ?? 'border-white/15 text-white/50 bg-white/5';
-  const consultantName   = (consultant?.displayName ?? consultant?.name ?? 'C') as string;
-  const today            = new Date().toISOString().split('T')[0];
+  const sym            = CURRENCY_SYMBOLS[listing.pricing.currency] ?? '$';
+  const isHourly       = listing.pricing.type === 'hourly';
+  const introPriceCts  = listing.intro_price_cents ?? 10000;
+  const introDurMin    = listing.intro_duration_minutes ?? 15;
+  const colorClass     = CATEGORY_COLORS[listing.category] ?? 'border-white/15 text-white/50 bg-white/5';
+  const consultantName = (consultant?.displayName ?? consultant?.name ?? 'C') as string;
+
+  // Price to show for the current selection
+  const activePriceCents = useIntro && isHourly
+    ? introPriceCts
+    : isHourly
+      ? Math.round(listing.pricing.amount_cents * selectedDuration / 60)
+      : listing.pricing.amount_cents;
 
   return (
     <div className="min-h-screen bg-[#0A0B0F]">
+      {/* Toast */}
+      {showToast && (
+        <div className="fixed inset-x-0 top-6 z-50 flex justify-center px-4 pointer-events-none">
+          <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-[#0A0B0F] px-5 py-3.5 shadow-[0_0_40px_rgba(0,240,255,0.15)] backdrop-blur-md">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20">
+              <svg className="h-3.5 w-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-white">
+              Request saved — redirecting to scheduling…
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Nav */}
       <div className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#0A0B0F]/80 px-6 py-4 backdrop-blur-md">
         <Link href="/marketplace" className="text-sm text-white/40 hover:text-white">← Marketplace</Link>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 pb-20 pt-8 sm:px-6 lg:px-8">
-
         {/* Breadcrumb */}
         <div className="mb-8 flex items-center gap-2 text-sm text-white/40">
           <Link href="/marketplace" className="transition hover:text-white">Marketplace</Link>
@@ -289,11 +267,8 @@ export default function ListingDetailPage() {
                 <div className="flex items-start gap-4">
                   {consultant.photo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={consultant.photo_url as string}
-                      alt={consultantName}
-                      className="h-14 w-14 rounded-2xl object-cover ring-2 ring-white/10"
-                    />
+                    <img src={consultant.photo_url as string} alt={consultantName}
+                      className="h-14 w-14 rounded-2xl object-cover ring-2 ring-white/10" />
                   ) : (
                     <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0047FF] to-[#00F0FF] text-xl font-bold text-white">
                       {consultantName[0].toUpperCase()}
@@ -309,9 +284,7 @@ export default function ListingDetailPage() {
                       )}
                     </div>
                     {!!consultant.title && <p className="mt-0.5 text-sm text-white/50">{String(consultant.title)}</p>}
-                    {!!consultant.location && (
-                      <p className="mt-1 text-xs text-white/35">📍 {String(consultant.location)}</p>
-                    )}
+                    {!!consultant.location && <p className="mt-1 text-xs text-white/35">📍 {String(consultant.location)}</p>}
                     {((consultant.rating as number) ?? 0) > 0 && (
                       <div className="mt-2 flex items-center gap-1.5">
                         <svg className="h-4 w-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
@@ -337,166 +310,129 @@ export default function ListingDetailPage() {
             )}
           </div>
 
-          {/* Right: booking panel */}
+          {/* Right: scheduling panel */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 backdrop-blur-sm">
-              <h2 className="mb-5 text-lg font-semibold text-white">Book this Service</h2>
+              <h2 className="mb-5 text-lg font-semibold text-white">Schedule a Session</h2>
 
-              {isHourly && (
-                <div className="mb-5">
-                  <p className="mb-2 text-xs font-medium text-white/50">Session Duration</p>
+              {/* Ki Wallet balance */}
+              {walletMinutes !== null && (
+                <div className="mb-5 flex items-center gap-3 rounded-xl border border-[#00F0FF]/15 bg-[#00F0FF]/5 px-4 py-3">
+                  <svg className="h-5 w-5 shrink-0 text-[#00F0FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <p className="text-[11px] text-white/40">Ki Wallet balance with this consultant</p>
+                    <p className="text-sm font-semibold text-[#00F0FF]">
+                      {walletMinutes >= 60
+                        ? `${Math.floor(walletMinutes / 60)}h ${walletMinutes % 60 ? walletMinutes % 60 + 'm' : ''}`
+                        : `${walletMinutes} min`}
+                      {' '}remaining
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Session options */}
+              <div className="mb-5 space-y-2">
+                <p className="mb-2 text-xs font-medium text-white/50">
+                  {isHourly ? 'How long do you need?' : 'Session'}
+                </p>
+
+                {/* Intro option (hourly only) */}
+                {isHourly && (
+                  <button
+                    type="button"
+                    onClick={() => setUseIntro(true)}
+                    className={[
+                      'w-full rounded-xl border p-3.5 text-left transition',
+                      useIntro
+                        ? 'border-[#00F0FF]/40 bg-[#00F0FF]/10'
+                        : 'border-white/10 bg-white/[0.02] hover:border-white/20',
+                    ].join(' ')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className={`text-sm font-semibold ${useIntro ? 'text-[#00F0FF]' : 'text-white'}`}>
+                          ⭐ Intro Meeting
+                        </p>
+                        <p className="mt-0.5 text-xs text-white/40">
+                          {fmtDuration(introDurMin)} · First consultation
+                        </p>
+                      </div>
+                      <p className={`text-lg font-bold ${useIntro ? 'text-[#00F0FF]' : 'text-white'}`}>
+                        {sym}{(introPriceCts / 100).toLocaleString()}
+                      </p>
+                    </div>
+                  </button>
+                )}
+
+                {/* Regular duration options (hourly) */}
+                {isHourly && (
                   <div className="grid grid-cols-3 gap-2">
                     {DURATION_OPTIONS.map(opt => (
                       <button
                         key={opt.minutes}
                         type="button"
-                        onClick={() => setSelectedDuration(opt.minutes)}
-                        className={`rounded-xl border py-2 text-xs font-medium transition ${
-                          selectedDuration === opt.minutes
+                        onClick={() => { setUseIntro(false); setSelectedDuration(opt.minutes); }}
+                        className={[
+                          'rounded-xl border py-2.5 text-xs font-medium transition',
+                          !useIntro && selectedDuration === opt.minutes
                             ? 'border-[#00F0FF]/40 bg-[#00F0FF]/10 text-[#00F0FF]'
-                            : 'border-white/10 bg-white/5 text-white/40 hover:text-white'
-                        }`}
+                            : 'border-white/10 bg-white/5 text-white/40 hover:text-white',
+                        ].join(' ')}
                       >
-                        {opt.label}
+                        <p>{opt.label}</p>
+                        <p className="mt-0.5 opacity-70">
+                          {sym}{(Math.round(listing.pricing.amount_cents * opt.minutes / 60) / 100).toLocaleString()}
+                        </p>
                       </button>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
 
+                {/* Non-hourly: single option */}
+                {!isHourly && (
+                  <div className="rounded-xl border border-[#00F0FF]/20 bg-[#00F0FF]/5 p-3.5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-white">{listing.title}</p>
+                      <p className="text-lg font-bold text-white">
+                        {sym}{(listing.pricing.amount_cents / 100).toLocaleString()}
+                      </p>
+                    </div>
+                    <p className="mt-0.5 text-xs text-white/40">{PRICING_LABELS[listing.pricing.type]}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Price summary */}
               <div className="mb-5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-                <p className="text-xs text-white/40">Service Price</p>
-                <p className="text-2xl font-bold text-white">
-                  {sym}{(priceForDuration / 100).toLocaleString()}
-                  {isHourly && (
-                    <span className="ml-1 text-sm font-normal text-white/40">
-                      for {formatMinutes(selectedDuration)}
-                    </span>
-                  )}
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-white/40">Session total</p>
+                  <p className="text-xl font-bold text-white">
+                    {sym}{(activePriceCents / 100).toLocaleString()}
+                  </p>
+                </div>
+                <p className="mt-0.5 text-right text-xs text-white/30">
+                  {useIntro && isHourly
+                    ? `Intro · ${fmtDuration(introDurMin)}`
+                    : isHourly ? fmtDuration(selectedDuration)
+                    : PRICING_LABELS[listing.pricing.type]}
                 </p>
               </div>
 
-              <div className="mb-4">
-                <label htmlFor="booking-date" className="mb-1.5 block text-xs font-medium text-white/50">
-                  Select Date <span className="text-red-400">*</span>
-                </label>
-                <input
-                  id="booking-date"
-                  type="date"
-                  min={today}
-                  value={selectedDate}
-                  onChange={e => { setSelectedDate(e.target.value); setSelectedSlot(''); }}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white focus:border-[#00F0FF]/60 focus:outline-none"
-                />
-              </div>
-
-              {selectedDate && (
-                <div className="mb-4">
-                  <p className="mb-2 text-xs font-medium text-white/50">Available Time Slots</p>
-                  {slotsLoading ? (
-                    <div className="flex justify-center py-4">
-                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#00F0FF] border-t-transparent" />
-                    </div>
-                  ) : slots.length === 0 ? (
-                    <p className="rounded-xl border border-white/[0.06] bg-white/[0.02] py-3 text-center text-xs text-white/30">
-                      No available slots on this date
-                    </p>
-                  ) : (
-                    <div className="grid max-h-48 grid-cols-3 gap-1.5 overflow-y-auto pr-1">
-                      {slots.map(slot => (
-                        <button
-                          key={slot.time}
-                          type="button"
-                          disabled={!slot.available}
-                          onClick={() => setSelectedSlot(slot.time)}
-                          className={`rounded-lg border py-1.5 text-xs font-medium transition ${
-                            !slot.available
-                              ? 'cursor-not-allowed border-white/5 bg-white/[0.02] text-white/20 line-through'
-                              : selectedSlot === slot.time
-                              ? 'border-[#00F0FF]/40 bg-[#00F0FF]/10 text-[#00F0FF]'
-                              : 'border-white/10 bg-white/5 text-white/50 hover:border-white/20 hover:text-white'
-                          }`}
-                        >
-                          {slot.time}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {selectedSlot && (
-                <div className="mb-4 space-y-3">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-white/50">Full Name</label>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={e => setName(e.target.value)}
-                      placeholder="Your Full Name"
-                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-white/20 focus:border-[#00F0FF]/60 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-white/50">
-                      Email <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-white/20 focus:border-[#00F0FF]/60 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="booking-timezone" className="mb-1.5 block text-xs font-medium text-white/50">Timezone</label>
-                    <select
-                      id="booking-timezone"
-                      value={timezone}
-                      onChange={e => setTimezone(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white focus:border-[#00F0FF]/60 focus:outline-none"
-                    >
-                      {POPULAR_TIMEZONES.map(tz => (
-                        <option key={tz.value} value={tz.value}>{tz.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              {error && (
-                <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-                  {error}
-                </div>
-              )}
-
               <button
                 type="button"
-                onClick={handleBook}
-                disabled={submitting || !selectedSlot || !email}
-                className="w-full rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] py-3.5 text-sm font-semibold text-white shadow-[0_0_30px_rgba(0,71,255,0.3)] transition hover:opacity-90 disabled:opacity-40"
+                onClick={handleSchedule}
+                disabled={showToast}
+                className="w-full rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] py-3.5 text-sm font-semibold text-white shadow-[0_0_30px_rgba(0,71,255,0.3)] transition hover:opacity-90 disabled:opacity-70"
               >
-                {submitting ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Processing...
-                  </span>
-                ) : !selectedDate ? 'Select a date to continue'
-                  : !selectedSlot ? 'Select a time slot'
-                  : !email        ? 'Enter your email'
-                  : `Proceed to Payment — ${sym}${(priceForDuration / 100).toLocaleString()}`}
+                {showToast ? '✓ Request saved…' : 'Schedule Consultation →'}
               </button>
 
-              <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-white/30">
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                Secured by Stripe
+              <p className="mt-3 text-center text-xs text-white/25">
+                You will select a date & time on the next page
               </p>
             </div>
           </div>

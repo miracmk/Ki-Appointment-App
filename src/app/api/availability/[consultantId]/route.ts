@@ -32,6 +32,11 @@ export async function GET(
       return NextResponse.json({ slots: [] });
     }
 
+    const blockedDates: string[] = Array.isArray(data.blocked_dates) ? data.blocked_dates : [];
+    if (blockedDates.includes(dateStr)) {
+      return NextResponse.json({ slots: [] });
+    }
+
     const date    = new Date(dateStr + 'T00:00:00');
     const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayKey  = dayKeys[date.getDay()] as keyof WeeklyAvailability;

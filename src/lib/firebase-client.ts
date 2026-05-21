@@ -3,6 +3,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const clientConfig = {
   apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY            || 'AIzaSyBOIvtpXtMyiNHAoW0ed4afoh-wkLoqOFk',
@@ -34,6 +35,11 @@ export function getFirebaseAuth() {
 export function getFirestoreClient() {
   const app = getFirebaseClientApp();
   return app ? getFirestore(app) : null;
+}
+
+export function getFirebaseStorage() {
+  const app = getFirebaseClientApp();
+  return app ? getStorage(app) : null;
 }
 
 export function isFirebaseConfigured(): boolean {
