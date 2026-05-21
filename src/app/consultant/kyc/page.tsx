@@ -43,6 +43,11 @@ export default function ConsultantKycPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Could not initiate payment.');
 
+      if (data.sessionUrl) {
+        window.location.assign(data.sessionUrl);
+        return;
+      }
+
       let key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
       if (!key) {
         const cfgRes = await fetch('/api/stripe/config');

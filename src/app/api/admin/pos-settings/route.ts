@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminAuth } from '@/lib/firebase-admin';
+import { getAdminAuth, getAdminFirestore } from '@/lib/firebase-admin';
 import { getKiStripePosSlots, upsertKiStripePosSlot, setActiveKiStripePosSlot, deleteKiStripePosSlot } from '@/lib/stripe-pos';
 
 async function verifyAdmin(request: NextRequest) {
   const authToken = request.headers.get('Authorization')?.replace('Bearer ', '');
-  if (!authToken) {
-    return { error: 'Missing authorization token', status: 401 };
-  }
-
+  if (!authToken) return { error: 'Missing authorization token', status: 401 };
   const auth = getAdminAuth();
   let decodedToken;
   try {
@@ -15,12 +12,14 @@ async function verifyAdmin(request: NextRequest) {
   } catch {
     return { error: 'Invalid or expired token', status: 401 };
   }
-
   const userRecord = await auth.getUser(decodedToken.uid);
   if (!userRecord.customClaims?.admin) {
-    return { error: 'Unauthorized. Admin access required.', status: 403 };
+    const db = getAdminFirestore();
+    const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+    if (!userDoc.exists || userDoc.data()?.role !== 'admin') {
+      return { error: 'Unauthorized. Admin access required.', status: 403 };
+    }
   }
-
   return { uid: decodedToken.uid };
 }
 

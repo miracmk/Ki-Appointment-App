@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { DEFAULT_LOCALE } from '@/lib/i18n';
 import enMessages from '@/messages/en.json';
+import GoogleServicesScript from '@/components/GoogleServicesScript';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -23,6 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.className}>
       <body>
+        <GoogleServicesScript />
         <NextIntlClientProvider locale={DEFAULT_LOCALE} messages={enMessages}>
           {children}
         </NextIntlClientProvider>

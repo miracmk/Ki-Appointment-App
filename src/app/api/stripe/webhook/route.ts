@@ -390,12 +390,14 @@ export async function POST(request: NextRequest) {
         }
 
         let passwordResetLink: string | null = null;
+        let ensuredUid: string | undefined;
         try {
-          const { isNew } = await ensureFirebaseUser(
+          const result = await ensureFirebaseUser(
             eventMetadata.customer_email,
             eventMetadata.customer_name || ''
           );
-          if (isNew) {
+          ensuredUid = result.uid;
+          if (result.isNew) {
             const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
             passwordResetLink = await getAdminAuth().generatePasswordResetLink(
               eventMetadata.customer_email,
@@ -404,6 +406,20 @@ export async function POST(request: NextRequest) {
           }
         } catch (authErr) {
           console.error('Firebase user creation error:', authErr);
+        }
+
+        if (sessionObj.customer && ensuredUid) {
+          const stripeCustomerId = typeof sessionObj.customer === 'string'
+            ? sessionObj.customer
+            : (sessionObj.customer as { id: string }).id;
+          try {
+            await getAdminFirestore().collection('users').doc(ensuredUid).set(
+              { stripe_customer_id: stripeCustomerId, updated_at: Date.now() },
+              { merge: true }
+            );
+          } catch (scErr) {
+            console.error('Error saving stripe_customer_id:', scErr);
+          }
         }
 
         // ── Time credit (hourly listings) ──────────────────────────────

@@ -106,6 +106,11 @@ export function CheckoutButton({ packageId, packageName, packagePriceCents }: Ch
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Could not create checkout session.');
+      if (data.sessionUrl) {
+        // Server returned a full redirect URL — navigate directly (works across different Stripe accounts)
+        window.location.assign(data.sessionUrl);
+        return;
+      }
       if (!data.sessionId) throw new Error('No session ID returned.');
       if (!stripePromise) throw new Error('Stripe is not configured.');
 
@@ -113,7 +118,7 @@ export function CheckoutButton({ packageId, packageName, packagePriceCents }: Ch
       if (!stripe) throw new Error('Could not load Stripe.');
 
       const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
-      if (result.error) throw new Error(result.error.message || 'Stripe redirect failed.');
+      if ((result as any)?.error) throw new Error((result as any).error.message || 'Stripe redirect failed.');
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred.');
     } finally {

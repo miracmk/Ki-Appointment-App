@@ -10,7 +10,7 @@ import { ref as sRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useSearchParams } from 'next/navigation';
 import { useUserRole } from '@/lib/use-user-role';
 import type { AppRole } from '@/lib/use-user-role';
-import type { WeeklyAvailability, DayAvailability, MarketplaceCategory } from '@/types/marketplace';
+import type { WeeklyAvailability, DayAvailability, MarketplaceCategory, PaymentMode } from '@/types/marketplace';
 import { CATEGORIES, SPECIALTIES } from '@/lib/categories';
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
@@ -549,12 +549,14 @@ function TabWorkingHours({ uid }: { uid: string }) {
 // ─── Tab: Integrations ────────────────────────────────────────────────────────
 
 function TabIntegrations({ uid }: { uid: string }) {
-  const [paymentMode, setPaymentMode] = useState('ki_escrow');
-  const [stripeKeys, setStripeKeys]   = useState({ public: '', secret: '', webhook: '' });
-  const [calConnected, setCalConn]    = useState(false);
-  const [vidConnected, setVidConn]    = useState(false);
-  const [saving, setSave]             = useState(false);
-  const [msg, setMsg]                 = useState<{ ok: boolean; text: string } | null>(null);
+  const [paymentMode, setPaymentMode]   = useState<PaymentMode>('ki_escrow');
+  const [secretKey, setSecretKey]       = useState('');
+  const [webhookSecret, setWebhookSec]  = useState('');
+  const [stripeActive, setStripeActive] = useState(false);
+  const [calConnected, setCalConn]      = useState(false);
+  const [bankInfo, setBankInfo] = useState({ bank_name: '', account_holder: '', iban: '', swift_bic: '' });
+  const [saving, setSave]   = useState(false);
+  const [msg, setMsg]       = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -563,10 +565,15 @@ function TabIntegrations({ uid }: { uid: string }) {
       const snap = await getDoc(doc(db, 'users', uid));
       if (snap.exists()) {
         const d = snap.data();
-        setPaymentMode(d.paymentMethod ?? 'ki_escrow');
-        setStripeKeys({ public: d.stripePublicKey ?? '', secret: d.stripeSecretKey ?? '', webhook: d.webhookSecret ?? '' });
-        setCalConn(d.calendarConnected ?? false);
-        setVidConn(d.videoCallConnected ?? false);
+        setPaymentMode((d.payment_mode ?? 'ki_escrow') as PaymentMode);
+        setStripeActive(d.stripe_settings?.is_active ?? false);
+        setCalConn(d.calendar_integration?.connected ?? false);
+        setBankInfo({
+          bank_name:      d.bank_name      ?? '',
+          account_holder: d.account_holder ?? '',
+          iban:           d.iban           ?? '',
+          swift_bic:      d.swift_bic      ?? '',
+        });
       }
     })();
   }, [uid]);
@@ -574,79 +581,168 @@ function TabIntegrations({ uid }: { uid: string }) {
   const save = async (e: React.FormEvent) => {
     e.preventDefault(); setSave(true); setMsg(null);
     try {
+      const auth = getFirebaseAuth();
+      if (!auth?.currentUser) throw new Error('Not authenticated');
+      const token = await auth.currentUser.getIdToken();
+
+      // Payment mode + optional Stripe keys via secure API (server encrypts keys)
+      const body: Record<string, unknown> = { payment_mode: paymentMode };
+      if (secretKey)     body.secret_key     = secretKey;
+      if (webhookSecret) body.webhook_secret = webhookSecret;
+
+      const res = await fetch('/api/consultant/stripe-settings', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? 'Failed to save stripe settings');
+      }
+
+      // Bank account info (no secrets — payout reference for admin)
       const db = getFirestoreClient();
       if (!db) throw new Error('Firestore unavailable');
-      const update: Record<string, unknown> = { paymentMethod: paymentMode, updatedAt: Date.now() };
-      if (paymentMode === 'own_key') {
-        update.stripePublicKey = stripeKeys.public;
-        update.stripeSecretKey = stripeKeys.secret;
-        update.webhookSecret   = stripeKeys.webhook;
-      }
-      await updateDoc(doc(db, 'users', uid), update);
+      await updateDoc(doc(db, 'users', uid), {
+        bank_name:      bankInfo.bank_name,
+        account_holder: bankInfo.account_holder,
+        iban:           bankInfo.iban,
+        swift_bic:      bankInfo.swift_bic,
+        updated_at:     Date.now(),
+      });
+
+      if (paymentMode === 'own_keys' && (secretKey || webhookSecret)) setStripeActive(true);
+      setSecretKey('');
+      setWebhookSec('');
       setMsg({ ok: true, text: 'Integration settings saved.' });
     } catch (err) {
       setMsg({ ok: false, text: String(err) });
     } finally { setSave(false); }
   };
 
+  const webhookUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/api/stripe/webhook`
+    : '/api/stripe/webhook';
+
   return (
     <form onSubmit={save} className="space-y-4">
+      {/* ── Payment Mode ── */}
       <div className={CARD}>
         <h2 className={SECTION_TITLE}>Payment Mode</h2>
         <div>
-          <label htmlFor="payment-mode" className={LBL}>Select how you receive payments</label>
-          <select id="payment-mode" value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)} className={SEL}>
-            <option value="ki_escrow">Ki Escrow — Ki Business holds and transfers funds (default)</option>
-            <option value="own_key">Own Stripe Keys — Clients pay directly to your Stripe</option>
-            <option value="ki_connect">Ki Connect — Automatic split via Stripe Connect</option>
+          <label htmlFor="payment-mode" className={LBL}>How you receive payments</label>
+          <select id="payment-mode" value={paymentMode}
+            onChange={(e) => setPaymentMode(e.target.value as PaymentMode)} className={SEL}>
+            <option value="ki_escrow">Ki Escrow — Platform holds and transfers funds (default)</option>
+            <option value="own_keys">Own Stripe Keys — Clients pay directly to your Stripe</option>
+            <option value="ki_connect">Ki Connect — Auto-split via Stripe Connect</option>
           </select>
         </div>
 
         {paymentMode === 'ki_escrow' && (
-          <div className="rounded-xl border border-[#00F0FF]/10 bg-[#00F0FF]/5 px-4 py-3 text-sm text-[#00F0FF]/70">
-            Ki Business holds funds in escrow and transfers your payout minus the 10% platform fee after each completed session.
+          <div className="space-y-3">
+            <div className="rounded-xl border border-[#00F0FF]/10 bg-[#00F0FF]/5 px-4 py-3 text-sm text-[#00F0FF]/70">
+              Ki Business holds funds in escrow for 15 days, then transfers your payout minus the 10% platform fee.
+            </div>
+            <div>
+              <label className={LBL}>Webhook URL (platform-managed)</label>
+              <div className="flex items-center gap-2">
+                <input readOnly value={webhookUrl}
+                  className={INP + ' cursor-default text-white/40'} />
+                <button type="button"
+                  onClick={() => navigator.clipboard?.writeText(webhookUrl)}
+                  className="shrink-0 rounded-lg border border-white/10 px-3 py-2.5 text-xs text-white/50 hover:text-white transition">
+                  Copy
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
-        {paymentMode === 'own_key' && (
-          <div className="space-y-4">
-            <p className="text-xs text-white/40">Your clients pay directly to your Stripe account. You owe Ki Business 10% platform fee via your Ki Wallet.</p>
-            <SecretInput label="Stripe Publishable Key" value={stripeKeys.public} onChange={(v) => setStripeKeys({ ...stripeKeys, public: v })} placeholder="pk_live_…" />
-            <SecretInput label="Stripe Secret Key" value={stripeKeys.secret} onChange={(v) => setStripeKeys({ ...stripeKeys, secret: v })} placeholder="sk_live_…" />
-            <SecretInput label="Webhook Secret" value={stripeKeys.webhook} onChange={(v) => setStripeKeys({ ...stripeKeys, webhook: v })} placeholder="whsec_…" />
+        {paymentMode === 'own_keys' && (
+          <div className="space-y-3">
+            {stripeActive && (
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-xs text-emerald-400">
+                Stripe is active. Leave keys blank to keep your existing configuration.
+              </div>
+            )}
+            <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-3 text-xs text-yellow-400/80 space-y-1.5">
+              <p className="font-semibold text-yellow-400">Stripe Dashboard Setup</p>
+              <p>Go to <strong>Developers → Webhooks → Add endpoint</strong> and paste:</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 break-all rounded bg-yellow-500/10 px-2 py-1 font-mono text-yellow-300/70 text-xs">{webhookUrl}</code>
+                <button type="button"
+                  onClick={() => navigator.clipboard?.writeText(webhookUrl)}
+                  className="shrink-0 rounded-lg border border-yellow-500/30 px-2 py-1 text-xs text-yellow-400 hover:bg-yellow-500/10 transition">
+                  Copy
+                </button>
+              </div>
+              <p>Select event: <code className="font-mono">checkout.session.completed</code></p>
+              <p>A 10% platform fee is deducted from your Ki Wallet per appointment.</p>
+            </div>
+            <SecretInput label="Stripe Secret Key" value={secretKey}
+              onChange={setSecretKey} placeholder="sk_live_… or sk_test_…" />
+            <SecretInput label="Webhook Secret" value={webhookSecret}
+              onChange={setWebhookSec} placeholder="whsec_…" />
           </div>
         )}
 
         {paymentMode === 'ki_connect' && (
           <div className="rounded-xl border border-[#B000FF]/10 bg-[#B000FF]/5 px-4 py-3 text-sm text-[#B000FF]/70">
-            Stripe Connect automatically splits the payment at checkout. Contact your administrator to set up Connect for your account.
+            Stripe Connect automatically splits the payment at checkout. Contact your administrator to link your Connect account.
           </div>
         )}
       </div>
 
+      {/* ── Payout Bank Account ── */}
       <div className={CARD}>
-        <h2 className={SECTION_TITLE}>Calendar & Video</h2>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3">
-            <div>
-              <p className="text-sm font-medium text-white">Calendar Sync</p>
-              <p className="text-xs text-white/40">Sync your availability automatically</p>
-            </div>
-            <span className={`text-xs font-medium ${calConnected ? 'text-emerald-400' : 'text-white/30'}`}>
-              {calConnected ? 'Connected' : 'Not connected'}
-            </span>
+        <h2 className={SECTION_TITLE}>Payout Bank Account</h2>
+        <p className="text-xs text-white/40">
+          {paymentMode === 'ki_escrow'
+            ? 'Required for escrow payouts — your administrator will transfer to this account after the hold period.'
+            : 'Stored for your records and payout reference.'}
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className={LBL}>Bank Name</label>
+            <input type="text" value={bankInfo.bank_name}
+              onChange={(e) => setBankInfo({ ...bankInfo, bank_name: e.target.value })}
+              placeholder="e.g. Garanti BBVA" className={INP} />
           </div>
-          <div className="flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3">
-            <div>
-              <p className="text-sm font-medium text-white">Video Calls</p>
-              <p className="text-xs text-white/40">Auto-generate video call links</p>
-            </div>
-            <span className={`text-xs font-medium ${vidConnected ? 'text-emerald-400' : 'text-white/30'}`}>
-              {vidConnected ? 'Connected' : 'Not connected'}
-            </span>
+          <div>
+            <label className={LBL}>Account Holder</label>
+            <input type="text" value={bankInfo.account_holder}
+              onChange={(e) => setBankInfo({ ...bankInfo, account_holder: e.target.value })}
+              placeholder="Full legal name" className={INP} />
           </div>
         </div>
-        <p className="text-xs text-white/25">Calendar and video call OAuth connections are managed by your administrator. Contact support if you need to connect your accounts.</p>
+        <div>
+          <label className={LBL}>IBAN</label>
+          <input type="text" value={bankInfo.iban}
+            onChange={(e) => setBankInfo({ ...bankInfo, iban: e.target.value.toUpperCase() })}
+            placeholder="TR00 0000 0000 0000 0000 0000 00" className={INP} />
+        </div>
+        <div>
+          <label className={LBL}>SWIFT / BIC</label>
+          <input type="text" value={bankInfo.swift_bic}
+            onChange={(e) => setBankInfo({ ...bankInfo, swift_bic: e.target.value.toUpperCase() })}
+            placeholder="GARAN2A" className={INP} />
+        </div>
+      </div>
+
+      {/* ── Calendar Status ── */}
+      <div className={CARD}>
+        <h2 className={SECTION_TITLE}>Calendar</h2>
+        <div className="flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3">
+          <div>
+            <p className="text-sm font-medium text-white">Calendar Sync</p>
+            <p className="text-xs text-white/40">Sync your appointments automatically</p>
+          </div>
+          <span className={`text-xs font-medium ${calConnected ? 'text-emerald-400' : 'text-white/30'}`}>
+            {calConnected ? 'Connected' : 'Not connected'}
+          </span>
+        </div>
+        <p className="text-xs text-white/25">Calendar OAuth is managed by your administrator. Contact support to connect.</p>
       </div>
 
       {msg && (
@@ -817,6 +913,7 @@ interface PlatformCfg {
   calendarClientId: string; calendarClientSecret: string; calendarRedirectUri: string;
   firebaseApiKey: string; firebaseAuthDomain: string; firebaseProjectId: string;
   firebaseStorageBucket: string; firebaseMessagingSenderId: string; firebaseAppId: string;
+  ga4_id: string; gtm_id: string; gsc_verification: string;
 }
 
 const PLATFORM_DEFAULTS: PlatformCfg = {
@@ -826,9 +923,10 @@ const PLATFORM_DEFAULTS: PlatformCfg = {
   calendarClientId: '', calendarClientSecret: '', calendarRedirectUri: '',
   firebaseApiKey: '', firebaseAuthDomain: '', firebaseProjectId: '',
   firebaseStorageBucket: '', firebaseMessagingSenderId: '', firebaseAppId: '',
+  ga4_id: '', gtm_id: '', gsc_verification: '',
 };
 
-type PlatformTab = 'identity' | 'stripe' | 'calendar' | 'firebase';
+type PlatformTab = 'identity' | 'stripe' | 'calendar' | 'firebase' | 'google';
 
 function TabPlatform() {
   const [cfg, setCfg]         = useState<PlatformCfg>(PLATFORM_DEFAULTS);
@@ -855,9 +953,30 @@ function TabPlatform() {
   const save = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true); setMsg(null);
     try {
-      const db = getFirestoreClient();
-      if (!db) throw new Error('Firestore unavailable');
-      await setDoc(doc(db, 'platform_settings', 'config'), { ...cfg, updatedAt: Date.now() });
+      if (sub === 'stripe') {
+        if (!cfg.stripeSecretKey || !cfg.stripeWebhookSecret) throw new Error('Secret key and webhook secret are required');
+        const auth = getFirebaseAuth();
+        const token = auth?.currentUser ? await auth.currentUser.getIdToken() : null;
+        if (!token) throw new Error('Not authenticated');
+        const res = await fetch('/api/admin/pos-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            action: 'save_slot',
+            label: 'Platform Default',
+            publishable_key: cfg.stripePublicKey,
+            secret_key: cfg.stripeSecretKey,
+            webhook_secret: cfg.stripeWebhookSecret,
+            isActive: true,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to save Stripe keys');
+      } else {
+        const db = getFirestoreClient();
+        if (!db) throw new Error('Firestore unavailable');
+        await setDoc(doc(db, 'platform_settings', 'config'), { ...cfg, updatedAt: Date.now() });
+      }
       setMsg({ ok: true, text: 'Platform settings saved.' });
     } catch (err) {
       setMsg({ ok: false, text: String(err) });
@@ -871,6 +990,7 @@ function TabPlatform() {
     { id: 'stripe',   label: 'Stripe' },
     { id: 'calendar', label: 'Calendar OAuth' },
     { id: 'firebase', label: 'Firebase' },
+    { id: 'google',   label: 'Google Services' },
   ];
 
   return (
@@ -957,6 +1077,40 @@ function TabPlatform() {
               <label className={LBL}>Redirect URI</label>
               <input type="url" value={cfg.calendarRedirectUri} onChange={set('calendarRedirectUri')}
                 placeholder={`${cfg.appUrl || 'https://your-app.netlify.app'}/api/auth/calendar/callback`} className={INP} />
+            </div>
+          </div>
+        )}
+
+        {sub === 'google' && (
+          <div className="space-y-4">
+            <div className={CARD}>
+              <h2 className={SECTION_TITLE}>Google Analytics 4</h2>
+              <p className="text-xs text-white/30">Paste your Measurement ID to enable GA4 on every page. Changes take effect immediately — no redeploy needed.</p>
+              <div>
+                <label className={LBL}>Measurement ID</label>
+                <input type="text" value={cfg.ga4_id} onChange={set('ga4_id')} placeholder="G-XXXXXXXXXX" className={INP} />
+              </div>
+            </div>
+            <div className={CARD}>
+              <h2 className={SECTION_TITLE}>Google Tag Manager</h2>
+              <p className="text-xs text-white/30">Add your GTM container ID to load any tag or pixel without code changes.</p>
+              <div>
+                <label className={LBL}>Container ID</label>
+                <input type="text" value={cfg.gtm_id} onChange={set('gtm_id')} placeholder="GTM-XXXXXXX" className={INP} />
+              </div>
+            </div>
+            <div className={CARD}>
+              <h2 className={SECTION_TITLE}>Google Search Console</h2>
+              <p className="text-xs text-white/30">Paste the content value from the HTML tag verification method in Search Console.</p>
+              <div>
+                <label className={LBL}>Verification Tag Content</label>
+                <input type="text" value={cfg.gsc_verification} onChange={set('gsc_verification')} placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" className={INP} />
+                <p className="mt-1.5 text-xs text-white/25">From: &lt;meta name=&quot;google-site-verification&quot; content=&quot;…&quot; /&gt;</p>
+              </div>
+            </div>
+            <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 px-4 py-3 text-xs text-emerald-400/70">
+              <p className="font-semibold text-emerald-400">Live without redeploy</p>
+              <p className="mt-0.5">Scripts are injected client-side on every page as soon as you save. GA4 and GTM fire on navigation events automatically.</p>
             </div>
           </div>
         )}

@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { getAdminAuth } from '@/lib/firebase-admin';
+import { getAdminAuth, getAdminFirestore } from '@/lib/firebase-admin';
 import {
   updateConsultantStripeSettings,
   updateConsultantCalendar,
@@ -53,10 +53,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
 
-    // Check if user is admin (you may want to add a custom claim for this)
     const userRecord = await auth.getUser(decodedToken.uid);
     if (!userRecord.customClaims?.admin) {
-      return NextResponse.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 });
+      const db = getAdminFirestore();
+      const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+      if (!userDoc.exists || userDoc.data()?.role !== 'admin') {
+        return NextResponse.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 });
+      }
     }
 
     const body = await request.json();

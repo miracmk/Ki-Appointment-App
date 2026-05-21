@@ -237,20 +237,25 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const baseSessionParams: Stripe.Checkout.SessionCreateParams = {
-      payment_method_types: ['card'],
-      mode: 'payment',
-      line_items: lineItems,
-      metadata,
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      customer_email: customerEmail,
+    async function getOrCreateStripeCustomer(stripe: Stripe, email: string, name: string): Promise<string> {
+      const existing = await stripe.customers.list({ email, limit: 1 });
+      if (existing.data.length > 0) return existing.data[0].id;
+      const customer = await stripe.customers.create({ email, name: name || undefined });
+      return customer.id;
+    }
+
+    const invoiceCreation: Stripe.Checkout.SessionCreateParams.InvoiceCreation = {
+      enabled: true,
+      invoice_data: {
+        description: `Consulting session: ${selectedPackage.name}`,
+        footer: 'Terms of Service: https://kibusiness.co/terms-of-service | Privacy: https://kibusiness.co/privacy-policy',
+        metadata: { appointment_id: appointmentId, consultant_id: consultantId },
+      },
     };
 
     let session: Stripe.Checkout.Session;
 
     if (paymentMode === 'own_keys') {
-      // Consultant's own Stripe account
       const stripeApiKey = await getConsultantStripeApiKey(consultantId);
       if (!stripeApiKey) {
         return NextResponse.json(
@@ -259,10 +264,19 @@ export async function POST(request: NextRequest) {
         );
       }
       const stripe = new Stripe(stripeApiKey, { apiVersion: '2023-10-16' });
-      session = await stripe.checkout.sessions.create(baseSessionParams);
+      const customerId = await getOrCreateStripeCustomer(stripe, customerEmail, customerName ?? '');
+      session = await stripe.checkout.sessions.create(({
+        mode: 'payment',
+        automatic_payment_methods: { enabled: true },
+        line_items: lineItems,
+        metadata,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        customer: customerId,
+        invoice_creation: invoiceCreation,
+      }) as any);
 
     } else if (paymentMode === 'ki_connect') {
-      // Stripe Connect: platform collects, auto-splits
       const connectAccountId = consultant.stripe_connect_account_id;
       if (!connectAccountId) {
         return NextResponse.json(
@@ -272,19 +286,36 @@ export async function POST(request: NextRequest) {
       }
       const activeConfig = await getActiveKiStripePosConfig();
       const stripe = new Stripe(activeConfig.secretKey, { apiVersion: '2023-10-16' });
-      session = await stripe.checkout.sessions.create({
-        ...baseSessionParams,
+      const customerId = await getOrCreateStripeCustomer(stripe, customerEmail, customerName ?? '');
+      session = await stripe.checkout.sessions.create(({
+        mode: 'payment',
+        automatic_payment_methods: { enabled: true },
+        line_items: lineItems,
+        metadata,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        customer: customerId,
+        invoice_creation: invoiceCreation,
         payment_intent_data: {
           application_fee_amount: platformFeeCents,
           transfer_data: { destination: connectAccountId },
         },
-      });
+      }) as any);
 
     } else if (paymentMode === 'ki_escrow' || paymentMode === 'direct') {
-      // Ki Business collects all (escrow or direct)
       const activeConfig = await getActiveKiStripePosConfig();
       const stripe = new Stripe(activeConfig.secretKey, { apiVersion: '2023-10-16' });
-      session = await stripe.checkout.sessions.create(baseSessionParams);
+      const customerId = await getOrCreateStripeCustomer(stripe, customerEmail, customerName ?? '');
+      session = await stripe.checkout.sessions.create(({
+        mode: 'payment',
+        automatic_payment_methods: { enabled: true },
+        line_items: lineItems,
+        metadata,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        customer: customerId,
+        invoice_creation: invoiceCreation,
+      }) as any);
 
     } else {
       return NextResponse.json({ error: 'Unknown payment mode.' }, { status: 400 });
@@ -292,6 +323,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       sessionId: session.id,
+      sessionUrl: session.url ?? null,
       appointmentId,
       paymentMode,
       feeBreakdown: {

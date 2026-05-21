@@ -69,6 +69,11 @@ export function ListingCheckout({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Could not create checkout session.');
 
+      if (data.sessionUrl) {
+        window.location.assign(data.sessionUrl);
+        return;
+      }
+
       let key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
       if (!key) {
         const cfgRes = await fetch('/api/stripe/config');
@@ -81,7 +86,7 @@ export function ListingCheckout({
       if (!stripe) throw new Error('Could not load Stripe.');
 
       const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
-      if (result.error) throw new Error(result.error.message ?? 'Redirect failed.');
+      if ((result as any)?.error) throw new Error(result.error.message ?? 'Redirect failed.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred.');
     } finally {
