@@ -6,13 +6,15 @@ import { CATEGORIES } from '@/lib/categories';
 
 const LANGUAGES = ['Turkish', 'English', 'German', 'French', 'Arabic', 'Spanish', 'Russian'];
 
-export function MarketplaceFilters() {
+export function MarketplaceFilters({ mode = 'consultants' }: { mode?: 'consultants' | 'listings' }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [minRate, setMinRate]     = useState(Number(searchParams.get('minRate') ?? 0));
-  const [maxRate, setMaxRate]     = useState(Number(searchParams.get('maxRate') ?? 500));
+  const priceKey = mode === 'listings' ? 'minPrice' : 'minRate';
+  const priceMaxKey = mode === 'listings' ? 'maxPrice' : 'maxRate';
+  const [minRate, setMinRate]     = useState(Number(searchParams.get(priceKey) ?? 0));
+  const [maxRate, setMaxRate]     = useState(Number(searchParams.get(priceMaxKey) ?? 500));
   const [minRating, setMinRating] = useState(Number(searchParams.get('rating') ?? 0));
   const [langs, setLangs]         = useState<string[]>(
     searchParams.get('lang') ? searchParams.get('lang')!.split(',') : []
@@ -23,8 +25,8 @@ export function MarketplaceFilters() {
 
   const apply = useCallback(() => {
     const params = new URLSearchParams();
-    if (minRate > 0)    params.set('minRate', String(minRate));
-    if (maxRate < 500)  params.set('maxRate', String(maxRate));
+    if (minRate > 0)    params.set(priceKey, String(minRate));
+    if (maxRate < 500)  params.set(priceMaxKey, String(maxRate));
     if (minRating > 0)  params.set('rating', String(minRating));
     if (langs.length)   params.set('lang', langs.join(','));
     if (cats.length)    params.set('category', cats.join(','));
@@ -58,7 +60,7 @@ export function MarketplaceFilters() {
       {/* Price range */}
       <div className="mb-6">
         <p className="mb-3 text-sm font-medium text-white/70">
-          Hourly Rate: ${minRate} – ${maxRate === 500 ? '500+' : maxRate}
+          {mode === 'listings' ? 'Price' : 'Hourly Rate'}: ${minRate} – ${maxRate === 500 ? '500+' : maxRate}
         </p>
         <div className="space-y-2">
           <div className="flex items-center gap-2">

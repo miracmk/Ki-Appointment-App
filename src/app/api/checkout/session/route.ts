@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
       listingId,
       amountCents,
       listingTitle,
+      currency,
     } = body;
 
     if (!consultantId || !customerEmail || !appointmentDate || !appointmentTime) {
@@ -99,6 +100,7 @@ export async function POST(request: NextRequest) {
 
     const paymentMode: PaymentMode = consultant.payment_mode ?? 'own_keys';
     const consultingFeeCents = selectedPackage.amount;
+    const stripeCurrency = (currency ?? 'usd').toLowerCase();
     
     // ─── CHECKOUT MATH: Two Conditions ───────────────────────────────────
     // Condition A: If Ki Business is the consultant (direct mode)
@@ -169,7 +171,7 @@ export async function POST(request: NextRequest) {
     // Add consulting fee
     lineItems.push({
       price_data: {
-        currency: 'usd',
+        currency: stripeCurrency,
         product_data: {
           name: selectedPackage.name,
           description: `Consulting session with ${consultant.name}`,
@@ -183,7 +185,7 @@ export async function POST(request: NextRequest) {
     if (platformFeeCents > 0) {
       lineItems.push({
         price_data: {
-          currency: 'usd',
+          currency: stripeCurrency,
           product_data: {
             name: 'Platform Fee (10%)',
             description: 'Ki Business service fee',
@@ -198,7 +200,7 @@ export async function POST(request: NextRequest) {
     if (stripeFeeCents > 0) {
       lineItems.push({
         price_data: {
-          currency: 'usd',
+          currency: stripeCurrency,
           product_data: {
             name: 'Payment Processing Fee',
             description: 'Stripe payment processing',

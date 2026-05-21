@@ -2,20 +2,24 @@ import { Suspense } from 'react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { MarketplaceFilters } from '@/components/marketplace/filters';
-import { ConsultantCard } from '@/components/marketplace/consultant-card';
+import { ListingCard, type PublicListing } from '@/components/marketplace/listing-card';
 import { CATEGORIES } from '@/lib/categories';
-import type { PublicConsultantInfo } from '@/types/marketplace';
 
-async function getConsultants(searchParams: Record<string, string>): Promise<PublicConsultantInfo[]> {
+async function getListings(searchParams: Record<string, string>): Promise<PublicListing[]> {
   try {
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-    const qs   = new URLSearchParams(searchParams).toString();
-    const res  = await fetch(`${base}/api/marketplace/consultants${qs ? `?${qs}` : ''}`, {
+    const base   = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+    const params = new URLSearchParams();
+    if (searchParams.category) params.set('category', searchParams.category);
+    if (searchParams.minPrice)  params.set('minPrice', searchParams.minPrice);
+    if (searchParams.maxPrice)  params.set('maxPrice', searchParams.maxPrice);
+    if (searchParams.lang)      params.set('lang', searchParams.lang);
+    const qs  = params.toString();
+    const res = await fetch(`${base}/api/marketplace/listings${qs ? `?${qs}` : ''}`, {
       next: { revalidate: 60 },
     });
     if (!res.ok) return [];
     const data = await res.json();
-    return data.consultants ?? [];
+    return data.listings ?? [];
   } catch {
     return [];
   }
@@ -26,29 +30,31 @@ interface PageProps {
 }
 
 export default async function MarketplacePage({ searchParams }: PageProps) {
-  const params       = await searchParams;
-  const consultants  = await getConsultants(params);
+  const params         = await searchParams;
+  const listings       = await getListings(params);
   const activeCategory = params.category ? CATEGORIES.find((c) => c.id === params.category) : null;
 
   return (
     <div className="min-h-screen bg-[#0A0B0F]">
       <Navbar />
 
+      {/* Aurora blobs */}
+      <div className="pointer-events-none fixed -top-32 left-1/4 h-96 w-96 rounded-full bg-[#0047FF]/10 blur-[120px]" />
+      <div className="pointer-events-none fixed top-20 right-1/4 h-72 w-72 rounded-full bg-[#B000FF]/8 blur-[100px]" />
+
       {/* Header */}
-      <section className="relative overflow-hidden pt-28 pb-12">
-        <div className="pointer-events-none absolute -top-24 left-1/4 h-80 w-80 rounded-full bg-[#0047FF]/15 blur-[100px]" />
-        <div className="pointer-events-none absolute top-0 right-1/4 h-64 w-64 rounded-full bg-[#B000FF]/10 blur-[80px]" />
+      <section className="relative overflow-hidden pt-28 pb-10">
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h1 className="mb-3 text-4xl font-bold text-white sm:text-5xl">
-            {activeCategory ? `${activeCategory.icon} ${activeCategory.label}` : 'All Consultants'}
+          <h1 className="mb-2 text-4xl font-bold text-white sm:text-5xl">
+            {activeCategory ? `${activeCategory.icon} ${activeCategory.label}` : 'Consulting Services'}
           </h1>
           <p className="text-white/50">
             {activeCategory
               ? activeCategory.description
-              : 'Connect with KYC-verified expert consultants.'}
+              : 'Browse expert consulting services across all categories.'}
           </p>
 
-          {/* Category quick links */}
+          {/* Category pills */}
           <div className="mt-6 flex flex-wrap gap-2">
             <a
               href="/marketplace"
@@ -78,26 +84,31 @@ export default async function MarketplacePage({ searchParams }: PageProps) {
       </section>
 
       {/* Main */}
-      <div className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-8 lg:flex-row">
           <Suspense>
-            <MarketplaceFilters />
+            <MarketplaceFilters mode="listings" />
           </Suspense>
 
           <div className="flex-1">
-            {consultants.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.03] py-20 text-center">
-                <svg className="mb-4 h-12 w-12 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <p className="text-white/40">No consultants found matching these criteria.</p>
+            {listings.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.03] py-24 text-center">
+                <p className="mb-3 text-5xl">📋</p>
+                <p className="font-medium text-white/50">No listings found</p>
+                <p className="mt-1 text-sm text-white/30">
+                  {activeCategory
+                    ? 'No active listings in this category yet.'
+                    : 'No consulting listings are available at the moment.'}
+                </p>
               </div>
             ) : (
               <>
-                <p className="mb-6 text-sm text-white/40">{consultants.length} consultant{consultants.length !== 1 ? 's' : ''} found</p>
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                  {consultants.map((c) => (
-                    <ConsultantCard key={c.uid} consultant={c} />
+                <p className="mb-5 text-sm text-white/40">
+                  {listings.length} listing{listings.length !== 1 ? 's' : ''} found
+                </p>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                  {listings.map((l) => (
+                    <ListingCard key={l.id} listing={l} />
                   ))}
                 </div>
               </>
