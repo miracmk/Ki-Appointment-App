@@ -3,7 +3,7 @@ import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from './src/lib/i18n';
 
 const PUBLIC_FILE = /\.[^/]+$/;
 
-// Only these routes exist under src/app/[locale]/ — everything else passes through
+// Sadece bu route'lar [locale] klasörü altında var
 const LOCALE_AWARE_ROUTES = ['/', '/login', '/register', '/terms', '/privacy', '/refund'];
 
 function needsLocalePrefix(pathname: string): boolean {
@@ -14,9 +14,16 @@ function needsLocalePrefix(pathname: string): boolean {
   return false;
 }
 
+function stripLocalePrefix(pathname: string): string {
+  const localePattern = new RegExp(`^/(${SUPPORTED_LOCALES.join('|')})(/.*)$`);
+  const match = pathname.match(localePattern);
+  return match ? match[2] : pathname;
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Static dosyalar ve API'ler — dokunma
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
@@ -27,20 +34,33 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Already has a locale prefix → pass through
+  // Locale prefix var mı kontrol et
   const localePattern = new RegExp(`^/(${SUPPORTED_LOCALES.join('|')})(?:/|$)`);
-  if (localePattern.test(pathname)) {
+  const hasLocalePrefix = localePattern.test(pathname);
+
+  if (hasLocalePrefix) {
+    // Locale prefix var — ama bu route locale-aware mi?
+    const withoutLocale = stripLocalePrefix(pathname);
+    const isLocaleAware = needsLocalePrefix(withoutLocale) || withoutLocale === '';
+
+    if (!isLocaleAware) {
+      // /en/marketplace → /marketplace gibi locale'i at
+      const url = request.nextUrl.clone();
+      url.pathname = withoutLocale || '/';
+      return NextResponse.redirect(url);
+    }
+
     return NextResponse.next();
   }
 
-  // Only add locale prefix to routes that actually have a [locale] version
-  if (!needsLocalePrefix(pathname)) {
-    return NextResponse.next();
+  // Locale prefix yok — bu route locale-aware mi?
+  if (needsLocalePrefix(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${DEFAULT_LOCALE}${pathname}`;
+    return NextResponse.redirect(url);
   }
 
-  const url = request.nextUrl.clone();
-  url.pathname = `/${DEFAULT_LOCALE}${pathname}`;
-  return NextResponse.redirect(url);
+  return NextResponse.next();
 }
 
 export const config = {
