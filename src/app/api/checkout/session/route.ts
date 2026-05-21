@@ -267,7 +267,7 @@ export async function POST(request: NextRequest) {
       const customerId = await getOrCreateStripeCustomer(stripe, customerEmail, customerName ?? '');
       session = await stripe.checkout.sessions.create(({
         mode: 'payment',
-        automatic_payment_methods: { enabled: true },
+        payment_method_types: ['card'],
         line_items: lineItems,
         metadata,
         success_url: successUrl,
@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
       const customerId = await getOrCreateStripeCustomer(stripe, customerEmail, customerName ?? '');
       session = await stripe.checkout.sessions.create(({
         mode: 'payment',
-        automatic_payment_methods: { enabled: true },
+        payment_method_types: ['card'],
         line_items: lineItems,
         metadata,
         success_url: successUrl,
@@ -308,7 +308,7 @@ export async function POST(request: NextRequest) {
       const customerId = await getOrCreateStripeCustomer(stripe, customerEmail, customerName ?? '');
       session = await stripe.checkout.sessions.create(({
         mode: 'payment',
-        automatic_payment_methods: { enabled: true },
+        payment_method_types: ['card'],
         line_items: lineItems,
         metadata,
         success_url: successUrl,
