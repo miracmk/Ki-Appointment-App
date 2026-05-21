@@ -58,40 +58,27 @@ export async function POST(request: NextRequest) {
       appointmentTimezone,
       specialtyId,
       categoryId,
-      listingId,
-      amountCents,
-      listingAmountCents,
-      listingTitle,
       currency,
     } = body;
 
-    if (!consultantId || !customerEmail || !appointmentDate || !appointmentTime) {
+    if (!consultantId || !customerEmail) {
       return NextResponse.json(
-        { error: 'Zorunlu alanlar eksik: consultantId, customerEmail, appointmentDate, appointmentTime' },
+        { error: 'Zorunlu alanlar eksik: consultantId, customerEmail' },
         { status: 400 }
       );
     }
 
-    // listing_price varsa onu kullan, yoksa eski pricingMap'e bak
-    // listingAmountCents ve amountCents her ikisi de kabul edilir
-    const resolvedAmountCents = listingAmountCents ? Number(listingAmountCents) : (amountCents ? Number(amountCents) : null);
-    const resolvedTitle: string = listingTitle ?? 'Consulting Service';
+    const listingAmountCents = body.listingAmountCents ? Number(body.listingAmountCents) : null;
+    const listingTitle       = body.listingTitle       ? String(body.listingTitle)       : null;
+    const listingId          = body.listingId          ? String(body.listingId)          : null;
+    const durationMinutes    = body.durationMinutes    ? Number(body.durationMinutes)    : null;
 
-    let selectedPackage: { amount: number; name: string };
-    if (resolvedAmountCents) {
-      if (isNaN(resolvedAmountCents) || resolvedAmountCents < 50) {
-        return NextResponse.json({ error: 'Geçersiz tutar. En az 50 kuruş olmalı.' }, { status: 400 });
-      }
-      selectedPackage = { amount: resolvedAmountCents, name: resolvedTitle };
-    } else {
-      if (!packageId) {
-        return NextResponse.json({ error: 'packageId veya amountCents gerekli.' }, { status: 400 });
-      }
-      const pkg = pricingMap[packageId];
-      if (!pkg) {
-        return NextResponse.json({ error: 'Geçersiz paket seçimi.' }, { status: 400 });
-      }
-      selectedPackage = pkg;
+    const selectedPackage = listingAmountCents
+      ? { amount: listingAmountCents, name: listingTitle ?? 'Consulting Service' }
+      : (packageId ? pricingMap[packageId] : null);
+
+    if (!selectedPackage) {
+      return NextResponse.json({ error: 'Invalid package or listing price.' }, { status: 400 });
     }
 
     const consultant = await getConsultantProfile(consultantId);
@@ -128,23 +115,28 @@ export async function POST(request: NextRequest) {
       totalChargedCents = consultingFeeCents + stripeFeeCents;
     }
 
-    const appointmentDateUtc = buildIsoUtcDate(
-      appointmentDate,
-      appointmentTime,
-      appointmentTimezone || 'UTC'
-    );
+    const appointmentDateUtc = (appointmentDate && appointmentTime)
+      ? buildIsoUtcDate(appointmentDate, appointmentTime, appointmentTimezone ?? 'UTC')
+      : '';
 
-    const appointmentId = await createAppointment(consultantId, {
-      consultant_id: consultantId,
-      customer_email: customerEmail,
-      customer_name: customerName || '',
-      appointment_date: appointmentDateUtc,
-      appointment_time: appointmentTime,
-      appointment_timezone: appointmentTimezone || 'UTC',
-      package_id: packageId,
-      status: 'pending',
-      payment_amount: consultingFeeCents,
-    });
+    const appointmentData: Record<string, unknown> = {
+      consultant_id:        consultantId,
+      customer_email:       customerEmail,
+      customer_name:        customerName ?? '',
+      appointment_date:     appointmentDate ?? '',
+      appointment_time:     appointmentTime ?? '',
+      appointment_timezone: appointmentTimezone ?? 'UTC',
+      status:               'pending',
+      payment_amount:       consultingFeeCents,
+    };
+
+    if (packageId)       appointmentData.package_id       = packageId;
+    if (listingId)       appointmentData.listing_id       = listingId;
+    if (listingTitle)    appointmentData.listing_title    = listingTitle;
+    if (durationMinutes) appointmentData.duration_minutes = durationMinutes;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const appointmentId = await createAppointment(consultantId, appointmentData as any);
 
     const metadata: Stripe.MetadataParam = {
       consultant_id: consultantId,
@@ -155,6 +147,8 @@ export async function POST(request: NextRequest) {
       customer_email: customerEmail,
       customer_name: customerName || '',
       session_id: appointmentId,
+      listing_id: listingId ?? '',
+      duration_minutes: String(durationMinutes ?? 0),
       payment_mode: paymentMode,
       consulting_fee_cents: String(consultingFeeCents),
       platform_fee_cents: String(platformFeeCents),
@@ -162,7 +156,6 @@ export async function POST(request: NextRequest) {
       total_charged_cents: String(totalChargedCents),
       specialty_id: specialtyId ?? '',
       category_id: categoryId ?? '',
-      listing_id: listingId ?? '',
     };
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') || 'http://localhost:3000';

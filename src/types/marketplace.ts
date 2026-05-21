@@ -465,6 +465,31 @@ export interface ListingPricing {
   payment_methods: ListingPaymentMethod[];
 }
 
+// ─── Time Credits (Saat Kredisi) ─────────────────────────────────────────────
+
+export type TimeCreditStatus = 'available' | 'used' | 'expired';
+
+export interface TimeCredit {
+  id: string;
+  client_uid: string;
+  consultant_id: string;
+  listing_id: string;
+  total_minutes: number;
+  used_minutes: number;
+  remaining_minutes: number;
+  appointment_ids: string[];
+  status: TimeCreditStatus;
+  purchased_at: number;
+  expires_at?: number;
+}
+
+export interface BookingSlot {
+  date: string;
+  time: string;
+  available: boolean;
+  bookedBy?: string;
+}
+
 export interface ConsultantListing {
   id: string;
   consultant_id: string;

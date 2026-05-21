@@ -406,6 +406,32 @@ export async function POST(request: NextRequest) {
           console.error('Firebase user creation error:', authErr);
         }
 
+        // ── Time credit (hourly listings) ──────────────────────────────
+        const rawMeta         = eventMetadata as unknown as Record<string, string | undefined>;
+        const durationMinutes = Number(rawMeta?.duration_minutes ?? 0);
+        const clientEmail     = rawMeta?.customer_email ?? (sessionObj.customer_email as string | undefined);
+        if (durationMinutes > 0 && clientEmail) {
+          try {
+            const auth       = getAdminAuth();
+            const userRecord = await auth.getUserByEmail(clientEmail);
+            const db2        = getAdminFirestore();
+            await db2.collection('time_credits').add({
+              client_uid:        userRecord.uid,
+              consultant_id:     consultantId,
+              listing_id:        rawMeta?.listing_id ?? '',
+              total_minutes:     durationMinutes,
+              used_minutes:      0,
+              remaining_minutes: durationMinutes,
+              appointment_ids:   [appointmentId],
+              status:            'available',
+              purchased_at:      Date.now(),
+              expires_at:        Date.now() + 365 * 24 * 60 * 60 * 1000,
+            });
+          } catch (tcErr) {
+            console.error('Time credit creation failed:', tcErr);
+          }
+        }
+
         await Promise.allSettled([
           syncToCalendar(consultantId, { ...appointment, id: appointmentId }),
           syncToOutlookCalendar(consultantId, { ...appointment, id: appointmentId }),
