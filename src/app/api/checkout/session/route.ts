@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
       categoryId,
       listingId,
       amountCents,
+      listingAmountCents,
       listingTitle,
       currency,
     } = body;
@@ -71,29 +72,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Support both listing-based (amountCents) and legacy package-based pricing
+    // listing_price varsa onu kullan, yoksa eski pricingMap'e bak
+    // listingAmountCents ve amountCents her ikisi de kabul edilir
+    const resolvedAmountCents = listingAmountCents ? Number(listingAmountCents) : (amountCents ? Number(amountCents) : null);
+    const resolvedTitle: string = listingTitle ?? 'Consulting Service';
+
     let selectedPackage: { amount: number; name: string };
-    if (amountCents) {
-      const cents = parseInt(String(amountCents), 10);
-      if (isNaN(cents) || cents < 50) {
-        return NextResponse.json({ error: 'amountCents must be at least 50 (¢50).' }, { status: 400 });
+    if (resolvedAmountCents) {
+      if (isNaN(resolvedAmountCents) || resolvedAmountCents < 50) {
+        return NextResponse.json({ error: 'Geçersiz tutar. En az 50 kuruş olmalı.' }, { status: 400 });
       }
-      selectedPackage = { amount: cents, name: listingTitle || 'Consulting Service' };
+      selectedPackage = { amount: resolvedAmountCents, name: resolvedTitle };
     } else {
       if (!packageId) {
-        return NextResponse.json({ error: 'Either packageId or amountCents is required.' }, { status: 400 });
+        return NextResponse.json({ error: 'packageId veya amountCents gerekli.' }, { status: 400 });
       }
       const pkg = pricingMap[packageId];
       if (!pkg) {
-        return NextResponse.json({ error: 'Invalid package selection.' }, { status: 400 });
+        return NextResponse.json({ error: 'Geçersiz paket seçimi.' }, { status: 400 });
       }
       selectedPackage = pkg;
     }
 
     const consultant = await getConsultantProfile(consultantId);
-    if (!consultant || !consultant.is_active) {
+    if (!consultant) {
       return NextResponse.json(
-        { error: 'Consultant not found or not active.' },
+        { error: 'Consultant not found.' },
         { status: 404 }
       );
     }

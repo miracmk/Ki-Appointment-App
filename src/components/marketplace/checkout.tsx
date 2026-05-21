@@ -9,6 +9,8 @@ interface MarketplaceCheckoutProps {
   packageId?: string;
   specialtyId?: string;
   categoryId?: string;
+  listingAmountCents?: number;
+  listingTitle?: string;
 }
 
 const PACKAGES = [
@@ -18,7 +20,7 @@ const PACKAGES = [
   { id: 'executive', label: 'Full Day',   price: '$10,000', description: 'Strategy & implementation' },
 ];
 
-export function MarketplaceCheckout({ consultantId, packageId, specialtyId, categoryId }: MarketplaceCheckoutProps) {
+export function MarketplaceCheckout({ consultantId, packageId, specialtyId, categoryId, listingAmountCents, listingTitle }: MarketplaceCheckoutProps) {
   const [selectedPackage, setSelectedPackage] = useState(packageId ?? 'starter');
   const [email,      setEmail]      = useState('');
   const [name,       setName]       = useState('');
@@ -49,6 +51,8 @@ export function MarketplaceCheckout({ consultantId, packageId, specialtyId, cate
           appointmentTimezone: timezone,
           specialtyId: specialtyId ?? '',
           categoryId: categoryId ?? '',
+          listingAmountCents: listingAmountCents,
+          listingTitle: listingTitle,
         }),
       });
 
