@@ -270,6 +270,8 @@ function TabProfile({ uid, isConsultant }: { uid: string; isConsultant: boolean 
     displayName: '', language: 'en', birthDate: '', city: '',
     bio: '', title: '', hourlyRate: '', photoUrl: '', specialties: [] as string[],
   });
+  const [kycStatus, setKycStatus] = useState('unverified');
+  const [rejectionReason, setRejectionReason] = useState('');
   const [saving, setSave] = useState(false);
   const [msg, setMsg]     = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -291,6 +293,8 @@ function TabProfile({ uid, isConsultant }: { uid: string; isConsultant: boolean 
           photoUrl:    d.photo_url         ?? '',
           specialties: Array.isArray(d.specialties) ? d.specialties : [],
         });
+        setKycStatus(d.kycStatus ?? d.kyc_status ?? 'unverified');
+        setRejectionReason(d.kyc_rejection_reason ?? '');
       }
     })();
   }, [uid]);
@@ -403,6 +407,31 @@ function TabProfile({ uid, isConsultant }: { uid: string; isConsultant: boolean 
               value={form.specialties}
               onChange={(ids) => setForm((f) => ({ ...f, specialties: ids }))}
             />
+          </div>
+        </div>
+      )}
+
+      {!isConsultant && (
+        <div className={CARD}>
+          <h2 className={SECTION_TITLE}>Consultant Access</h2>
+          <p className="text-sm text-white/40">
+            Save your profile as a client now, and when you're ready to list services, complete consultant verification.
+          </p>
+          <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+            <p className="text-sm text-white/70">KYC status: <span className="font-semibold text-white">{kycStatus}</span></p>
+            {kycStatus === 'pending' && (
+              <p className="mt-2 text-sm text-yellow-300">Your KYC application is under review. You will unlock consultant settings after approval.</p>
+            )}
+            {kycStatus === 'rejected' && (
+              <p className="mt-2 text-sm text-red-300">Your application was rejected. Please update your details in the KYC page and reapply.</p>
+            )}
+            {rejectionReason && (
+              <p className="mt-2 text-sm text-red-400">Reason: {rejectionReason}</p>
+            )}
+            <a href="/dashboard/kyc?apply=consultant"
+              className="mt-4 inline-flex rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90">
+              Apply for Consultant Account
+            </a>
           </div>
         </div>
       )}

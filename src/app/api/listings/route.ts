@@ -84,10 +84,11 @@ export async function POST(req: NextRequest) {
     // Only the owner or admin can create
     const db       = getAdminFirestore();
     const userSnap = await db.collection('users').doc(callerUid).get();
-    const callerRole = userSnap.data()?.role ?? '';
-    const isAdmin    = callerUid === uid || callerRole === 'admin' || callerRole === 'supervisor';
-    if (!isAdmin && callerUid !== uid) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const callerRole = userSnap.data()?.role ?? 'client';
+    const isStaff      = callerRole === 'admin' || callerRole === 'supervisor';
+    const isConsultant = callerRole === 'consultant';
+    if (!isConsultant && !isStaff) {
+      return NextResponse.json({ error: 'Only verified consultants or administrators can create listings' }, { status: 403 });
     }
 
     const now = Date.now();

@@ -64,6 +64,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const badge = ROLE_BADGE[user.role] ?? ROLE_BADGE.client;
+  const navItems = NAV.filter((item) => {
+    if (user.role === 'client' && item.href === '/dashboard/consultations') return false;
+    return true;
+  });
 
   return (
     <div className="flex min-h-screen bg-[#0A0B0F]">
@@ -93,7 +97,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Nav */}
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-          {NAV.map((item) => {
+          {navItems.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
               <Link
