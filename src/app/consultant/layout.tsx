@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useLocale } from 'next-intl';
 import { useRouter, usePathname } from 'next/navigation';
 import { getFirebaseAuth } from '@/lib/firebase-client';
 import { signOut } from 'firebase/auth';
@@ -77,7 +76,6 @@ const NAV = [
 export default function ConsultantLayout({ children }: { children: React.ReactNode }) {
   const router     = useRouter();
   const pathname   = usePathname();
-  const locale     = useLocale();
   const { user, loading } = useUserRole();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -102,7 +100,7 @@ export default function ConsultantLayout({ children }: { children: React.ReactNo
   if (loading || !user || !hasConsultantAccess(user.role)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0A0B0F]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#B000FF] border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-ki-primary border-t-transparent" />
       </div>
     );
   }
@@ -115,13 +113,13 @@ export default function ConsultantLayout({ children }: { children: React.ReactNo
 
       <aside className={`fixed left-0 top-0 z-30 flex h-full w-64 flex-col border-r border-white/[0.06] bg-[#0D0E14] transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex h-16 items-center border-b border-white/[0.06] px-6">
-          <Link href={`/${locale}`}>
+          <Link href="/">
             <img src="/logo.png" alt="Ki Business" className="h-7 w-auto" />
           </Link>
         </div>
 
         <div className="border-b border-white/[0.06] px-4 py-3">
-          <span className="rounded-lg border border-[#B000FF]/30 bg-[#B000FF]/10 px-2.5 py-1 text-xs font-semibold text-[#B000FF]">
+          <span className="rounded-lg border border-ki-primary/30 bg-ki-primary/10 px-2.5 py-1 text-xs font-semibold text-ki-primary">
             Consultant Dashboard
           </span>
         </div>
@@ -138,7 +136,7 @@ export default function ConsultantLayout({ children }: { children: React.ReactNo
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                   active
-                    ? 'bg-[#B000FF]/10 text-[#B000FF]'
+                    ? 'bg-ki-primary/10 text-ki-primary'
                     : 'text-white/50 hover:bg-white/5 hover:text-white'
                 }`}
               >

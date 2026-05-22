@@ -1,9 +1,28 @@
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { MarketplaceFilters } from '@/components/marketplace/filters';
 import { ListingCard, type PublicListing } from '@/components/marketplace/listing-card';
 import { CATEGORIES } from '@/lib/categories';
+
+export const metadata: Metadata = {
+  title: 'Marketplace — Ki Business Solutions',
+  description: 'Browse KYC-verified consultants. Filter by category, language, price, and rating to find the right expert for your business.',
+  alternates: { canonical: 'https://kibusiness.global/marketplace' },
+  openGraph: {
+    title: 'Find a Consultant — Ki Business Marketplace',
+    description: 'KYC-verified experts in accounting, law, immigration, finance, and more. Book a session in minutes.',
+    url: 'https://kibusiness.global/marketplace',
+    siteName: 'Ki Business Solutions',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Ki Business Marketplace',
+    description: 'Connect with verified consultants. Escrow-protected payments, instant video calls.',
+  },
+};
 
 async function getListings(searchParams: Record<string, string>): Promise<PublicListing[]> {
   try {

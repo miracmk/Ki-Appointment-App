@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { useLocale } from 'next-intl';
 import { useRouter, usePathname } from 'next/navigation';
 import { getFirebaseAuth } from '@/lib/firebase-client';
 import { signOut } from 'firebase/auth';
@@ -18,7 +17,6 @@ const NAV = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const locale   = useLocale();
   const { user, loading } = useUserRole();
 
   useEffect(() => {
@@ -36,7 +34,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (loading || !isAdmin) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0A0B0F]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#00F0FF] border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-ki-primary border-t-transparent" />
       </div>
     );
   }
@@ -45,7 +43,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="flex min-h-screen bg-[#0A0B0F]">
       <aside className="hidden w-56 flex-col border-r border-white/[0.06] bg-[#0D0E14]/80 backdrop-blur-xl lg:flex">
         <div className="flex h-16 items-center border-b border-white/[0.06] px-5">
-          <Link href={`/${locale}`}>
+          <Link href="/">
             <img src="/logo.png" alt="Ki Business" className="h-7 w-auto" />
           </Link>
         </div>

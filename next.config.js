@@ -3,6 +3,22 @@ const path = require('path');
 
 const nextConfig = {
   output: 'standalone',
+  async redirects() {
+    return [
+      // Redirect /en/some/path → /some/path (308 permanent)
+      {
+        source: '/:locale(en|tr|es|fr|it|ru|zh|pt)/:path*',
+        destination: '/:path*',
+        permanent: true,
+      },
+      // Redirect bare /en, /tr, etc. → /
+      {
+        source: '/:locale(en|tr|es|fr|it|ru|zh|pt)',
+        destination: '/',
+        permanent: true,
+      },
+    ];
+  },
   reactStrictMode: true,
   swcMinify: true,
   images: {

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useLocale } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getFirebaseAuth, getFirestoreClient, isFirebaseConfigured } from '@/lib/firebase-client';
 import {
@@ -14,7 +13,6 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 type AccountType = 'client' | 'consultant';
 
 export default function RegisterPage() {
-  const locale       = useLocale();
   const router       = useRouter();
   const searchParams = useSearchParams();
   const defaultType  = (searchParams.get('type') === 'consultant' ? 'consultant' : 'client') as AccountType;
@@ -36,7 +34,7 @@ export default function RegisterPage() {
       if (user) router.push('/dashboard');
     });
     return () => unsub();
-  }, [configured, router, locale]);
+  }, [configured, router]);
 
   const createUserDoc = async (uid: string, displayName: string, userEmail: string, photoURL: string) => {
     const db = getFirestoreClient();
@@ -131,7 +129,7 @@ export default function RegisterPage() {
 
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 text-center">
-          <Link href={`/${locale}`}>
+          <Link href="/">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="Ki Business Solutions" className="mx-auto h-10 w-auto" />
           </Link>
@@ -279,7 +277,7 @@ export default function RegisterPage() {
 
         <p className="mt-6 text-center text-sm text-[var(--text-muted)]">
           Already have an account?{' '}
-          <Link href={`/${locale}/login`} className="text-ki-primary hover:underline">Sign In</Link>
+          <Link href="/login" className="text-ki-primary hover:underline">Sign In</Link>
         </p>
       </div>
     </div>

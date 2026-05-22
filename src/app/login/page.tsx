@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { getFirebaseAuth, getFirestoreClient, isFirebaseConfigured } from '@/lib/firebase-client';
 import {
@@ -11,7 +10,6 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function LoginPage() {
-  const locale    = useLocale();
   const router    = useRouter();
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -29,7 +27,7 @@ export default function LoginPage() {
       if (user) router.push('/dashboard');
     });
     return () => unsub();
-  }, [configured, router, locale]);
+  }, [configured, router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -105,7 +103,7 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 text-center">
-          <Link href={`/${locale}`}>
+          <Link href="/">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="Ki Business Solutions" className="mx-auto h-10 w-auto" />
           </Link>
@@ -187,7 +185,7 @@ export default function LoginPage() {
 
         <p className="mt-6 text-center text-sm text-[var(--text-muted)]">
           Don&apos;t have an account?{' '}
-          <Link href={`/${locale}/register`} className="text-ki-primary hover:underline">Create Account</Link>
+          <Link href="/register" className="text-ki-primary hover:underline">Create Account</Link>
         </p>
       </div>
     </div>

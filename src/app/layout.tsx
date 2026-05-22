@@ -1,19 +1,25 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import { NextIntlClientProvider } from 'next-intl';
-import { DEFAULT_LOCALE } from '@/lib/i18n';
-import enMessages from '@/messages/en.json';
 import GoogleServicesScript from '@/components/GoogleServicesScript';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Ki Business Solutions - Management Consulting',
-  description: 'Professional business management consulting services helping companies achieve operational excellence, financial health, and sustainable growth.',
-  icons: {
-    icon: '/favicon.png',
+  metadataBase: new URL('https://kibusiness.global'),
+  title: {
+    default: 'Ki Business Solutions — Management Consulting',
+    template: '%s | Ki Business Solutions',
   },
+  description: 'Connect with KYC-verified expert consultants in accounting, tax, law, immigration, and finance. Escrow-protected payments and secure video calls.',
+  icons: { icon: '/favicon.png' },
+  openGraph: {
+    siteName: 'Ki Business Solutions',
+    type: 'website',
+    locale: 'en_US',
+  },
+  twitter: { card: 'summary_large_image' },
+  robots: { index: true, follow: true },
 };
 
 // Prevents FOUC: runs before React hydrates to set the correct theme class
@@ -38,9 +44,7 @@ export default function RootLayout({
       </head>
       <body>
         <GoogleServicesScript />
-        <NextIntlClientProvider locale={DEFAULT_LOCALE} messages={enMessages}>
-          {children}
-        </NextIntlClientProvider>
+        {children}
       </body>
     </html>
   );

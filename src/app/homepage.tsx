@@ -4,10 +4,6 @@ import { Hero } from '@/components/hero';
 import { Footer } from '@/components/footer';
 import { CATEGORIES } from '@/lib/categories';
 
-type HomepageProps = {
-  locale: string;
-};
-
 const HOW_IT_WORKS = [
   {
     step: '01',
@@ -116,12 +112,7 @@ const TRUST_ITEMS = [
   },
 ];
 
-function localeHref(locale: string, path: string) {
-  if (path === '/') return `/${locale}`;
-  return `/${locale}${path}`;
-}
-
-export default function Homepage({ locale }: HomepageProps) {
+export default function Homepage() {
   return (
     <div className="bg-[var(--surface)] text-[var(--text-primary)]">
       <Navbar />
@@ -143,7 +134,7 @@ export default function Homepage({ locale }: HomepageProps) {
             {CATEGORIES.map((cat) => (
               <Link
                 key={cat.id}
-                href={localeHref(locale, `/marketplace/${cat.id}`)}
+                href={`/marketplace/${cat.id}`}
                 className="glass-card-hover group flex items-start gap-4 p-6"
               >
                 <span className="text-3xl">{cat.icon}</span>
@@ -203,7 +194,7 @@ export default function Homepage({ locale }: HomepageProps) {
               <p className="text-[var(--text-secondary)]">KYC-verified experts with top ratings.</p>
             </div>
             <Link
-              href={localeHref(locale, '/marketplace')}
+              href="/marketplace"
               className="hidden text-sm font-medium text-ki-primary transition-opacity hover:opacity-70 sm:block"
             >
               View All →
@@ -278,13 +269,13 @@ export default function Homepage({ locale }: HomepageProps) {
             </p>
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
-                href={localeHref(locale, '/marketplace')}
+                href="/marketplace"
                 className="inline-flex items-center gap-2 rounded-2xl bg-ki-gradient px-8 py-4 text-base font-semibold text-white shadow-glow-ki transition-all duration-300 hover:opacity-90"
               >
                 Find a Consultant
               </Link>
               <Link
-                href={localeHref(locale, '/register?type=consultant')}
+                href="/register?type=consultant"
                 className="btn-ghost inline-flex items-center gap-2 rounded-2xl px-8 py-4 text-base font-semibold"
               >
                 Join as a Consultant

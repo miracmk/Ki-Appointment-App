@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /consultant
+Disallow: /onboarding
+Disallow: /unauthorized
+
+Sitemap: https://kibusiness.global/sitemap.xml

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useLocale } from 'next-intl';
 import { useRouter, usePathname } from 'next/navigation';
 import { getFirebaseAuth } from '@/lib/firebase-client';
 import { signOut } from 'firebase/auth';
@@ -41,7 +40,6 @@ const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const locale   = useLocale();
   const { user, loading } = useUserRole();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -81,7 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className={`fixed left-0 top-0 z-30 flex h-full w-64 flex-col border-r border-white/[0.06] bg-[#0D0E14] transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Logo */}
         <div className="flex h-16 items-center border-b border-white/[0.06] px-6">
-          <Link href={`/${locale}`} onClick={() => setSidebarOpen(false)}>
+          <Link href="/" onClick={() => setSidebarOpen(false)}>
             <img src="/logo.png" alt="Ki Business" className="h-7 w-auto" />
           </Link>
         </div>
@@ -146,7 +144,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
           <div className="flex items-center gap-3 ml-auto">
             <Link
-              href="/marketplace"
+              href="/"
               className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white/70 transition hover:text-white"
             >
               ← Back to Site

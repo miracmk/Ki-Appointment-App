@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useLocale } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { CATEGORIES } from '@/lib/categories';
 import { getFirebaseAuth, getFirestoreClient } from '@/lib/firebase-client';
@@ -14,7 +13,6 @@ export function Navbar() {
   const [mobileOpen,     setMobileOpen]     = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [user,           setUser]           = useState<{ displayName: string | null; email: string | null } | null>(null);
-  const locale   = useLocale();
   const pathname = usePathname();
   const router   = useRouter();
 
@@ -46,16 +44,7 @@ export function Navbar() {
     const auth = getFirebaseAuth();
     if (!auth) return;
     await signOut(auth);
-    router.push(`/${locale}`);
-  };
-
-  const LOCALE_PATHS = ['/login', '/register', '/terms', '/privacy', '/refund'];
-  const localeHref = (path: string) => {
-    if (path === '/') return `/${locale}`;
-    if (LOCALE_PATHS.some((lp) => path === lp || path.startsWith(lp + '/'))) {
-      return `/${locale}${path}`;
-    }
-    return path;
+    router.push('/');
   };
 
   return (
@@ -65,7 +54,7 @@ export function Navbar() {
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         {/* Logo */}
-        <Link href={localeHref('/')} className="flex shrink-0 items-center gap-2">
+        <Link href={'/'} className="flex shrink-0 items-center gap-2">
           <img src="/logo.png" alt="Ki Business Solutions" className="h-8 w-auto" />
         </Link>
 
@@ -102,7 +91,7 @@ export function Navbar() {
                   {CATEGORIES.map((cat) => (
                     <Link
                       key={cat.id}
-                      href={localeHref(`/marketplace/${cat.id}`)}
+                      href={`/marketplace/${cat.id}`}
                       className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors duration-150"
                       style={{ color: 'var(--text-primary)' }}
                       onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(38,166,154,0.08)')}
@@ -115,7 +104,7 @@ export function Navbar() {
                 </div>
                 <div className="mt-2 pt-2" style={{ borderTop: '1px solid var(--glass-border)' }}>
                   <Link
-                    href={localeHref('/marketplace')}
+                    href={'/marketplace'}
                     className="flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-150"
                     style={{ color: 'var(--ki-primary)' }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(38,166,154,0.08)')}
@@ -128,8 +117,8 @@ export function Navbar() {
             )}
           </div>
 
-          <NavLink href={localeHref('/marketplace')}>Marketplace</NavLink>
-          <NavLink href={`/${locale}#how-it-works`}>How It Works</NavLink>
+          <NavLink href={'/marketplace'}>Marketplace</NavLink>
+          <NavLink href={'/#how-it-works'}>How It Works</NavLink>
         </div>
 
         {/* Desktop auth + theme toggle */}
@@ -167,10 +156,10 @@ export function Navbar() {
             </>
           ) : (
             <>
-              <NavLink href={localeHref('/login')}>Login</NavLink>
-              <NavLink href={localeHref('/register')}>Register</NavLink>
+              <NavLink href={'/login'}>Login</NavLink>
+              <NavLink href={'/register'}>Register</NavLink>
               <Link
-                href={localeHref('/marketplace')}
+                href={'/marketplace'}
                 className="rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-lg transition-all duration-200 hover:opacity-90 hover:shadow-[0_0_24px_rgba(38,166,154,0.40)]"
                 style={{ background: 'linear-gradient(135deg, #26A69A 0%, #2D8A6B 100%)' }}
               >
@@ -204,7 +193,7 @@ export function Navbar() {
             {CATEGORIES.map((cat) => (
               <Link
                 key={cat.id}
-                href={localeHref(`/marketplace/${cat.id}`)}
+                href={`/marketplace/${cat.id}`}
                 className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors duration-150"
                 style={{ color: 'var(--text-secondary)' }}
                 onClick={() => setMobileOpen(false)}
@@ -216,7 +205,7 @@ export function Navbar() {
             ))}
             <div className="my-3" style={{ borderTop: '1px solid var(--glass-border)' }} />
             <Link
-              href={localeHref('/marketplace')}
+              href={'/marketplace'}
               className="block rounded-xl px-3 py-2.5 text-sm transition-colors duration-150"
               style={{ color: 'var(--text-secondary)' }}
               onClick={() => setMobileOpen(false)}
@@ -245,7 +234,7 @@ export function Navbar() {
             ) : (
               <>
                 <Link
-                  href={localeHref('/login')}
+                  href={'/login'}
                   className="block rounded-xl px-3 py-2.5 text-sm transition-colors duration-150"
                   style={{ color: 'var(--text-secondary)' }}
                   onClick={() => setMobileOpen(false)}
@@ -253,7 +242,7 @@ export function Navbar() {
                   Login
                 </Link>
                 <Link
-                  href={localeHref('/register')}
+                  href={'/register'}
                   className="block rounded-xl px-3 py-2.5 text-sm transition-colors duration-150"
                   style={{ color: 'var(--text-secondary)' }}
                   onClick={() => setMobileOpen(false)}
@@ -261,7 +250,7 @@ export function Navbar() {
                   Register
                 </Link>
                 <Link
-                  href={localeHref('/marketplace')}
+                  href={'/marketplace'}
                   className="mt-2 block rounded-xl px-4 py-3 text-center text-sm font-semibold text-white transition-opacity duration-200 hover:opacity-90"
                   style={{ background: 'linear-gradient(135deg, #26A69A 0%, #2D8A6B 100%)' }}
                   onClick={() => setMobileOpen(false)}

@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import type { ConsultantListing, ListingCurrency } from '@/types/marketplace';
 import { getCategoryLabel } from '@/lib/categories';
