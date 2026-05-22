@@ -15,8 +15,8 @@ import { CATEGORIES, SPECIALTIES } from '@/lib/categories';
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
 
-const INP  = 'w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-white/20 focus:border-[#00F0FF]/60 focus:outline-none transition';
-const SEL  = 'w-full rounded-xl border border-white/10 bg-[#161820] px-4 py-2.5 text-sm text-white focus:border-[#00F0FF]/60 focus:outline-none transition';
+const INP  = 'w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-white/20 focus:border-ki-primary/60 focus:outline-none transition';
+const SEL  = 'w-full rounded-xl border border-white/10 bg-[#161820] px-4 py-2.5 text-sm text-white focus:border-ki-primary/60 focus:outline-none transition';
 const LBL  = 'mb-1.5 block text-xs font-medium text-white/50';
 const CARD = 'rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-4';
 const SECTION_TITLE = 'text-sm font-semibold uppercase tracking-wide text-white/70';
@@ -156,7 +156,7 @@ function SpecialtiesSelector({ value, onChange }: {
             onClick={() => setActiveCat(cat.id)}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
               activeCat === cat.id
-                ? 'border border-[#B000FF]/30 bg-[#B000FF]/20 text-[#B000FF]'
+                ? 'border border-ki-accent/30 bg-ki-accent/20 text-ki-accent'
                 : 'border border-white/[0.08] text-white/40 hover:text-white'
             }`}
           >
@@ -174,7 +174,7 @@ function SpecialtiesSelector({ value, onChange }: {
               type="checkbox"
               checked={value.includes(sp.id)}
               onChange={() => toggle(sp.id)}
-              className="h-3.5 w-3.5 accent-[#B000FF]"
+              className="h-3.5 w-3.5 accent-ki-primary"
             />
             <span className="text-xs text-white/70">{sp.label}</span>
           </label>
@@ -413,7 +413,7 @@ function TabProfile({ uid, isConsultant }: { uid: string; isConsultant: boolean 
         </div>
       )}
       <button type="submit" disabled={saving}
-        className="rounded-xl border border-[#00F0FF]/20 bg-[#00F0FF]/10 px-6 py-2.5 text-sm font-semibold text-[#00F0FF] transition hover:bg-[#00F0FF]/20 disabled:opacity-50">
+        className="rounded-xl border border-ki-primary/20 bg-ki-primary/10 px-6 py-2.5 text-sm font-semibold text-ki-primary transition hover:bg-ki-primary/20 disabled:opacity-50">
         {saving ? 'Saving…' : 'Save Profile'}
       </button>
     </form>
@@ -479,7 +479,7 @@ function TabWorkingHours({ uid }: { uid: string }) {
                   <button
                     type="button"
                     onClick={() => updateDay(day.key, 'enabled', !d.enabled)}
-                    className={`relative h-5 w-9 rounded-full transition ${d.enabled ? 'bg-[#B000FF]' : 'bg-white/10'}`}
+                    className={`relative h-5 w-9 rounded-full transition ${d.enabled ? 'bg-ki-primary' : 'bg-white/10'}`}
                   >
                     <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${d.enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
                   </button>
@@ -539,7 +539,7 @@ function TabWorkingHours({ uid }: { uid: string }) {
         </div>
       )}
       <button type="submit" disabled={saving}
-        className="rounded-xl bg-gradient-to-r from-[#B000FF] to-[#0047FF] px-8 py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
+        className="rounded-xl bg-ki-gradient px-8 py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
         {saving ? 'Saving…' : 'Save Working Hours'}
       </button>
     </form>
@@ -548,12 +548,14 @@ function TabWorkingHours({ uid }: { uid: string }) {
 
 // ─── Tab: Integrations ────────────────────────────────────────────────────────
 
-function TabIntegrations({ uid }: { uid: string }) {
-  const [paymentMode, setPaymentMode]   = useState<PaymentMode>('ki_escrow');
-  const [secretKey, setSecretKey]       = useState('');
-  const [webhookSecret, setWebhookSec]  = useState('');
-  const [stripeActive, setStripeActive] = useState(false);
-  const [calConnected, setCalConn]      = useState(false);
+function TabIntegrations({ uid, role }: { uid: string; role: AppRole }) {
+  const [paymentMode, setPaymentMode]       = useState<PaymentMode>('ki_escrow');
+  const [secretKey, setSecretKey]           = useState('');
+  const [webhookSecret, setWebhookSec]      = useState('');
+  const [stripeActive, setStripeActive]     = useState(false);
+  const [calConnected, setCalConn]          = useState(false);
+  const [outlookConnected, setOutlookConn]  = useState(false);
+  const [notionConnected, setNotionConn]    = useState(false);
   const [bankInfo, setBankInfo] = useState({ bank_name: '', account_holder: '', iban: '', swift_bic: '' });
   const [saving, setSave]   = useState(false);
   const [msg, setMsg]       = useState<{ ok: boolean; text: string } | null>(null);
@@ -568,6 +570,8 @@ function TabIntegrations({ uid }: { uid: string }) {
         setPaymentMode((d.payment_mode ?? 'ki_escrow') as PaymentMode);
         setStripeActive(d.stripe_settings?.is_active ?? false);
         setCalConn(d.calendar_integration?.connected ?? false);
+        setOutlookConn(d.outlook_integration?.connected ?? false);
+        setNotionConn(d.notion_integration?.connected ?? false);
         setBankInfo({
           bank_name:      d.bank_name      ?? '',
           account_holder: d.account_holder ?? '',
@@ -641,7 +645,7 @@ function TabIntegrations({ uid }: { uid: string }) {
 
         {paymentMode === 'ki_escrow' && (
           <div className="space-y-3">
-            <div className="rounded-xl border border-[#00F0FF]/10 bg-[#00F0FF]/5 px-4 py-3 text-sm text-[#00F0FF]/70">
+            <div className="rounded-xl border border-ki-primary/10 bg-ki-primary/5 px-4 py-3 text-sm text-ki-primary/70">
               Ki Business holds funds in escrow for 15 days, then transfers your payout minus the 10% platform fee.
             </div>
             <div>
@@ -688,7 +692,7 @@ function TabIntegrations({ uid }: { uid: string }) {
         )}
 
         {paymentMode === 'ki_connect' && (
-          <div className="rounded-xl border border-[#B000FF]/10 bg-[#B000FF]/5 px-4 py-3 text-sm text-[#B000FF]/70">
+          <div className="rounded-xl border border-ki-primary/10 bg-ki-primary/5 px-4 py-3 text-sm text-ki-primary/70">
             Stripe Connect automatically splits the payment at checkout. Contact your administrator to link your Connect account.
           </div>
         )}
@@ -730,20 +734,148 @@ function TabIntegrations({ uid }: { uid: string }) {
         </div>
       </div>
 
-      {/* ── Calendar Status ── */}
+      {/* ── Google Services ── */}
       <div className={CARD}>
-        <h2 className={SECTION_TITLE}>Calendar</h2>
-        <div className="flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3">
-          <div>
-            <p className="text-sm font-medium text-white">Calendar Sync</p>
-            <p className="text-xs text-white/40">Sync your appointments automatically</p>
+        <h2 className={SECTION_TITLE}>Google Services</h2>
+        <p className="text-xs text-white/40">Connect your Google account to sync appointments and auto-generate Meet links.</p>
+
+        {/* Google Calendar row */}
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <svg viewBox="0 0 24 24" className="h-7 w-7 shrink-0" aria-hidden="true">
+                <rect x="6" y="6" width="12" height="12" rx="2" fill="white" stroke="#E0E0E0" strokeWidth=".5"/>
+                <rect x="8" y="4" width="2" height="4" rx="1" fill="#1A73E8"/>
+                <rect x="14" y="4" width="2" height="4" rx="1" fill="#1A73E8"/>
+                <line x1="6" y1="11" x2="18" y2="11" stroke="#E0E0E0" strokeWidth=".5"/>
+                <rect x="8" y="13" width="3" height="3" rx=".5" fill="#4285F4"/>
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-white">Google Calendar & Meet</p>
+                <p className="text-xs text-white/40">Auto-sync appointments · Generate Meet links</p>
+              </div>
+            </div>
+            <span className={`shrink-0 rounded-lg border px-2.5 py-1 text-xs font-medium ${calConnected ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-white/10 bg-white/5 text-white/30'}`}>
+              {calConnected ? 'Connected' : 'Not connected'}
+            </span>
           </div>
-          <span className={`text-xs font-medium ${calConnected ? 'text-emerald-400' : 'text-white/30'}`}>
-            {calConnected ? 'Connected' : 'Not connected'}
-          </span>
+          {calConnected ? (
+            <button type="button" onClick={async () => {
+              const db = getFirestoreClient(); if (!db) return;
+              await updateDoc(doc(db, 'users', uid), { 'calendar_integration.connected': false });
+              setCalConn(false);
+            }} className="text-xs text-red-400 hover:underline">
+              Disconnect Google Calendar
+            </button>
+          ) : (
+            <a href={`/api/auth/google/calendar?uid=${uid}`}
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10">
+              <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+              </svg>
+              Connect Google Calendar
+            </a>
+          )}
         </div>
-        <p className="text-xs text-white/25">Calendar OAuth is managed by your administrator. Contact support to connect.</p>
       </div>
+
+      {/* ── Microsoft Outlook Calendar ── */}
+      <div className={CARD}>
+        <h2 className={SECTION_TITLE}>Microsoft Outlook Calendar</h2>
+        <p className="text-xs text-white/40">Sync with Outlook / Microsoft 365 calendar via Microsoft Graph API.</p>
+
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <svg viewBox="0 0 24 24" className="h-7 w-7 shrink-0" fill="none" aria-hidden="true">
+                <rect width="24" height="24" rx="4" fill="#0078D4"/>
+                <path d="M12 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" fill="white" opacity=".9"/>
+                <rect x="5" y="15" width="14" height="1.5" rx=".75" fill="white" opacity=".7"/>
+                <rect x="5" y="17.5" width="10" height="1.5" rx=".75" fill="white" opacity=".5"/>
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-white">Outlook / Microsoft 365</p>
+                <p className="text-xs text-white/40">Microsoft Graph API · Calendar sync</p>
+              </div>
+            </div>
+            <span className={`shrink-0 rounded-lg border px-2.5 py-1 text-xs font-medium ${outlookConnected ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-white/10 bg-white/5 text-white/30'}`}>
+              {outlookConnected ? 'Connected' : 'Not connected'}
+            </span>
+          </div>
+          {outlookConnected ? (
+            <button type="button" onClick={async () => {
+              const db = getFirestoreClient(); if (!db) return;
+              await updateDoc(doc(db, 'users', uid), { 'outlook_integration.connected': false });
+              setOutlookConn(false);
+            }} className="text-xs text-red-400 hover:underline">
+              Disconnect Outlook
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <a href={`/api/auth/outlook/calendar?uid=${uid}`}
+                className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#0078D4]/30 bg-[#0078D4]/10 py-2.5 text-sm font-medium text-[#4AA8F0] transition hover:bg-[#0078D4]/20">
+                <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                  <path d="M21.17 3.25q.33 0 .59.25.24.24.24.58v15.84q0 .34-.24.58-.26.25-.59.25H7.83q-.33 0-.59-.25-.24-.24-.24-.58V17h-6q-.34 0-.58-.24Q.17 16.5.17 16V8q0-.33.25-.58.24-.24.58-.24h6V3.08q0-.34.24-.58.26-.25.59-.25H21.17z"/>
+                </svg>
+                Connect Outlook Calendar
+              </a>
+              <p className="text-xs text-white/25">Requires Azure AD app registration. Contact your administrator.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Notion Calendar ── */}
+      <div className={CARD}>
+        <h2 className={SECTION_TITLE}>Notion Calendar</h2>
+        <p className="text-xs text-white/40">Sync appointments with your Notion workspace calendar database.</p>
+
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <svg viewBox="0 0 24 24" className="h-7 w-7 shrink-0" aria-hidden="true">
+                <rect width="24" height="24" rx="4" fill="#191919"/>
+                <path d="M6 5h8l4 4v10H6V5z" fill="white" opacity=".9"/>
+                <path d="M14 5l4 4h-4V5z" fill="#999"/>
+                <rect x="8" y="10" width="7" height="1" rx=".5" fill="#191919" opacity=".4"/>
+                <rect x="8" y="12.5" width="5" height="1" rx=".5" fill="#191919" opacity=".3"/>
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-white">Notion</p>
+                <p className="text-xs text-white/40">Calendar database sync · Workspace: {notionConnected ? 'Connected' : 'Not linked'}</p>
+              </div>
+            </div>
+            <span className={`shrink-0 rounded-lg border px-2.5 py-1 text-xs font-medium ${notionConnected ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-white/10 bg-white/5 text-white/30'}`}>
+              {notionConnected ? 'Connected' : 'Not connected'}
+            </span>
+          </div>
+          {notionConnected ? (
+            <button type="button" onClick={async () => {
+              const db = getFirestoreClient(); if (!db) return;
+              await updateDoc(doc(db, 'users', uid), { 'notion_integration.connected': false });
+              setNotionConn(false);
+            }} className="text-xs text-red-400 hover:underline">
+              Disconnect Notion
+            </button>
+          ) : (
+            <a href={`/api/auth/notion/calendar?uid=${uid}`}
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10">
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+                <path d="M6 5h8l4 4v10H6V5zm8 0v4h4"/>
+              </svg>
+              Connect Notion
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* ── Supervisor SMTP settings ── */}
+      {role === 'supervisor' && (
+        <SupervisorSmtp uid={uid} />
+      )}
 
       {msg && (
         <div className={`rounded-xl p-3.5 text-sm ${msg.ok ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
@@ -751,10 +883,85 @@ function TabIntegrations({ uid }: { uid: string }) {
         </div>
       )}
       <button type="submit" disabled={saving}
-        className="rounded-xl border border-[#00F0FF]/20 bg-[#00F0FF]/10 px-6 py-2.5 text-sm font-semibold text-[#00F0FF] transition hover:bg-[#00F0FF]/20 disabled:opacity-50">
+        className="rounded-xl border border-ki-primary/20 bg-ki-primary/10 px-6 py-2.5 text-sm font-semibold text-ki-primary transition hover:bg-ki-primary/20 disabled:opacity-50">
         {saving ? 'Saving…' : 'Save Integrations'}
       </button>
     </form>
+  );
+}
+
+// ─── Supervisor SMTP ──────────────────────────────────────────────────────────
+
+function SupervisorSmtp({ uid }: { uid: string }) {
+  const [cfg, setCfg]   = useState({ host: '', port: '465', user: '', pass: '', from: '' });
+  const [saving, setSv] = useState(false);
+  const [msg, setMsg]   = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const db = getFirestoreClient();
+      if (!db) return;
+      const snap = await getDoc(doc(db, 'users', uid));
+      const s = snap.data()?.smtp_settings;
+      if (s) setCfg({ host: s.host ?? '', port: String(s.port ?? 465), user: s.user ?? '', pass: s.pass ?? '', from: s.from ?? '' });
+    })();
+  }, [uid]);
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault(); setSv(true); setMsg(null);
+    try {
+      const db = getFirestoreClient();
+      if (!db) throw new Error('Firestore unavailable');
+      await updateDoc(doc(db, 'users', uid), {
+        smtp_settings: { host: cfg.host, port: Number(cfg.port), user: cfg.user, pass: cfg.pass, from: cfg.from },
+        updated_at: Date.now(),
+      });
+      setMsg({ ok: true, text: 'SMTP settings saved.' });
+      setCfg((p) => ({ ...p, pass: '' }));
+    } catch (err) {
+      setMsg({ ok: false, text: String(err) });
+    } finally { setSv(false); }
+  };
+
+  return (
+    <div className={CARD}>
+      <h2 className={SECTION_TITLE}>Your SMTP Settings</h2>
+      <p className="text-xs text-white/40">
+        Required to send emails. Platform SMTP is not available for supervisors — configure your own mail server below.
+      </p>
+      <form onSubmit={save} className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={LBL}>SMTP Host</label>
+            <input value={cfg.host} onChange={(e) => setCfg({ ...cfg, host: e.target.value })} placeholder="mail.yourdomain.com" className={INP} />
+          </div>
+          <div>
+            <label className={LBL}>Port</label>
+            <select value={cfg.port} onChange={(e) => setCfg({ ...cfg, port: e.target.value })} className={SEL}>
+              <option value="465">465 (SSL)</option>
+              <option value="587">587 (STARTTLS)</option>
+              <option value="25">25 (SMTP)</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className={LBL}>Username / Email</label>
+          <input type="email" value={cfg.user} onChange={(e) => setCfg({ ...cfg, user: e.target.value })} placeholder="you@yourdomain.com" className={INP} />
+        </div>
+        <SecretInput label="Password" value={cfg.pass} onChange={(v) => setCfg({ ...cfg, pass: v })} placeholder="SMTP password" />
+        <div>
+          <label className={LBL}>From Address (optional)</label>
+          <input value={cfg.from} onChange={(e) => setCfg({ ...cfg, from: e.target.value })} placeholder="Your Name <you@domain.com>" className={INP} />
+        </div>
+        {msg && (
+          <p className={`text-xs ${msg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{msg.text}</p>
+        )}
+        <button type="submit" disabled={saving}
+          className="rounded-xl border border-white/10 bg-white/5 px-5 py-2 text-sm text-white/70 transition hover:text-white disabled:opacity-50">
+          {saving ? 'Saving…' : 'Save SMTP Settings'}
+        </button>
+      </form>
+    </div>
   );
 }
 
@@ -848,13 +1055,13 @@ function TabConsultants() {
           placeholder="Search…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#00F0FF]/60 focus:outline-none"
+          className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-white/20 focus:border-ki-primary/60 focus:outline-none"
         />
       </div>
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#00F0FF] border-t-transparent" />
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-ki-primary border-t-transparent" />
         </div>
       ) : filtered.length === 0 ? (
         <p className="py-8 text-center text-sm text-white/40">No consultants found.</p>
@@ -1134,9 +1341,9 @@ function TabPlatform() {
                 </div>
               ))}
             </div>
-            <div className="rounded-xl border border-[#00F0FF]/15 bg-[#00F0FF]/5 px-4 py-3 text-xs text-[#00F0FF]/60 space-y-1">
-              <p className="font-semibold text-[#00F0FF]/80">Netlify Environment Variables</p>
-              <ul className="mt-1 space-y-0.5 font-mono text-[#00F0FF]/40">
+            <div className="rounded-xl border border-ki-primary/15 bg-ki-primary/5 px-4 py-3 text-xs text-ki-primary/60 space-y-1">
+              <p className="font-semibold text-ki-primary/80">Netlify Environment Variables</p>
+              <ul className="mt-1 space-y-0.5 font-mono text-ki-primary/40">
                 {['NEXT_PUBLIC_FIREBASE_API_KEY','NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN','NEXT_PUBLIC_FIREBASE_PROJECT_ID',
                   'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET','NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID','NEXT_PUBLIC_FIREBASE_APP_ID',
                 ].map((v) => <li key={v}>{v}</li>)}
@@ -1209,7 +1416,7 @@ export default function SettingsPage() {
 
   if (!uid || !user) return (
     <div className="flex justify-center py-20">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#00F0FF] border-t-transparent" />
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-ki-primary border-t-transparent" />
     </div>
   );
 
@@ -1227,7 +1434,7 @@ export default function SettingsPage() {
               tab === t.id
                 ? t.id === 'platform'
                   ? 'border-red-400 text-red-400'
-                  : 'border-[#00F0FF] text-[#00F0FF]'
+                  : 'border-ki-primary text-ki-primary'
                 : 'border-transparent text-white/40 hover:text-white'
             }`}>
             {t.label}
@@ -1236,7 +1443,7 @@ export default function SettingsPage() {
       </div>
 
       {tab === 'profile'       && <TabProfile uid={uid} isConsultant={isConsultantTab} />}
-      {tab === 'integrations'  && (isConsultantTab || isManagement) && <TabIntegrations uid={uid} />}
+      {tab === 'integrations'  && (isConsultantTab || isManagement) && <TabIntegrations uid={uid} role={user.role} />}
       {tab === 'working_hours' && isConsultantTab && <TabWorkingHours uid={uid} />}
       {tab === 'consultants'   && isManagement && <TabConsultants />}
       {tab === 'platform'      && isAdmin && <TabPlatform />}

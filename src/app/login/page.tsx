@@ -96,11 +96,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0A0B0F] flex items-center justify-center px-4">
+    <div className="relative min-h-screen overflow-hidden flex items-center justify-center px-4 bg-[var(--surface)]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-[#0047FF] opacity-20 blur-[120px]" />
-        <div className="absolute -bottom-40 -right-20 h-[400px] w-[400px] rounded-full bg-[#B000FF] opacity-20 blur-[120px]" />
-        <div className="absolute top-1/2 left-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#00F0FF] opacity-10 blur-[100px]" />
+        <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-ki-primary opacity-20 blur-[120px]" />
+        <div className="absolute -bottom-40 -right-20 h-[400px] w-[400px] rounded-full bg-ki-accent opacity-15 blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-ki-secondary opacity-10 blur-[100px]" />
       </div>
 
       <div className="relative z-10 w-full max-w-md">
@@ -109,24 +109,24 @@ export default function LoginPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="Ki Business Solutions" className="mx-auto h-10 w-auto" />
           </Link>
-          <h1 className="mt-6 text-2xl font-bold text-white">Sign In to Your Account</h1>
-          <p className="mt-2 text-sm text-white/50">
+          <h1 className="mt-6 text-2xl font-bold text-[var(--text-primary)]">Sign In to Your Account</h1>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
             Use the email and password sent after your first consultation purchase.
           </p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-md">
+        <div className="glass-card p-8">
           {!configured ? (
-            <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-300">
+            <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-600 dark:text-yellow-300">
               Authentication is not configured. Please check environment variables:
-              <code className="mt-2 block text-xs text-yellow-200/70">
+              <code className="mt-2 block text-xs opacity-70">
                 NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, NEXT_PUBLIC_FIREBASE_PROJECT_ID
               </code>
             </div>
           ) : (
             <div className="space-y-5">
               {error && (
-                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500 dark:text-red-300">
                   {error}
                 </div>
               )}
@@ -136,7 +136,8 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={loading || !authReady}
-                className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-3 rounded-xl border px-6 py-3 text-sm font-medium text-[var(--text-primary)] transition hover:bg-ki-primary/5 disabled:opacity-50"
+                style={{ borderColor: 'var(--glass-border)', background: 'var(--glass-bg)' }}
               >
                 <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -148,40 +149,34 @@ export default function LoginPage() {
               </button>
 
               <div className="flex items-center gap-3">
-                <div className="h-px flex-1 bg-white/10" />
-                <span className="text-xs text-white/30">or sign in with email</span>
-                <div className="h-px flex-1 bg-white/10" />
+                <div className="h-px flex-1" style={{ background: 'var(--glass-border)' }} />
+                <span className="text-xs text-[var(--text-muted)]">or sign in with email</span>
+                <div className="h-px flex-1" style={{ background: 'var(--glass-border)' }} />
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-white/70">Email address</label>
+                  <label htmlFor="email" className="block text-sm font-medium text-[var(--text-secondary)]">Email address</label>
                   <input
-                    id="email"
-                    type="email"
-                    value={email}
+                    id="email" type="email" value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder="you@example.com"
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 outline-none transition focus:border-[#00F0FF]/50 focus:ring-2 focus:ring-[#00F0FF]/20"
+                    required placeholder="you@example.com"
+                    className="input-ki mt-2"
                   />
                 </div>
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-white/70">Password</label>
+                  <label htmlFor="password" className="block text-sm font-medium text-[var(--text-secondary)]">Password</label>
                   <input
-                    id="password"
-                    type="password"
-                    value={password}
+                    id="password" type="password" value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="••••••••"
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 outline-none transition focus:border-[#00F0FF]/50 focus:ring-2 focus:ring-[#00F0FF]/20"
+                    required placeholder="••••••••"
+                    className="input-ki mt-2"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading || !authReady}
-                  className="w-full rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] px-6 py-3 font-semibold text-white shadow-lg shadow-[#0047FF]/30 transition hover:opacity-90 disabled:opacity-50"
+                  className="w-full rounded-xl bg-ki-gradient px-6 py-3 font-semibold text-white shadow-lg shadow-ki-primary/20 transition hover:opacity-90 disabled:opacity-50"
                 >
                   {loading ? 'Signing in…' : 'Sign In'}
                 </button>
@@ -190,9 +185,9 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="mt-6 text-center text-sm text-white/40">
+        <p className="mt-6 text-center text-sm text-[var(--text-muted)]">
           Don&apos;t have an account?{' '}
-          <Link href={`/${locale}/register`} className="text-[#00F0FF] hover:underline">Create Account</Link>
+          <Link href={`/${locale}/register`} className="text-ki-primary hover:underline">Create Account</Link>
         </p>
       </div>
     </div>

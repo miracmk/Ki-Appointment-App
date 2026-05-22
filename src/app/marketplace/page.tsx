@@ -35,20 +35,20 @@ export default async function MarketplacePage({ searchParams }: PageProps) {
   const activeCategory = params.category ? CATEGORIES.find((c) => c.id === params.category) : null;
 
   return (
-    <div className="min-h-screen bg-[#0A0B0F]">
+    <div className="min-h-screen bg-[var(--surface)] text-[var(--text-primary)]">
       <Navbar />
 
-      {/* Aurora blobs */}
-      <div className="pointer-events-none fixed -top-32 left-1/4 h-96 w-96 rounded-full bg-[#0047FF]/10 blur-[120px]" />
-      <div className="pointer-events-none fixed top-20 right-1/4 h-72 w-72 rounded-full bg-[#B000FF]/8 blur-[100px]" />
+      {/* Ki teal blobs */}
+      <div className="pointer-events-none fixed -top-32 left-1/4 h-96 w-96 rounded-full bg-ki-primary/10 blur-[120px]" />
+      <div className="pointer-events-none fixed top-20 right-1/4 h-72 w-72 rounded-full bg-ki-accent/8 blur-[100px]" />
 
       {/* Header */}
       <section className="relative overflow-hidden pt-28 pb-10">
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h1 className="mb-2 text-4xl font-bold text-white sm:text-5xl">
+          <h1 className="mb-2 text-4xl font-bold text-[var(--text-primary)] sm:text-5xl">
             {activeCategory ? `${activeCategory.icon} ${activeCategory.label}` : 'Consulting Services'}
           </h1>
-          <p className="text-white/50">
+          <p className="text-[var(--text-secondary)]">
             {activeCategory
               ? activeCategory.description
               : 'Browse expert consulting services across all categories.'}
@@ -60,8 +60,8 @@ export default async function MarketplacePage({ searchParams }: PageProps) {
               href="/marketplace"
               className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
                 !activeCategory
-                  ? 'border-[#00F0FF]/50 bg-[#00F0FF]/10 text-[#00F0FF]'
-                  : 'border-white/10 bg-white/5 text-white/50 hover:border-white/20 hover:text-white'
+                  ? 'border-ki-primary/50 bg-ki-primary/10 text-ki-primary'
+                  : 'border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text-muted)] hover:border-ki-primary/30 hover:text-ki-primary'
               }`}
             >
               All
@@ -72,8 +72,8 @@ export default async function MarketplacePage({ searchParams }: PageProps) {
                 href={`/marketplace/${cat.id}`}
                 className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
                   activeCategory?.id === cat.id
-                    ? 'border-[#00F0FF]/50 bg-[#00F0FF]/10 text-[#00F0FF]'
-                    : 'border-white/10 bg-white/5 text-white/50 hover:border-white/20 hover:text-white'
+                    ? 'border-ki-primary/50 bg-ki-primary/10 text-ki-primary'
+                    : 'border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text-muted)] hover:border-ki-primary/30 hover:text-ki-primary'
                 }`}
               >
                 {cat.icon} {cat.label}
@@ -92,10 +92,10 @@ export default async function MarketplacePage({ searchParams }: PageProps) {
 
           <div className="flex-1">
             {listings.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.03] py-24 text-center">
+              <div className="glass-card flex flex-col items-center justify-center py-24 text-center">
                 <p className="mb-3 text-5xl">📋</p>
-                <p className="font-medium text-white/50">No listings found</p>
-                <p className="mt-1 text-sm text-white/30">
+                <p className="font-medium text-[var(--text-secondary)]">No listings found</p>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">
                   {activeCategory
                     ? 'No active listings in this category yet.'
                     : 'No consulting listings are available at the moment.'}
@@ -103,7 +103,7 @@ export default async function MarketplacePage({ searchParams }: PageProps) {
               </div>
             ) : (
               <>
-                <p className="mb-5 text-sm text-white/40">
+                <p className="mb-5 text-sm text-[var(--text-muted)]">
                   {listings.length} listing{listings.length !== 1 ? 's' : ''} found
                 </p>
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">

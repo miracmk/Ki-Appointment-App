@@ -32,9 +32,9 @@ const NAV = [
 ] as const;
 
 const ROLE_BADGE: Record<string, { label: string; cls: string }> = {
-  admin:      { label: 'Admin',      cls: 'border-[#B000FF]/30 bg-[#B000FF]/10 text-[#B000FF]' },
+  admin:      { label: 'Admin',      cls: 'border-ki-accent/30 bg-ki-accent/10 text-ki-accent' },
   supervisor: { label: 'Supervisor', cls: 'border-red-500/30 bg-red-500/10 text-red-400' },
-  consultant: { label: 'Consultant', cls: 'border-[#00F0FF]/30 bg-[#00F0FF]/10 text-[#00F0FF]' },
+  consultant: { label: 'Consultant', cls: 'border-ki-primary/30 bg-ki-primary/10 text-ki-primary' },
   client:     { label: 'Client',     cls: 'border-white/10 bg-white/5 text-white/50' },
 };
 
@@ -60,7 +60,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0A0B0F]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#00F0FF] border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-ki-primary border-t-transparent" />
       </div>
     );
   }
@@ -104,7 +104,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                   active
-                    ? 'bg-[#00F0FF]/10 text-[#00F0FF]'
+                    ? 'bg-ki-primary/10 text-ki-primary'
                     : 'text-white/50 hover:bg-white/5 hover:text-white'
                 }`}
               >
@@ -149,7 +149,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               href="/marketplace"
               className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white/70 transition hover:text-white"
             >
-              Find a Consultant
+              ← Back to Site
             </Link>
           </div>
         </header>

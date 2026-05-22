@@ -17,7 +17,7 @@ const STATUS_STYLE: Record<string, string> = {
   confirmed: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
   pending:   'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20',
   cancelled: 'bg-red-500/10 text-red-400 border border-red-500/20',
-  completed: 'bg-[#00F0FF]/10 text-[#00F0FF] border border-[#00F0FF]/20',
+  completed: 'bg-ki-primary/10 text-ki-primary border border-ki-primary/20',
 };
 
 const OB_STYLE: Record<string, string> = {
@@ -41,11 +41,21 @@ export default function AdminPage() {
   const [docEmail,   setDocEmail]   = useState('');
   const [docFeedback, setDocFeedback] = useState<string | null>(null);
 
+  // Email compose
+  const [emailTo,      setEmailTo]      = useState('');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody,    setEmailBody]    = useState('');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailFeedback, setEmailFeedback] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [authToken,    setAuthToken]    = useState<string | null>(null);
+
   useEffect(() => {
     const auth = getFirebaseAuth();
     if (!auth) { setLoading(false); return; }
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) { setLoading(false); return; }
+      // Capture token for API calls
+      u.getIdToken().then(setAuthToken).catch(() => {});
       const db = getFirestoreClient();
       if (!db) { setLoading(false); return; }
 
@@ -114,6 +124,28 @@ export default function AdminPage() {
     }
   };
 
+  const handleSendEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!authToken) return;
+    setEmailSending(true);
+    setEmailFeedback(null);
+    try {
+      const res = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ to: emailTo, subject: emailSubject, text: emailBody }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send.');
+      setEmailFeedback({ msg: 'Email sent successfully.', ok: true });
+      setEmailTo(''); setEmailSubject(''); setEmailBody('');
+    } catch (err: any) {
+      setEmailFeedback({ msg: err.message, ok: false });
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
   const filtered = filterStatus === 'all'
     ? appointments
     : filterStatus === 'onboarding_pending'
@@ -136,7 +168,7 @@ export default function AdminPage() {
     { label: 'Total Appointments', value: stats.total,                 color: 'text-white' },
     { label: 'Revenue',            value: `$${(revenue / 100).toLocaleString()}`, color: 'text-emerald-400' },
     { label: 'KYC Pending',        value: stats.kycPending,            color: 'text-yellow-400' },
-    { label: 'Open Tickets',       value: stats.openTickets,           color: 'text-[#00F0FF]' },
+    { label: 'Open Tickets',       value: stats.openTickets,           color: 'text-ki-primary' },
   ];
 
   return (
@@ -209,7 +241,7 @@ export default function AdminPage() {
                   <div key={a.id} className="py-4">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-[#00F0FF]">{a.customer_email}</p>
+                        <p className="truncate text-sm font-medium text-ki-primary">{a.customer_email}</p>
                         {a.customer_name && <p className="text-xs text-white/40">{a.customer_name}</p>}
                         <p className="mt-0.5 font-medium text-white">{a.package_name}</p>
                         {a.consultant_name && <p className="text-xs text-white/40">Consultant: {a.consultant_name}</p>}
@@ -223,7 +255,7 @@ export default function AdminPage() {
                           </span>
                         )}
                         {escrowPaid && (
-                          <span className="rounded-full bg-[#00F0FF]/10 px-2.5 py-0.5 text-xs font-semibold text-[#00F0FF]">Paid Out</span>
+                          <span className="rounded-full bg-ki-primary/10 px-2.5 py-0.5 text-xs font-semibold text-ki-primary">Paid Out</span>
                         )}
                       </div>
                     </div>
@@ -303,6 +335,46 @@ export default function AdminPage() {
                 {docFeedback}
               </p>
             )}
+          </div>
+
+          {/* Email compose */}
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5">
+            <h2 className="mb-4 text-base font-semibold text-white">Send Email</h2>
+            <form onSubmit={handleSendEmail} className="space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-white/60">To (email address)</label>
+                <input
+                  type="email" required value={emailTo} onChange={(e) => setEmailTo(e.target.value)}
+                  placeholder="recipient@example.com"
+                  className="w-full rounded-lg border border-white/10 bg-[#0D0E14] px-3 py-2 text-sm text-white placeholder-white/30 focus:border-ki-primary/40 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-white/60">Subject</label>
+                <input
+                  type="text" required value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Subject line"
+                  className="w-full rounded-lg border border-white/10 bg-[#0D0E14] px-3 py-2 text-sm text-white placeholder-white/30 focus:border-ki-primary/40 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-white/60">Message</label>
+                <textarea
+                  required rows={5} value={emailBody} onChange={(e) => setEmailBody(e.target.value)}
+                  placeholder="Write your message here…"
+                  className="w-full resize-none rounded-lg border border-white/10 bg-[#0D0E14] px-3 py-2 text-sm text-white placeholder-white/30 focus:border-ki-primary/40 focus:outline-none"
+                />
+              </div>
+              {emailFeedback && (
+                <p className={`text-xs ${emailFeedback.ok ? 'text-emerald-400' : 'text-red-400'}`}>{emailFeedback.msg}</p>
+              )}
+              <button
+                type="submit" disabled={emailSending}
+                className="w-full rounded-lg bg-ki-primary/10 py-2 text-sm font-medium text-ki-primary transition hover:bg-ki-primary/20 disabled:opacity-50"
+              >
+                {emailSending ? 'Sending…' : 'Send Email'}
+              </button>
+            </form>
           </div>
 
           {/* Assigned docs list */}

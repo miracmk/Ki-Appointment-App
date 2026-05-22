@@ -11,7 +11,7 @@ export function MarketplaceFilters({ mode = 'consultants' }: { mode?: 'consultan
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const priceKey = mode === 'listings' ? 'minPrice' : 'minRate';
+  const priceKey    = mode === 'listings' ? 'minPrice' : 'minRate';
   const priceMaxKey = mode === 'listings' ? 'maxPrice' : 'maxRate';
   const [minRate, setMinRate]     = useState(Number(searchParams.get(priceKey) ?? 0));
   const [maxRate, setMaxRate]     = useState(Number(searchParams.get(priceMaxKey) ?? 500));
@@ -19,19 +19,19 @@ export function MarketplaceFilters({ mode = 'consultants' }: { mode?: 'consultan
   const [langs, setLangs]         = useState<string[]>(
     searchParams.get('lang') ? searchParams.get('lang')!.split(',') : []
   );
-  const [cats, setCats]           = useState<string[]>(
+  const [cats, setCats] = useState<string[]>(
     searchParams.get('category') ? searchParams.get('category')!.split(',') : []
   );
 
   const apply = useCallback(() => {
     const params = new URLSearchParams();
-    if (minRate > 0)    params.set(priceKey, String(minRate));
-    if (maxRate < 500)  params.set(priceMaxKey, String(maxRate));
-    if (minRating > 0)  params.set('rating', String(minRating));
-    if (langs.length)   params.set('lang', langs.join(','));
-    if (cats.length)    params.set('category', cats.join(','));
+    if (minRate > 0)   params.set(priceKey, String(minRate));
+    if (maxRate < 500) params.set(priceMaxKey, String(maxRate));
+    if (minRating > 0) params.set('rating', String(minRating));
+    if (langs.length)  params.set('lang', langs.join(','));
+    if (cats.length)   params.set('category', cats.join(','));
     router.push(`${pathname}?${params.toString()}`);
-  }, [router, pathname, minRate, maxRate, minRating, langs, cats]);
+  }, [router, pathname, minRate, maxRate, minRating, langs, cats, priceKey, priceMaxKey]);
 
   const reset = useCallback(() => {
     setMinRate(0); setMaxRate(500); setMinRating(0); setLangs([]); setCats([]);
@@ -45,13 +45,16 @@ export function MarketplaceFilters({ mode = 'consultants' }: { mode?: 'consultan
     setCats((prev) => prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]);
 
   return (
-    <aside className="w-full rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 backdrop-blur-sm lg:w-64 lg:shrink-0">
+    <aside
+      className="w-full rounded-2xl p-5 backdrop-blur-sm lg:w-64 lg:shrink-0"
+      style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)' }}
+    >
       <div className="mb-5 flex items-center justify-between">
-        <h2 className="font-semibold text-white">Filter</h2>
+        <h2 className="font-semibold text-[var(--text-primary)]">Filter</h2>
         <button
           type="button"
           onClick={reset}
-          className="text-xs text-white/40 transition hover:text-white"
+          className="text-xs text-[var(--text-muted)] transition hover:text-ki-primary"
         >
           Reset
         </button>
@@ -59,28 +62,26 @@ export function MarketplaceFilters({ mode = 'consultants' }: { mode?: 'consultan
 
       {/* Price range */}
       <div className="mb-6">
-        <p className="mb-3 text-sm font-medium text-white/70">
+        <p className="mb-3 text-sm font-medium text-[var(--text-secondary)]">
           {mode === 'listings' ? 'Price' : 'Hourly Rate'}: ${minRate} – ${maxRate === 500 ? '500+' : maxRate}
         </p>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="w-8 text-xs text-white/40">Min</span>
+            <span className="w-8 text-xs text-[var(--text-muted)]">Min</span>
             <input
-              type="range"
-              min={0} max={500} step={25}
+              type="range" min={0} max={500} step={25}
               value={minRate}
               onChange={(e) => setMinRate(Number(e.target.value))}
-              className="w-full accent-[#00F0FF]"
+              className="w-full accent-ki-primary"
             />
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-8 text-xs text-white/40">Max</span>
+            <span className="w-8 text-xs text-[var(--text-muted)]">Max</span>
             <input
-              type="range"
-              min={0} max={500} step={25}
+              type="range" min={0} max={500} step={25}
               value={maxRate}
               onChange={(e) => setMaxRate(Number(e.target.value))}
-              className="w-full accent-[#00F0FF]"
+              className="w-full accent-ki-primary"
             />
           </div>
         </div>
@@ -88,7 +89,7 @@ export function MarketplaceFilters({ mode = 'consultants' }: { mode?: 'consultan
 
       {/* Minimum rating */}
       <div className="mb-6">
-        <p className="mb-3 text-sm font-medium text-white/70">Minimum Rating</p>
+        <p className="mb-3 text-sm font-medium text-[var(--text-secondary)]">Minimum Rating</p>
         <div className="flex gap-2">
           {[0, 3, 4, 4.5].map((r) => (
             <button
@@ -97,8 +98,8 @@ export function MarketplaceFilters({ mode = 'consultants' }: { mode?: 'consultan
               onClick={() => setMinRating(r)}
               className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                 minRating === r
-                  ? 'border-[#00F0FF]/50 bg-[#00F0FF]/10 text-[#00F0FF]'
-                  : 'border-white/10 bg-white/5 text-white/50 hover:border-white/20 hover:text-white'
+                  ? 'border-ki-primary/50 bg-ki-primary/10 text-ki-primary'
+                  : 'border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text-muted)] hover:border-ki-primary/30 hover:text-ki-primary'
               }`}
             >
               {r === 0 ? 'All' : `${r}+`}
@@ -109,7 +110,7 @@ export function MarketplaceFilters({ mode = 'consultants' }: { mode?: 'consultan
 
       {/* Languages */}
       <div className="mb-6">
-        <p className="mb-3 text-sm font-medium text-white/70">Language</p>
+        <p className="mb-3 text-sm font-medium text-[var(--text-secondary)]">Language</p>
         <div className="space-y-2">
           {LANGUAGES.map((l) => (
             <label key={l} className="flex cursor-pointer items-center gap-2.5">
@@ -117,9 +118,9 @@ export function MarketplaceFilters({ mode = 'consultants' }: { mode?: 'consultan
                 type="checkbox"
                 checked={langs.includes(l)}
                 onChange={() => toggleLang(l)}
-                className="h-4 w-4 rounded accent-[#00F0FF]"
+                className="h-4 w-4 rounded accent-ki-primary"
               />
-              <span className={`text-sm ${langs.includes(l) ? 'text-white' : 'text-white/50'}`}>{l}</span>
+              <span className={`text-sm ${langs.includes(l) ? 'text-ki-primary' : 'text-[var(--text-muted)]'}`}>{l}</span>
             </label>
           ))}
         </div>
@@ -127,7 +128,7 @@ export function MarketplaceFilters({ mode = 'consultants' }: { mode?: 'consultan
 
       {/* Categories */}
       <div className="mb-6">
-        <p className="mb-3 text-sm font-medium text-white/70">Category</p>
+        <p className="mb-3 text-sm font-medium text-[var(--text-secondary)]">Category</p>
         <div className="space-y-2">
           {CATEGORIES.map((cat) => (
             <label key={cat.id} className="flex cursor-pointer items-center gap-2.5">
@@ -135,9 +136,9 @@ export function MarketplaceFilters({ mode = 'consultants' }: { mode?: 'consultan
                 type="checkbox"
                 checked={cats.includes(cat.id)}
                 onChange={() => toggleCat(cat.id)}
-                className="h-4 w-4 rounded accent-[#00F0FF]"
+                className="h-4 w-4 rounded accent-ki-primary"
               />
-              <span className={`text-sm ${cats.includes(cat.id) ? 'text-white' : 'text-white/50'}`}>
+              <span className={`text-sm ${cats.includes(cat.id) ? 'text-ki-primary' : 'text-[var(--text-muted)]'}`}>
                 {cat.icon} {cat.label}
               </span>
             </label>
@@ -148,7 +149,7 @@ export function MarketplaceFilters({ mode = 'consultants' }: { mode?: 'consultan
       <button
         type="button"
         onClick={apply}
-        className="w-full rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+        className="w-full rounded-xl bg-ki-gradient py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
       >
         Apply Filters
       </button>

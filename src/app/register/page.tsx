@@ -122,11 +122,11 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0A0B0F] flex items-center justify-center px-4 py-16">
+    <div className="relative min-h-screen overflow-hidden flex items-center justify-center px-4 py-16 bg-[var(--surface)]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-[#0047FF] opacity-20 blur-[120px]" />
-        <div className="absolute -bottom-40 -right-20 h-[400px] w-[400px] rounded-full bg-[#B000FF] opacity-20 blur-[120px]" />
-        <div className="absolute top-1/2 left-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#00F0FF] opacity-10 blur-[100px]" />
+        <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-ki-primary opacity-20 blur-[120px]" />
+        <div className="absolute -bottom-40 -right-20 h-[400px] w-[400px] rounded-full bg-ki-accent opacity-15 blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-ki-secondary opacity-10 blur-[100px]" />
       </div>
 
       <div className="relative z-10 w-full max-w-md">
@@ -135,28 +135,28 @@ export default function RegisterPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="Ki Business Solutions" className="mx-auto h-10 w-auto" />
           </Link>
-          <h1 className="mt-6 text-2xl font-bold text-white">Create Your Account</h1>
-          <p className="mt-2 text-sm text-white/50">
+          <h1 className="mt-6 text-2xl font-bold text-[var(--text-primary)]">Create Your Account</h1>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
             Join Ki Business and access expert consulting services.
           </p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-md">
+        <div className="glass-card p-8">
           {!configured ? (
-            <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-300">
+            <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-600 dark:text-yellow-300">
               Authentication is not configured. Please check environment variables.
             </div>
           ) : (
             <div className="space-y-5">
               {/* Account type toggle */}
-              <div className="flex rounded-xl border border-white/10 bg-white/5 p-1">
+              <div className="flex rounded-xl border p-1" style={{ borderColor: 'var(--glass-border)', background: 'var(--glass-bg)' }}>
                 <button
                   type="button"
                   onClick={() => setAccountType('client')}
                   className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${
                     accountType === 'client'
-                      ? 'bg-gradient-to-r from-[#0047FF] to-[#00F0FF] text-white'
-                      : 'text-white/50 hover:text-white'
+                      ? 'bg-ki-gradient text-white'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   I&apos;m a Client
@@ -166,8 +166,8 @@ export default function RegisterPage() {
                   onClick={() => setAccountType('consultant')}
                   className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${
                     accountType === 'consultant'
-                      ? 'bg-gradient-to-r from-[#B000FF] to-[#0047FF] text-white'
-                      : 'text-white/50 hover:text-white'
+                      ? 'bg-ki-gradient text-white'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   I&apos;m a Consultant
@@ -175,13 +175,13 @@ export default function RegisterPage() {
               </div>
 
               {accountType === 'consultant' && (
-                <div className="rounded-xl border border-[#B000FF]/30 bg-[#B000FF]/10 p-3 text-sm text-[#B000FF]">
+                <div className="rounded-xl border border-ki-primary/30 bg-ki-primary/10 p-3 text-sm text-ki-primary">
                   Consultants must complete KYC verification ($5 fee) before going live on the marketplace.
                 </div>
               )}
 
               {error && (
-                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500 dark:text-red-300">
                   {error}
                 </div>
               )}
@@ -191,7 +191,8 @@ export default function RegisterPage() {
                 type="button"
                 onClick={handleGoogleSignUp}
                 disabled={loading}
-                className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-medium text-white transition hover:bg-white/10 disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-3 rounded-xl border px-6 py-3 text-sm font-medium text-[var(--text-primary)] transition hover:bg-ki-primary/5 disabled:opacity-50"
+                style={{ borderColor: 'var(--glass-border)', background: 'var(--glass-bg)' }}
               >
                 <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -203,14 +204,14 @@ export default function RegisterPage() {
               </button>
 
               <div className="flex items-center gap-3">
-                <div className="h-px flex-1 bg-white/10" />
-                <span className="text-xs text-white/30">or register with email</span>
-                <div className="h-px flex-1 bg-white/10" />
+                <div className="h-px flex-1" style={{ background: 'var(--glass-border)' }} />
+                <span className="text-xs text-[var(--text-muted)]">or register with email</span>
+                <div className="h-px flex-1" style={{ background: 'var(--glass-border)' }} />
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-white/70">Full Name</label>
+                  <label htmlFor="name" className="block text-sm font-medium text-[var(--text-secondary)]">Full Name</label>
                   <input
                     id="name"
                     type="text"
@@ -218,11 +219,11 @@ export default function RegisterPage() {
                     onChange={(e) => setName(e.target.value)}
                     required
                     placeholder="Your full name"
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 outline-none transition focus:border-[#00F0FF]/50 focus:ring-2 focus:ring-[#00F0FF]/20"
+                    className="input-ki mt-2"
                   />
                 </div>
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-white/70">Email Address</label>
+                  <label htmlFor="email" className="block text-sm font-medium text-[var(--text-secondary)]">Email Address</label>
                   <input
                     id="email"
                     type="email"
@@ -230,11 +231,11 @@ export default function RegisterPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     placeholder="you@example.com"
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 outline-none transition focus:border-[#00F0FF]/50 focus:ring-2 focus:ring-[#00F0FF]/20"
+                    className="input-ki mt-2"
                   />
                 </div>
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-white/70">Password</label>
+                  <label htmlFor="password" className="block text-sm font-medium text-[var(--text-secondary)]">Password</label>
                   <input
                     id="password"
                     type="password"
@@ -243,11 +244,11 @@ export default function RegisterPage() {
                     required
                     minLength={8}
                     placeholder="At least 8 characters"
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 outline-none transition focus:border-[#00F0FF]/50 focus:ring-2 focus:ring-[#00F0FF]/20"
+                    className="input-ki mt-2"
                   />
                 </div>
                 <div>
-                  <label htmlFor="confirm-password" className="block text-sm font-medium text-white/70">Confirm Password</label>
+                  <label htmlFor="confirm-password" className="block text-sm font-medium text-[var(--text-secondary)]">Confirm Password</label>
                   <input
                     id="confirm-password"
                     type="password"
@@ -255,19 +256,19 @@ export default function RegisterPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     placeholder="Repeat your password"
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-white/30 outline-none transition focus:border-[#00F0FF]/50 focus:ring-2 focus:ring-[#00F0FF]/20"
+                    className="input-ki mt-2"
                   />
                 </div>
-                <p className="text-xs text-white/30">
+                <p className="text-xs text-[var(--text-muted)]">
                   By creating an account you agree to our{' '}
-                  <a href="https://kibusiness.co/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-[#00F0FF] hover:underline">Terms of Service</a>
+                  <a href="https://kibusiness.co/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-ki-primary hover:underline">Terms of Service</a>
                   {' '}and{' '}
-                  <a href="https://kibusiness.co/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-[#00F0FF] hover:underline">Privacy Policy</a>.
+                  <a href="https://kibusiness.co/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-ki-primary hover:underline">Privacy Policy</a>.
                 </p>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] px-6 py-3 font-semibold text-white shadow-lg shadow-[#0047FF]/30 transition hover:opacity-90 disabled:opacity-50"
+                  className="w-full rounded-xl bg-ki-gradient px-6 py-3 font-semibold text-white shadow-lg shadow-ki-primary/20 transition hover:opacity-90 disabled:opacity-50"
                 >
                   {loading ? 'Creating account…' : 'Create Account'}
                 </button>
@@ -276,9 +277,9 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <p className="mt-6 text-center text-sm text-white/40">
+        <p className="mt-6 text-center text-sm text-[var(--text-muted)]">
           Already have an account?{' '}
-          <Link href={`/${locale}/login`} className="text-[#00F0FF] hover:underline">Sign In</Link>
+          <Link href={`/${locale}/login`} className="text-ki-primary hover:underline">Sign In</Link>
         </p>
       </div>
     </div>

@@ -9,6 +9,7 @@ import { POPULAR_TIMEZONES } from '@/lib/timezone';
 import { getCategoryLabel } from '@/lib/categories';
 import type { ConsultantListing, ListingCurrency, MarketplaceCategory, WeeklyAvailability } from '@/types/marketplace';
 import Link from 'next/link';
+import { Navbar } from '@/components/navbar';
 
 const SYM: Record<ListingCurrency, string> = { usd: '$', eur: '€', gbp: '£', try: '₺' };
 
@@ -64,22 +65,22 @@ function MonthCalendar({
   const canPrev = !(year === today.getFullYear() && month === today.getMonth());
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+    <div className="glass-card p-5">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <button
           onClick={onPrev}
           disabled={!canPrev}
-          className="rounded-lg p-1.5 text-white/40 transition hover:bg-white/10 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed"
+          className="rounded-lg p-1.5 text-[var(--text-muted)] transition hover:bg-ki-primary/10 hover:text-ki-primary disabled:opacity-20 disabled:cursor-not-allowed"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <p className="text-sm font-semibold text-white">{MONTHS[month]} {year}</p>
+        <p className="text-sm font-semibold text-[var(--text-primary)]">{MONTHS[month]} {year}</p>
         <button
           onClick={onNext}
-          className="rounded-lg p-1.5 text-white/40 transition hover:bg-white/10 hover:text-white"
+          className="rounded-lg p-1.5 text-[var(--text-muted)] transition hover:bg-ki-primary/10 hover:text-ki-primary"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -90,7 +91,7 @@ function MonthCalendar({
       {/* Day headers */}
       <div className="mb-1 grid grid-cols-7 text-center">
         {DAY_SHORT.map((d) => (
-          <div key={d} className="py-1 text-[11px] font-medium text-white/30">{d}</div>
+          <div key={d} className="py-1 text-[11px] font-medium text-[var(--text-muted)]">{d}</div>
         ))}
       </div>
 
@@ -111,10 +112,10 @@ function MonthCalendar({
               className={[
                 'rounded-xl py-2 text-sm font-medium transition',
                 selected
-                  ? 'bg-[#00F0FF] text-[#0A0B0F] shadow-[0_0_15px_rgba(0,240,255,0.4)]'
+                  ? 'bg-ki-primary text-white shadow-lg shadow-ki-primary/30'
                   : past || !avail
-                  ? 'text-white/15 cursor-not-allowed'
-                  : 'text-white hover:bg-white/10 cursor-pointer',
+                  ? 'text-[var(--text-muted)] opacity-30 cursor-not-allowed'
+                  : 'text-[var(--text-primary)] hover:bg-ki-primary/10 hover:text-ki-primary cursor-pointer',
               ].join(' ')}
             >
               {dayNum}
@@ -123,12 +124,12 @@ function MonthCalendar({
         })}
       </div>
 
-      <div className="mt-4 flex items-center gap-3 text-xs text-white/30">
+      <div className="mt-4 flex items-center gap-3 text-xs text-[var(--text-muted)]">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2 w-2 rounded-full bg-[#00F0FF]/60" /> Available
+          <span className="inline-block h-2 w-2 rounded-full bg-ki-primary/60" /> Available
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2 w-2 rounded-full bg-white/10" /> Unavailable
+          <span className="inline-block h-2 w-2 rounded-full bg-ki-primary/10" /> Unavailable
         </span>
       </div>
     </div>
@@ -280,14 +281,14 @@ export default function BookPage() {
   };
 
   if (loading) return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0A0B0F]">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#00F0FF] border-t-transparent" />
+    <div className="flex min-h-screen items-center justify-center bg-[var(--surface)]">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-ki-primary border-t-transparent" />
     </div>
   );
 
   if (!listing) return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0A0B0F]">
-      <p className="text-white/50">Listing not found.</p>
+    <div className="flex min-h-screen items-center justify-center bg-[var(--surface)]">
+      <p className="text-[var(--text-muted)]">Listing not found.</p>
     </div>
   );
 
@@ -295,31 +296,31 @@ export default function BookPage() {
   const availability   = (consultant?.availability ?? null) as WeeklyAvailability | null;
 
   return (
-    <div className="min-h-screen bg-[#0A0B0F]">
-      {/* Nav */}
-      <div className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#0A0B0F]/80 px-6 py-4 backdrop-blur-md">
-        <Link href={`/listings/${listingId}`} className="text-sm text-white/40 hover:text-white">
-          ← Back to listing
-        </Link>
-      </div>
-
-      <div className="mx-auto max-w-5xl px-4 pb-20 pt-8 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[var(--surface)]">
+      <Navbar />
+      <div className="mx-auto max-w-5xl px-4 pb-20 pt-24 sm:px-6 lg:px-8">
+        <div className="mb-6">
+          <Link href={`/listings/${listingId}`} className="text-sm text-[var(--text-muted)] hover:text-ki-primary transition">
+            ← Back to listing
+          </Link>
+        </div>
 
         {/* Header */}
         <div className="mb-8">
           <div className="mb-1 flex flex-wrap items-center gap-2">
-            <span className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-white/50">
+            <span className="rounded-lg border px-2.5 py-1 text-xs text-[var(--text-muted)]"
+              style={{ borderColor: 'var(--glass-border)' }}>
               {getCategoryLabel(listing.category as MarketplaceCategory)}
             </span>
             {isIntro && (
-              <span className="rounded-lg border border-[#00F0FF]/30 bg-[#00F0FF]/10 px-2.5 py-1 text-xs font-semibold text-[#00F0FF]">
+              <span className="rounded-lg border border-ki-primary/30 bg-ki-primary/10 px-2.5 py-1 text-xs font-semibold text-ki-primary">
                 Intro Session
               </span>
             )}
           </div>
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">{listing.title}</h1>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">{listing.title}</h1>
           {consultantName && (
-            <p className="mt-1 text-sm text-white/40">with {consultantName}</p>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">with {consultantName}</p>
           )}
         </div>
 
@@ -340,10 +341,10 @@ export default function BookPage() {
 
             {/* Slots */}
             {selDate && (
-              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
-                <p className="mb-3 text-sm font-semibold text-white">
+              <div className="glass-card p-5">
+                <p className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
                   Available times on{' '}
-                  <span className="text-[#00F0FF]">
+                  <span className="text-ki-primary">
                     {new Date(selDate + 'T12:00:00').toLocaleDateString('en-US', {
                       weekday: 'long', month: 'long', day: 'numeric',
                     })}
@@ -351,10 +352,10 @@ export default function BookPage() {
                 </p>
                 {slotsLoad ? (
                   <div className="flex justify-center py-6">
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#00F0FF] border-t-transparent" />
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-ki-primary border-t-transparent" />
                   </div>
                 ) : slots.length === 0 ? (
-                  <p className="py-3 text-center text-sm text-white/30">
+                  <p className="py-3 text-center text-sm text-[var(--text-muted)]">
                     No available slots on this date
                   </p>
                 ) : (
@@ -367,11 +368,12 @@ export default function BookPage() {
                         className={[
                           'rounded-xl border py-2 text-xs font-medium transition',
                           !slot.available
-                            ? 'cursor-not-allowed border-white/5 bg-white/[0.02] text-white/20 line-through'
+                            ? 'cursor-not-allowed text-[var(--text-muted)] opacity-30 line-through'
                             : selSlot === slot.time
-                            ? 'border-[#00F0FF]/40 bg-[#00F0FF]/10 text-[#00F0FF]'
-                            : 'border-white/10 bg-white/5 text-white/50 hover:border-white/20 hover:text-white',
+                            ? 'border-ki-primary/40 bg-ki-primary/10 text-ki-primary'
+                            : 'text-[var(--text-muted)] hover:border-ki-primary/30 hover:text-ki-primary',
                         ].join(' ')}
+                        style={!slot.available || selSlot === slot.time ? {} : { borderColor: 'var(--glass-border)' }}
                       >
                         {slot.time}
                       </button>
@@ -387,26 +389,58 @@ export default function BookPage() {
             <div className="sticky top-24 space-y-4">
 
               {/* Price card */}
-              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
-                <p className="mb-1 text-xs text-white/40">Session price</p>
-                <p className="text-3xl font-bold text-white">
-                  {sym}{(priceCents / 100).toLocaleString()}
-                </p>
-                <p className="mt-0.5 text-xs text-white/40">
-                  {isIntro ? `Intro session · ${fmtDuration(listing.intro_duration_minutes ?? 15)}`
-                           : fmtDuration(urlDuration)}
-                </p>
+              <div className="glass-card p-5">
+                {(() => {
+                  const isKiBiz = !!(consultant as any)?.is_ki_business;
+                  const platFee = isKiBiz ? 0 : Math.ceil(priceCents * 0.10);
+                  const baseForStripe = isKiBiz ? priceCents : priceCents + platFee;
+                  const stripeFee = Math.ceil(baseForStripe * 0.029) + 30;
+                  const total = baseForStripe + stripeFee;
+                  return (
+                    <>
+                      <p className="mb-1 text-xs text-[var(--text-muted)]">Session price</p>
+                      <p className="text-3xl font-bold text-[var(--text-primary)]">
+                        {sym}{(priceCents / 100).toLocaleString()}
+                      </p>
+                      <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                        {isIntro ? `Intro session · ${fmtDuration(listing.intro_duration_minutes ?? 15)}`
+                                 : fmtDuration(urlDuration)}
+                      </p>
+                      {!isKiBiz && (
+                        <div className="mt-4 space-y-1.5 border-t pt-4" style={{ borderColor: 'var(--glass-border)' }}>
+                          <div className="flex justify-between text-xs text-[var(--text-muted)]">
+                            <span>Consulting fee</span>
+                            <span>{sym}{(priceCents / 100).toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-xs text-[var(--text-muted)]">
+                            <span>Platform fee (10%)</span>
+                            <span>{sym}{(platFee / 100).toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-xs text-[var(--text-muted)]">
+                            <span>Payment processing (2.9% + $0.30)</span>
+                            <span>{sym}{(stripeFee / 100).toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between border-t pt-2 text-sm font-semibold text-[var(--text-primary)]"
+                            style={{ borderColor: 'var(--glass-border)' }}>
+                            <span>Total charged</span>
+                            <span>{sym}{(total / 100).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
 
                 {/* Ki Wallet balance */}
                 {walletMinutes !== null && (
-                  <div className="mt-3 flex items-center gap-2 rounded-xl border border-[#00F0FF]/15 bg-[#00F0FF]/5 px-3 py-2">
-                    <svg className="h-4 w-4 shrink-0 text-[#00F0FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="mt-3 flex items-center gap-2 rounded-xl border border-ki-primary/20 bg-ki-primary/5 px-3 py-2">
+                    <svg className="h-4 w-4 shrink-0 text-ki-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                         d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div>
-                      <p className="text-[11px] text-white/40">Ki Wallet balance</p>
-                      <p className="text-sm font-semibold text-[#00F0FF]">
+                      <p className="text-[11px] text-[var(--text-muted)]">Ki Wallet balance</p>
+                      <p className="text-sm font-semibold text-ki-primary">
                         {walletMinutes >= 60
                           ? `${Math.floor(walletMinutes / 60)}h ${walletMinutes % 60 ? walletMinutes % 60 + 'm' : ''}`
                           : `${walletMinutes} min`}
@@ -421,13 +455,13 @@ export default function BookPage() {
               {selDate && selSlot && (
                 <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
                   <div className="flex items-start gap-3">
-                    <svg className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                         d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <div>
-                      <p className="text-xs font-medium text-emerald-400">Selected slot</p>
-                      <p className="mt-0.5 text-sm font-semibold text-white">
+                      <p className="text-xs font-medium text-emerald-500">Selected slot</p>
+                      <p className="mt-0.5 text-sm font-semibold text-[var(--text-primary)]">
                         {new Date(selDate + 'T12:00:00').toLocaleDateString('en-US', {
                           weekday: 'short', month: 'short', day: 'numeric',
                         })} · {selSlot}
@@ -438,39 +472,39 @@ export default function BookPage() {
               )}
 
               {/* Form */}
-              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 space-y-3">
-                <p className="text-sm font-semibold text-white">Your details</p>
+              <div className="glass-card p-5 space-y-3">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Your details</p>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-white/50">Full Name</label>
+                  <label className="mb-1.5 block text-xs font-medium text-[var(--text-secondary)]">Full Name</label>
                   <input
                     type="text"
                     value={name}
                     onChange={e => setName(e.target.value)}
                     placeholder="Your Full Name"
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-white/20 focus:border-[#00F0FF]/60 focus:outline-none"
+                    className="input-ki"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-white/50">
-                    Email <span className="text-red-400">*</span>
+                  <label className="mb-1.5 block text-xs font-medium text-[var(--text-secondary)]">
+                    Email <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-white/20 focus:border-[#00F0FF]/60 focus:outline-none"
+                    className="input-ki"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-white/50">Timezone</label>
+                  <label className="mb-1.5 block text-xs font-medium text-[var(--text-secondary)]">Timezone</label>
                   <select
                     value={timezone}
                     onChange={e => setTimezone(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-[#161820] px-4 py-2.5 text-sm text-white focus:border-[#00F0FF]/60 focus:outline-none"
+                    className="input-ki"
                   >
                     {POPULAR_TIMEZONES.map(tz => (
                       <option key={tz.value} value={tz.value}>{tz.label}</option>
@@ -480,7 +514,7 @@ export default function BookPage() {
               </div>
 
               {error && (
-                <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-500">
                   {error}
                 </div>
               )}
@@ -489,7 +523,7 @@ export default function BookPage() {
                 type="button"
                 onClick={handlePay}
                 disabled={submitting || !selDate || !selSlot || !email}
-                className="w-full rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] py-3.5 text-sm font-semibold text-white shadow-[0_0_30px_rgba(0,71,255,0.3)] transition hover:opacity-90 disabled:opacity-40"
+                className="w-full rounded-xl bg-ki-gradient py-3.5 text-sm font-semibold text-white shadow-lg shadow-ki-primary/20 transition hover:opacity-90 disabled:opacity-40"
               >
                 {submitting ? (
                   <span className="flex items-center justify-center gap-2">
@@ -505,7 +539,7 @@ export default function BookPage() {
                   : `Confirm & Pay — ${sym}${(priceCents / 100).toLocaleString()}`}
               </button>
 
-              <p className="flex items-center justify-center gap-1.5 text-xs text-white/30">
+              <p className="flex items-center justify-center gap-1.5 text-xs text-[var(--text-muted)]">
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />

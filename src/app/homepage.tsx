@@ -51,7 +51,7 @@ const MOCK_CONSULTANTS = [
     rate: 150,
     languages: ['English', 'French'],
     initials: 'JM',
-    gradient: 'from-[#0047FF] to-[#00F0FF]',
+    gradient: 'from-ki-primary to-ki-accent',
   },
   {
     name: 'Sophie Laurent',
@@ -62,7 +62,7 @@ const MOCK_CONSULTANTS = [
     rate: 200,
     languages: ['English', 'French'],
     initials: 'SL',
-    gradient: 'from-[#B000FF] to-[#0047FF]',
+    gradient: 'from-ki-accent to-ki-primary',
   },
   {
     name: 'David Chen',
@@ -73,7 +73,7 @@ const MOCK_CONSULTANTS = [
     rate: 175,
     languages: ['English', 'Mandarin'],
     initials: 'DC',
-    gradient: 'from-[#00F0FF] to-[#B000FF]',
+    gradient: 'from-ki-secondary to-ki-primary',
   },
 ];
 
@@ -123,7 +123,7 @@ function localeHref(locale: string, path: string) {
 
 export default function Homepage({ locale }: HomepageProps) {
   return (
-    <div className="bg-[#0A0B0F]">
+    <div className="bg-[var(--surface)] text-[var(--text-primary)]">
       <Navbar />
       <Hero />
 
@@ -131,45 +131,29 @@ export default function Homepage({ locale }: HomepageProps) {
       <section className="py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 text-center">
-            <h2 className="mb-3 text-3xl font-bold text-white sm:text-4xl">
+            <h2 className="mb-3 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
               Expert Categories
             </h2>
-            <p className="text-white/50">
+            <p className="text-[var(--text-secondary)]">
               Choose your area of need and connect with KYC-verified specialists.
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {CATEGORIES.map((cat) => {
-              const colorMap: Record<string, string> = {
-                cyan: 'border-[#00F0FF]/20 hover:border-[#00F0FF]/40 hover:shadow-[0_0_30px_rgba(0,240,255,0.1)]',
-                blue: 'border-[#0047FF]/20 hover:border-[#0047FF]/40 hover:shadow-[0_0_30px_rgba(0,71,255,0.1)]',
-                purple: 'border-[#B000FF]/20 hover:border-[#B000FF]/40 hover:shadow-[0_0_30px_rgba(176,0,255,0.1)]',
-                pink: 'border-[#FF006E]/20 hover:border-[#FF006E]/40 hover:shadow-[0_0_30px_rgba(255,0,110,0.1)]',
-                green: 'border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-[0_0_30px_rgba(16,185,129,0.1)]',
-                orange: 'border-orange-500/20 hover:border-orange-500/40 hover:shadow-[0_0_30px_rgba(249,115,22,0.1)]',
-              };
-              const textColorMap: Record<string, string> = {
-                cyan: 'text-[#00F0FF]', blue: 'text-[#0047FF]', purple: 'text-[#B000FF]',
-                pink: 'text-[#FF006E]', green: 'text-emerald-400', orange: 'text-orange-400',
-              };
-              return (
-                <Link
-                  key={cat.id}
-                  href={localeHref(locale, `/marketplace/${cat.id}`)}
-                  className={`group flex items-start gap-4 rounded-2xl border bg-white/[0.03] p-6 backdrop-blur-sm transition duration-300 ${colorMap[cat.color]}`}
-                >
-                  <span className="text-3xl">{cat.icon}</span>
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-white group-hover:text-white">{cat.label}</h3>
-                    <p className="mt-2 text-sm text-white/50 line-clamp-2">{cat.description}</p>
-                    <p className={`mt-3 text-xs font-medium ${textColorMap[cat.color]}`}>
-                      Browse Consultants →
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
+            {CATEGORIES.map((cat) => (
+              <Link
+                key={cat.id}
+                href={localeHref(locale, `/marketplace/${cat.id}`)}
+                className="glass-card-hover group flex items-start gap-4 p-6"
+              >
+                <span className="text-3xl">{cat.icon}</span>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-[var(--text-primary)]">{cat.label}</h3>
+                  <p className="mt-2 text-sm text-[var(--text-secondary)] line-clamp-2">{cat.description}</p>
+                  <p className="mt-3 text-xs font-medium text-ki-primary">Browse Consultants →</p>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
@@ -178,33 +162,30 @@ export default function Homepage({ locale }: HomepageProps) {
       <section id="how-it-works" className="py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 text-center">
-            <h2 className="mb-3 text-3xl font-bold text-white sm:text-4xl">
+            <h2 className="mb-3 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
               How It Works
             </h2>
-            <p className="text-white/50">Get professional advice in three simple steps.</p>
+            <p className="text-[var(--text-secondary)]">Get professional advice in three simple steps.</p>
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {HOW_IT_WORKS.map((item, i) => (
-              <div
-                key={item.step}
-                className="relative rounded-2xl border border-white/[0.08] bg-white/[0.03] p-8 backdrop-blur-sm"
-              >
+              <div key={item.step} className="glass-card relative p-8">
                 {i < HOW_IT_WORKS.length - 1 && (
                   <div className="absolute right-0 top-1/2 hidden -translate-y-1/2 translate-x-1/2 md:block">
-                    <svg className="h-5 w-5 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-5 w-5 text-ki-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
                 )}
                 <div className="mb-5 flex items-center justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#00F0FF]/20 bg-[#00F0FF]/10 text-[#00F0FF]">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-ki-primary/25 bg-ki-primary/10 text-ki-primary">
                     {item.icon}
                   </div>
-                  <span className="text-4xl font-black text-white/[0.06]">{item.step}</span>
+                  <span className="text-4xl font-black text-[var(--glass-border)]">{item.step}</span>
                 </div>
-                <h3 className="mb-2 text-lg font-semibold text-white">{item.title}</h3>
-                <p className="text-sm leading-relaxed text-white/50">{item.description}</p>
+                <h3 className="mb-2 text-lg font-semibold text-[var(--text-primary)]">{item.title}</h3>
+                <p className="text-sm leading-relaxed text-[var(--text-secondary)]">{item.description}</p>
               </div>
             ))}
           </div>
@@ -216,14 +197,14 @@ export default function Homepage({ locale }: HomepageProps) {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 flex items-end justify-between">
             <div>
-              <h2 className="mb-2 text-3xl font-bold text-white sm:text-4xl">
+              <h2 className="mb-2 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
                 Featured Consultants
               </h2>
-              <p className="text-white/50">KYC-verified experts with top ratings.</p>
+              <p className="text-[var(--text-secondary)]">KYC-verified experts with top ratings.</p>
             </div>
             <Link
               href={localeHref(locale, '/marketplace')}
-              className="hidden text-sm font-medium text-[#00F0FF] transition hover:opacity-80 sm:block"
+              className="hidden text-sm font-medium text-ki-primary transition-opacity hover:opacity-70 sm:block"
             >
               View All →
             </Link>
@@ -231,21 +212,24 @@ export default function Homepage({ locale }: HomepageProps) {
 
           <div className="grid gap-6 lg:grid-cols-3">
             {MOCK_CONSULTANTS.map((consultant) => (
-              <div key={consultant.name} className="rounded-3xl border border-white/[0.08] bg-white/[0.03] p-6">
+              <div key={consultant.name} className="glass-card rounded-3xl p-6">
                 <div className={`mb-6 inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-br ${consultant.gradient} text-lg font-bold text-white`}>
                   {consultant.initials}
                 </div>
-                <p className="text-sm uppercase tracking-[0.35em] text-white/40">{consultant.category}</p>
-                <h3 className="mt-3 text-xl font-semibold text-white">{consultant.name}</h3>
-                <p className="mt-2 text-sm text-white/50">{consultant.title}</p>
-                <div className="mt-5 flex flex-wrap items-center gap-2 text-sm text-white/40">
+                <p className="text-sm uppercase tracking-[0.35em] text-[var(--text-muted)]">{consultant.category}</p>
+                <h3 className="mt-3 text-xl font-semibold text-[var(--text-primary)]">{consultant.name}</h3>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">{consultant.title}</p>
+                <div className="mt-5 flex flex-wrap items-center gap-2 text-sm">
                   {consultant.languages.map((language) => (
-                    <span key={language} className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                    <span
+                      key={language}
+                      className="rounded-full border border-[var(--glass-border)] bg-ki-primary/5 px-3 py-1 text-[var(--text-muted)]"
+                    >
                       {language}
                     </span>
                   ))}
                 </div>
-                <div className="mt-6 flex items-center justify-between text-sm text-white/60">
+                <div className="mt-6 flex items-center justify-between text-sm text-[var(--text-secondary)]">
                   <span>{consultant.rating} ★</span>
                   <span>{consultant.reviews} reviews</span>
                   <span>${consultant.rate}/hr</span>
@@ -260,18 +244,22 @@ export default function Homepage({ locale }: HomepageProps) {
       <section className="pb-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 text-center">
-            <h2 className="mb-3 text-3xl font-bold text-white sm:text-4xl">Why Ki Business?</h2>
-            <p className="text-white/50">Everything you need for professional consulting, in one place.</p>
+            <h2 className="mb-3 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
+              Why Ki Business?
+            </h2>
+            <p className="text-[var(--text-secondary)]">
+              Everything you need for professional consulting, in one place.
+            </p>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             {TRUST_ITEMS.map((item) => (
-              <div key={item.title} className="rounded-3xl border border-white/[0.08] bg-white/[0.03] p-8">
-                <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-white/5 text-[#00F0FF]">
+              <div key={item.title} className="glass-card rounded-3xl p-8">
+                <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-ki-primary/10 text-ki-primary">
                   {item.icon}
                 </div>
-                <h3 className="mb-3 text-xl font-semibold text-white">{item.title}</h3>
-                <p className="text-sm leading-relaxed text-white/50">{item.description}</p>
+                <h3 className="mb-3 text-xl font-semibold text-[var(--text-primary)]">{item.title}</h3>
+                <p className="text-sm leading-relaxed text-[var(--text-secondary)]">{item.description}</p>
               </div>
             ))}
           </div>
@@ -281,23 +269,23 @@ export default function Homepage({ locale }: HomepageProps) {
       {/* ── CTA ── */}
       <section className="pb-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#0047FF]/10 to-[#B000FF]/10 p-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold text-white sm:text-4xl">
+          <div className="rounded-3xl border border-ki-primary/20 bg-ki-gradient-subtle p-12 text-center backdrop-blur-md">
+            <h2 className="mb-4 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
               Ready to get started?
             </h2>
-            <p className="mx-auto mb-8 max-w-xl text-white/50">
+            <p className="mx-auto mb-8 max-w-xl text-[var(--text-secondary)]">
               Join thousands of clients who connect with verified experts through our platform.
             </p>
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 href={localeHref(locale, '/marketplace')}
-                className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] px-8 py-4 text-base font-semibold text-white shadow-[0_0_40px_rgba(0,71,255,0.3)] transition hover:opacity-90"
+                className="inline-flex items-center gap-2 rounded-2xl bg-ki-gradient px-8 py-4 text-base font-semibold text-white shadow-glow-ki transition-all duration-300 hover:opacity-90"
               >
                 Find a Consultant
               </Link>
               <Link
                 href={localeHref(locale, '/register?type=consultant')}
-                className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-base font-semibold text-white/80 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
+                className="btn-ghost inline-flex items-center gap-2 rounded-2xl px-8 py-4 text-base font-semibold"
               >
                 Join as a Consultant
               </Link>
