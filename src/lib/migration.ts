@@ -139,24 +139,24 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Users collection - own profile only
-    match /users/{uid} {
-      allow read: if request.auth.uid == uid;
+      match /users/{uid} {
+      allow read, write: if request.auth.uid == uid || request.auth.token.admin == true;
+    }
+
+    match /consultantProfiles/{uid} {
+      allow read: if resource.data.is_active == true || request.auth.uid == uid || request.auth.token.admin == true;
       allow write: if request.auth.uid == uid || request.auth.token.admin == true;
-      
-      // Appointments subcollection
-      match /appointments/{appointmentId} {
-        allow read: if request.auth.uid == uid || request.auth.token.admin == true;
-        allow write: if request.auth.uid == uid || request.auth.token.admin == true;
-      }
     }
 
-    // Consultants collection (read-only for appointments)
-    match /consultants/{consultantId}/appointments/{appointmentId} {
-      allow read: if request.auth.uid == consultantId || request.auth.token.admin == true;
-      allow write: if request.auth.uid == consultantId || request.auth.token.admin == true;
+    match /clientProfiles/{uid} {
+      allow read, write: if request.auth.uid == uid || request.auth.token.admin == true;
     }
 
-    // Admin access to all
+    match /appointments/{appointmentId} {
+      allow read, write: if request.auth.uid != null;
+    }
+
+    // Admin access to all other documents
     match /{document=**} {
       allow read, write: if request.auth.token.admin == true;
     }

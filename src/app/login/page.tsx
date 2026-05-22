@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getFirebaseAuth, getFirestoreClient, isFirebaseConfigured } from '@/lib/firebase-client';
+import { getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebase-client';
 import {
   signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { ensureUserDoc } from '@/lib/auth';
 
 export default function LoginPage() {
   const router    = useRouter();
@@ -59,28 +59,7 @@ export default function LoginPage() {
       const auth = getFirebaseAuth();
       if (!auth) { setError('Authentication not configured.'); return; }
       const { user } = await signInWithPopup(auth, new GoogleAuthProvider());
-      const db = getFirestoreClient();
-      if (db) {
-        const snap = await getDoc(doc(db, 'users', user.uid));
-        if (!snap.exists()) {
-          await setDoc(doc(db, 'users', user.uid), {
-            uid:         user.uid,
-            email:       user.email ?? '',
-            displayName: user.displayName ?? '',
-            photo_url:   user.photoURL   ?? '',
-            role:        'client',
-            kycStatus:   'unverified',
-            walletBalance: 0,
-            isActive:    true,
-            name:        user.displayName ?? '',
-            kyc_status:  'none',
-            ki_wallet_cents: 0,
-            created_at:  Date.now(),
-            updated_at:  Date.now(),
-            is_active:   true,
-          });
-        }
-      }
+      await ensureUserDoc(user);
       router.push('/dashboard');
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {

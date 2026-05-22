@@ -223,6 +223,7 @@ export interface ClientProfile {
 
 export interface PublicConsultantInfo {
   uid: string;
+  slug?: string;
   name: string;
   title?: string;
   bio?: string;

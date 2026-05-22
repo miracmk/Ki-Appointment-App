@@ -263,8 +263,8 @@ GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=xxx
 
 # Microsoft OAuth
-MICROSOFT_CLIENT_ID=xxx
-MICROSOFT_CLIENT_SECRET=xxx
+AZURE_AD_CLIENT_ID=xxx
+AZURE_AD_CLIENT_SECRET=xxx
 ```
 
 ### Required (Already Configured)

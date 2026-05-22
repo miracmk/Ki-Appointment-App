@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getFirebaseAuth, getFirestoreClient, isFirebaseConfigured } from '@/lib/firebase-client';
+import { getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebase-client';
 import {
   createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider,
   onAuthStateChanged, updateProfile,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { ensureUserDoc } from '@/lib/auth';
 
 type AccountType = 'client' | 'consultant';
 
@@ -36,28 +36,8 @@ export default function RegisterPage() {
     return () => unsub();
   }, [configured, router]);
 
-  const createUserDoc = async (uid: string, displayName: string, userEmail: string, photoURL: string) => {
-    const db = getFirestoreClient();
-    if (!db) return;
-    const snap = await getDoc(doc(db, 'users', uid));
-    if (!snap.exists()) {
-      await setDoc(doc(db, 'users', uid), {
-        uid,
-        email:       userEmail,
-        displayName,
-        photo_url:   photoURL,
-        role:        'client',
-        kycStatus:   'unverified',
-        walletBalance: 0,
-        isActive:    true,
-        name:        displayName,
-        kyc_status:  'none',
-        ki_wallet_cents: 0,
-        created_at:  serverTimestamp(),
-        updated_at:  Date.now(),
-        is_active:   true,
-      });
-    }
+  const createUserDoc = async (user: any, requestedRole: 'client' | 'consultant') => {
+    await ensureUserDoc(user, requestedRole);
   };
 
   const handleGoogleSignUp = async () => {
@@ -67,7 +47,7 @@ export default function RegisterPage() {
       const auth = getFirebaseAuth();
       if (!auth) { setError('Authentication not configured.'); return; }
       const { user } = await signInWithPopup(auth, new GoogleAuthProvider());
-      await createUserDoc(user.uid, user.displayName ?? '', user.email ?? '', user.photoURL ?? '');
+      await createUserDoc(user, accountType);
       if (accountType === 'consultant') {
         router.push('/dashboard/kyc?apply=consultant');
       } else {
@@ -97,7 +77,7 @@ export default function RegisterPage() {
       if (!auth) { setError('Authentication not configured.'); return; }
       const { user } = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(user, { displayName: name });
-      await createUserDoc(user.uid, name, user.email ?? '', '');
+      await createUserDoc(user, accountType);
       if (accountType === 'consultant') {
         router.push('/dashboard/kyc?apply=consultant');
       } else {

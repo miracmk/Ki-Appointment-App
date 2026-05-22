@@ -146,8 +146,8 @@ async function refreshOutlookAccessToken(
     const refreshToken = decryptSensitiveData(refresh_token_encrypted, refresh_token_iv!, refresh_token_authTag!);
 
     const response = await axios.post('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
-      client_id: process.env.MICROSOFT_CLIENT_ID,
-      client_secret: process.env.MICROSOFT_CLIENT_SECRET,
+      client_id: process.env.AZURE_AD_CLIENT_ID,
+      client_secret: process.env.AZURE_AD_CLIENT_SECRET,
       refresh_token: refreshToken,
       grant_type: 'refresh_token',
       scope: 'Calendars.ReadWrite offline_access',

@@ -5,9 +5,9 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const appUrl        = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3010';
-  const clientId      = process.env.MICROSOFT_CLIENT_ID;
-  const clientSecret  = process.env.MICROSOFT_CLIENT_SECRET;
-  const tenantId      = process.env.MICROSOFT_TENANT_ID ?? 'common';
+  const clientId      = process.env.AZURE_AD_CLIENT_ID;
+  const clientSecret  = process.env.AZURE_AD_CLIENT_SECRET;
+  const tenantId      = process.env.AZURE_AD_TENANT_ID ?? 'common';
   const code          = request.nextUrl.searchParams.get('code');
   const uid           = request.nextUrl.searchParams.get('state');
 

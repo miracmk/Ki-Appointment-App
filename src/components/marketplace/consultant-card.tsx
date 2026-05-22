@@ -130,7 +130,7 @@ export function ConsultantCard({ consultant }: ConsultantCardProps) {
             </span>
           )}
           <Link
-            href={`/consultants/${consultant.uid}`}
+            href={`/consultant/${consultant.slug || consultant.uid}`}
             className="ml-auto inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#0047FF] to-[#00F0FF] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
           >
             Book Now
