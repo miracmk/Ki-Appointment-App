@@ -191,7 +191,7 @@ function ManagementOverview() {
       try {
         const [apptSnap, kycSnap, consultantSnap] = await Promise.all([
           getCountFromServer(collection(db, 'appointments')),
-          getCountFromServer(query(collection(db, 'kyc_submissions'), where('status', '==', 'pending'))),
+          getCountFromServer(query(collection(db, 'kyc_applications'), where('status', '==', 'pending'))),
           getCountFromServer(query(collection(db, 'users'), where('role', '==', 'consultant'))),
         ]);
         const allAppts = await getDocs(collection(db, 'appointments'));

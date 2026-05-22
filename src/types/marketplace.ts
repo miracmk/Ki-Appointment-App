@@ -263,6 +263,7 @@ export interface Appointment {
   appointment_time: string;
   appointment_timezone?: string;
   package_id: string;
+  payment_mode?: PaymentMode;
   stripe_session_id?: string;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   meet_link?: string;

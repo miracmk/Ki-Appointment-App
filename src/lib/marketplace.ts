@@ -105,14 +105,39 @@ export async function createAppointment(
   try {
     const db = getAdminFirestore();
     const appointmentsRef = db.collection('consultants').doc(consultantId).collection('appointments');
-
-    const newDoc = await appointmentsRef.add({
+    const newDocRef = appointmentsRef.doc();
+    const now = Date.now();
+    const appointmentRecord = {
       ...appointment,
-      created_at: Date.now(),
-      updated_at: Date.now(),
+      created_at: now,
+      updated_at: now,
+    };
+
+    await newDocRef.set(appointmentRecord);
+    await db.collection('appointments').doc(newDocRef.id).set({
+      consultant_id:         consultantId,
+      consultant_name:       '',
+      customer_email:        appointmentRecord.customer_email,
+      customer_name:         appointmentRecord.customer_name ?? '',
+      appointment_date:      appointmentRecord.appointment_date,
+      appointment_time:      appointmentRecord.appointment_time,
+      appointment_timezone:  appointmentRecord.appointment_timezone ?? 'UTC',
+      package_id:            appointmentRecord.package_id,
+      package_name:          (appointmentRecord as any).package_name ?? appointmentRecord.package_id,
+      status:                appointmentRecord.status,
+      payment_amount:        appointmentRecord.payment_amount,
+      payment_mode:          appointmentRecord.payment_mode ?? 'own_keys',
+      stripe_session_id:     appointmentRecord.stripe_session_id ?? '',
+      stripe_fee_cents:      0,
+      platform_fee_cents:    0,
+      consultant_payout_cents: 0,
+      payout_status:         'na',
+      onboarding_status:     'form_pending',
+      created_at:            now,
+      updated_at:            now,
     });
 
-    return newDoc.id;
+    return newDocRef.id;
   } catch (error) {
     console.error(`Error creating appointment for consultant ${consultantId}:`, error);
     throw error;

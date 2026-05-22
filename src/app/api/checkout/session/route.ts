@@ -122,12 +122,16 @@ export async function POST(request: NextRequest) {
 
     const appointmentData: Record<string, unknown> = {
       consultant_id:        consultantId,
+      consultant_name:      consultant.name ?? '',
       customer_email:       customerEmail,
       customer_name:        customerName ?? '',
       appointment_date:     appointmentDate ?? '',
       appointment_time:     appointmentTime ?? '',
       appointment_timezone: appointmentTimezone ?? 'UTC',
+      package_id:           packageId ?? listingId ?? 'custom',
+      package_name:         selectedPackage.name,
       status:               'pending',
+      payment_mode:         paymentMode,
       payment_amount:       consultingFeeCents,
     };
 

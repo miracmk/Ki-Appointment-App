@@ -1014,20 +1014,22 @@ function TabConsultants() {
     (async () => {
       const db = getFirestoreClient();
       if (!db) { setLoading(false); return; }
-      const [consultants, kycSubmissions] = await Promise.all([
-        getDocs(query(collection(db, 'users'), where('role', '==', 'consultant'))),
-        getDocs(collection(db, 'kyc_submissions')),
-      ]);
-      const kycMap = new Map<string, string>();
-      kycSubmissions.docs.forEach((d) => kycMap.set(d.id, d.data().status ?? 'unknown'));
+      const kycSnap = await getDocs(query(collection(db, 'kyc_applications')));
+      const rows = await Promise.all(kycSnap.docs.map(async (appDoc) => {
+        const uid = appDoc.id;
+        const appData = appDoc.data();
+        const userDoc = await getDoc(doc(db, 'users', uid));
+        const userData = userDoc.exists() ? userDoc.data() : {};
+        return {
+          uid,
+          name:  userData?.displayName ?? (`${appData.firstName ?? ''} ${appData.lastName ?? ''}`.trim() || '—'),
+          email: userData?.email ?? '',
+          kycStatus: appData.status ?? userData?.kycStatus ?? 'none',
+          role: userData?.role ?? 'client',
+        };
+      }));
 
-      setRows(consultants.docs.map((d) => ({
-        uid:       d.id,
-        name:      d.data().displayName ?? '—',
-        email:     d.data().email ?? '',
-        kycStatus: kycMap.get(d.id) ?? d.data().kycStatus ?? 'none',
-        role:      d.data().role ?? 'consultant',
-      })));
+      setRows(rows);
       setLoading(false);
     })();
   }, []);
@@ -1078,7 +1080,7 @@ function TabConsultants() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <h2 className={SECTION_TITLE}>Active Consultants</h2>
+        <h2 className={SECTION_TITLE}>Consultant KYC Applications</h2>
         <input
           type="text"
           placeholder="Search…"
